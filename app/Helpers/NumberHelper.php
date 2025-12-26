@@ -1,0 +1,570 @@
+<?php
+/**
+ * Number Helper
+ * 
+ * จุดประสงค์: ฟังก์ชันช่วยเหลือสำหรับจัดการตัวเลข
+ * 
+ * ฟีเจอร์:
+ * - จัดรูปแบบตัวเลข
+ * - แปลงเงิน, เปอร์เซ็นต์
+ * - ตัวเลขไทย
+ */
+
+namespace App\Helpers;
+
+class NumberHelper
+{
+    /**
+     * จัดรูปแบบเงิน
+     * 
+     * @param float $number
+     * @param int $decimals
+     * @param string $currency
+     * @return string
+     */
+    public static function money(float $number, int $decimals = 2, string $currency = '฿'): string
+    {
+        return $currency . number_format($number, $decimals);
+    }
+
+    /**
+     * จัดรูปแบบเงินบาท
+     * 
+     * @param float $number
+     * @param int $decimals
+     * @return string
+     */
+    public static function baht(float $number, int $decimals = 2): string
+    {
+        return number_format($number, $decimals) . ' บาท';
+    }
+
+    /**
+     * จัดรูปแบบตัวเลข
+     * 
+     * @param float $number
+     * @param int $decimals
+     * @param string $decPoint
+     * @param string $thousandsSep
+     * @return string
+     */
+    public static function format(
+        float $number,
+        int $decimals = 0,
+        string $decPoint = '.',
+        string $thousandsSep = ','
+    ): string {
+        return number_format($number, $decimals, $decPoint, $thousandsSep);
+    }
+
+    /**
+     * จัดรูปแบบเปอร์เซ็นต์
+     * 
+     * @param float $number
+     * @param int $decimals
+     * @return string
+     */
+    public static function percent(float $number, int $decimals = 2): string
+    {
+        return number_format($number, $decimals) . '%';
+    }
+
+    /**
+     * คำนวณเปอร์เซ็นต์
+     * 
+     * @param float $value
+     * @param float $total
+     * @param int $decimals
+     * @return float
+     */
+    public static function percentage(float $value, float $total, int $decimals = 2): float
+    {
+        if ($total == 0) {
+            return 0;
+        }
+        
+        return round(($value / $total) * 100, $decimals);
+    }
+
+    /**
+     * จัดรูปแบบขนาดไฟล์
+     * 
+     * @param int $bytes
+     * @param int $decimals
+     * @return string
+     */
+    public static function fileSize(int $bytes, int $decimals = 2): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+        
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, $decimals) . ' ' . $units[$i];
+    }
+
+    /**
+     * จัดรูปแบบตัวเลขขนาดใหญ่ (1K, 1M, 1B)
+     * 
+     * @param float $number
+     * @param int $decimals
+     * @return string
+     */
+    public static function abbreviate(float $number, int $decimals = 1): string
+    {
+        $units = ['', 'K', 'M', 'B', 'T'];
+        
+        for ($i = 0; abs($number) >= 1000 && $i < count($units) - 1; $i++) {
+            $number /= 1000;
+        }
+        
+        return round($number, $decimals) . $units[$i];
+    }
+
+    /**
+     * แปลงเป็นลำดับที่ (1st, 2nd, 3rd)
+     * 
+     * @param int $number
+     * @return string
+     */
+    public static function ordinal(int $number): string
+    {
+        $ends = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th'];
+        
+        if ((($number % 100) >= 11) && (($number % 100) <= 13)) {
+            return $number . 'th';
+        }
+        
+        return $number . $ends[$number % 10];
+    }
+
+    /**
+     * แปลงเป็นลำดับที่ภาษาไทย
+     * 
+     * @param int $number
+     * @return string
+     */
+    public static function ordinalThai(int $number): string
+    {
+        return 'ที่ ' . self::toThai($number);
+    }
+
+    /**
+     * แปลงตัวเลขเป็นภาษาไทย
+     * 
+     * @param int $number
+     * @return string
+     */
+    public static function toThai(int $number): string
+    {
+        $thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        
+        return str_replace(
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            $thaiDigits,
+            (string)$number
+        );
+    }
+
+    /**
+     * แปลงตัวเลขไทยเป็นตัวเลขอารบิก
+     * 
+     * @param string $thaiNumber
+     * @return string
+     */
+    public static function fromThai(string $thaiNumber): string
+    {
+        $thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        
+        return str_replace(
+            $thaiDigits,
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            $thaiNumber
+        );
+    }
+
+    /**
+     * แปลงตัวเลขเป็นคำอ่าน (ภาษาไทย)
+     * 
+     * @param float $number
+     * @return string
+     */
+    public static function toWord(float $number): string
+    {
+        $txtNum1 = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
+        $txtNum2 = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน'];
+        
+        $number = number_format($number, 2, '.', '');
+        $numberArr = explode('.', $number);
+        $baht = $numberArr[0];
+        $satang = $numberArr[1] ?? '00';
+        
+        $bahtText = self::convertNumber($baht, $txtNum1, $txtNum2);
+        $satangText = self::convertNumber($satang, $txtNum1, $txtNum2);
+        
+        $result = $bahtText . 'บาท';
+        
+        if ((int)$satang > 0) {
+            $result .= $satangText . 'สตางค์';
+        } else {
+            $result .= 'ถ้วน';
+        }
+        
+        return $result;
+    }
+
+    /**
+     * ฟังก์ชันช่วยแปลงตัวเลข
+     * 
+     * @param string $number
+     * @param array $txtNum1
+     * @param array $txtNum2
+     * @return string
+     */
+    private static function convertNumber(string $number, array $txtNum1, array $txtNum2): string
+    {
+        $number = str_pad($number, 7, '0', STR_PAD_LEFT);
+        $result = '';
+        
+        for ($i = 0; $i < 7; $i++) {
+            $digit = (int)$number[$i];
+            
+            if ($digit > 0) {
+                if ($i == 5 && $digit == 1) {
+                    $result .= 'เอ็ด';
+                } elseif ($i == 6 && $digit == 1) {
+                    $result .= 'เอ็ด';
+                } elseif ($i == 6 && $digit == 2) {
+                    $result .= 'ยี่';
+                } else {
+                    $result .= $txtNum1[$digit];
+                }
+                
+                $result .= $txtNum2[6 - $i];
+            }
+        }
+        
+        return $result;
+    }
+
+    /**
+     * ปัดเศษขึ้น
+     * 
+     * @param float $number
+     * @param int $precision
+     * @return float
+     */
+    public static function ceil(float $number, int $precision = 0): float
+    {
+        $multiplier = pow(10, $precision);
+        return ceil($number * $multiplier) / $multiplier;
+    }
+
+    /**
+     * ปัดเศษลง
+     * 
+     * @param float $number
+     * @param int $precision
+     * @return float
+     */
+    public static function floor(float $number, int $precision = 0): float
+    {
+        $multiplier = pow(10, $precision);
+        return floor($number * $multiplier) / $multiplier;
+    }
+
+    /**
+     * ปัดเศษ
+     * 
+     * @param float $number
+     * @param int $precision
+     * @return float
+     */
+    public static function round(float $number, int $precision = 0): float
+    {
+        return round($number, $precision);
+    }
+
+    /**
+     * คำนวณค่าเฉลี่ย
+     * 
+     * @param array $numbers
+     * @return float
+     */
+    public static function average(array $numbers): float
+    {
+        if (empty($numbers)) {
+            return 0;
+        }
+        
+        return array_sum($numbers) / count($numbers);
+    }
+
+    /**
+     * หาค่ามัธยฐาน
+     * 
+     * @param array $numbers
+     * @return float
+     */
+    public static function median(array $numbers): float
+    {
+        if (empty($numbers)) {
+            return 0;
+        }
+        
+        sort($numbers);
+        $count = count($numbers);
+        $middle = floor($count / 2);
+        
+        if ($count % 2) {
+            return $numbers[$middle];
+        }
+        
+        return ($numbers[$middle - 1] + $numbers[$middle]) / 2;
+    }
+
+    /**
+     * หาค่าต่ำสุด
+     * 
+     * @param array $numbers
+     * @return float|null
+     */
+    public static function min(array $numbers): ?float
+    {
+        return empty($numbers) ? null : min($numbers);
+    }
+
+    /**
+     * หาค่าสูงสุด
+     * 
+     * @param array $numbers
+     * @return float|null
+     */
+    public static function max(array $numbers): ?float
+    {
+        return empty($numbers) ? null : max($numbers);
+    }
+
+    /**
+     * หาผลรวม
+     * 
+     * @param array $numbers
+     * @return float
+     */
+    public static function sum(array $numbers): float
+    {
+        return array_sum($numbers);
+    }
+
+    /**
+     * ตรวจสอบว่าเป็นเลขคู่
+     * 
+     * @param int $number
+     * @return bool
+     */
+    public static function isEven(int $number): bool
+    {
+        return $number % 2 === 0;
+    }
+
+    /**
+     * ตรวจสอบว่าเป็นเลขคี่
+     * 
+     * @param int $number
+     * @return bool
+     */
+    public static function isOdd(int $number): bool
+    {
+        return $number % 2 !== 0;
+    }
+
+    /**
+     * ตรวจสอบว่าอยู่ในช่วง
+     * 
+     * @param float $number
+     * @param float $min
+     * @param float $max
+     * @return bool
+     */
+    public static function inRange(float $number, float $min, float $max): bool
+    {
+        return $number >= $min && $number <= $max;
+    }
+
+    /**
+     * จำกัดค่าให้อยู่ในช่วง
+     * 
+     * @param float $number
+     * @param float $min
+     * @param float $max
+     * @return float
+     */
+    public static function clamp(float $number, float $min, float $max): float
+    {
+        return max($min, min($max, $number));
+    }
+
+    /**
+     * แปลงเป็นเลขโรมัน
+     * 
+     * @param int $number
+     * @return string
+     */
+    public static function toRoman(int $number): string
+    {
+        $map = [
+            'M' => 1000, 'CM' => 900, 'D' => 500, 'CD' => 400,
+            'C' => 100, 'XC' => 90, 'L' => 50, 'XL' => 40,
+            'X' => 10, 'IX' => 9, 'V' => 5, 'IV' => 4, 'I' => 1
+        ];
+        
+        $result = '';
+        
+        foreach ($map as $roman => $value) {
+            $matches = intval($number / $value);
+            $result .= str_repeat($roman, $matches);
+            $number = $number % $value;
+        }
+        
+        return $result;
+    }
+
+    /**
+     * สร้างตัวเลขสุ่ม
+     * 
+     * @param int $min
+     * @param int $max
+     * @return int
+     */
+    public static function random(int $min = 0, int $max = 100): int
+    {
+        return random_int($min, $max);
+    }
+
+    /**
+     * คำนวณ VAT
+     * 
+     * @param float $price
+     * @param float $vatRate
+     * @return float
+     */
+    public static function vat(float $price, float $vatRate = 7): float
+    {
+        return $price * ($vatRate / 100);
+    }
+
+    /**
+     * คำนวณราคารวม VAT
+     * 
+     * @param float $price
+     * @param float $vatRate
+     * @return float
+     */
+    public static function priceWithVat(float $price, float $vatRate = 7): float
+    {
+        return $price + self::vat($price, $vatRate);
+    }
+
+    /**
+     * คำนวณราคาก่อน VAT
+     * 
+     * @param float $priceWithVat
+     * @param float $vatRate
+     * @return float
+     */
+    public static function priceBeforeVat(float $priceWithVat, float $vatRate = 7): float
+    {
+        return $priceWithVat / (1 + ($vatRate / 100));
+    }
+
+    /**
+     * คำนวณส่วนลด
+     * 
+     * @param float $price
+     * @param float $discount
+     * @return float
+     */
+    public static function discount(float $price, float $discount): float
+    {
+        return $price * ($discount / 100);
+    }
+
+    /**
+     * คำนวณราคาหลังส่วนลด
+     * 
+     * @param float $price
+     * @param float $discount
+     * @return float
+     */
+    public static function priceAfterDiscount(float $price, float $discount): float
+    {
+        return $price - self::discount($price, $discount);
+    }
+
+    /**
+     * แปลงเป็น Binary
+     * 
+     * @param int $number
+     * @return string
+     */
+    public static function toBinary(int $number): string
+    {
+        return decbin($number);
+    }
+
+    /**
+     * แปลงเป็น Hexadecimal
+     * 
+     * @param int $number
+     * @return string
+     */
+    public static function toHex(int $number): string
+    {
+        return dechex($number);
+    }
+
+    /**
+     * แปลงเป็น Octal
+     * 
+     * @param int $number
+     * @return string
+     */
+    public static function toOctal(int $number): string
+    {
+        return decoct($number);
+    }
+
+    /**
+     * แปลงจาก Binary
+     * 
+     * @param string $binary
+     * @return int
+     */
+    public static function fromBinary(string $binary): int
+    {
+        return bindec($binary);
+    }
+
+    /**
+     * แปลงจาก Hexadecimal
+     * 
+     * @param string $hex
+     * @return int
+     */
+    public static function fromHex(string $hex): int
+    {
+        return hexdec($hex);
+    }
+
+    /**
+     * แปลงจาก Octal
+     * 
+     * @param string $octal
+     * @return int
+     */
+    public static function fromOctal(string $octal): int
+    {
+        return octdec($octal);
+    }
+}

@@ -197,7 +197,7 @@ class User
     public function findById(int $userId): ?array
     {
         $stmt = $this->db->prepare("
-            SELECT id, username, email, created_at 
+            SELECT id, username, email, role, created_at 
             FROM users 
             WHERE id = ?
         ");
@@ -205,6 +205,17 @@ class User
         $user = $stmt->fetch();
 
         return $user ?: null;
+    }
+
+    /**
+     * Alias สำหรับ findById (เพื่อความเข้ากันได้)
+     * 
+     * @param int $userId ID ผู้ใช้
+     * @return array|null ข้อมูลผู้ใช้หรือ null
+     */
+    public function find(int $userId): ?array
+    {
+        return $this->findById($userId);
     }
 
     /**

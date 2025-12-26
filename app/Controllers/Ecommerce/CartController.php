@@ -19,6 +19,7 @@
 namespace App\Controllers\Ecommerce;
 
 use App\Core\Controller;
+use App\Core\View;
 use App\Models\Cart;
 
 class CartController extends Controller
@@ -49,49 +50,15 @@ class CartController extends Controller
         $items = $this->cartModel->getItems($userId);
         $totals = $this->cartModel->calculateTotal($userId);
 
-        echo "<h1>Shopping Cart</h1>";
-        echo "<p><a href='/products'>Continue Shopping</a> | <a href='/'>Home</a></p>";
-
-        if (empty($items)) {
-            echo "<p>Your cart is empty</p>";
-            return;
-        }
-
-        echo "<table border='1' cellpadding='10'>";
-        echo "<tr><th>Product</th><th>Price</th><th>Quantity</th><th>Subtotal</th><th>Actions</th></tr>";
-
-        foreach ($items as $item) {
-            echo "<tr>";
-            echo "<td>" . htmlspecialchars($item['name']) . "</td>";
-            echo "<td>$" . number_format($item['current_price'], 2) . "</td>";
-            echo "<td>";
-            echo "<form method='POST' action='/cart/update' style='display:inline;'>";
-            echo "<input type='hidden' name='product_id' value='" . $item['product_id'] . "'>";
-            echo "<input type='number' name='quantity' value='" . $item['qty'] . "' min='1' max='" . $item['stock'] . "' style='width:60px;'>";
-            echo "<button type='submit'>Update</button>";
-            echo "</form>";
-            echo "</td>";
-            echo "<td>$" . number_format($item['subtotal'], 2) . "</td>";
-            echo "<td>";
-            echo "<form method='POST' action='/cart/remove' style='display:inline;'>";
-            echo "<input type='hidden' name='product_id' value='" . $item['product_id'] . "'>";
-            echo "<button type='submit'>Remove</button>";
-            echo "</form>";
-            echo "</td>";
-            echo "</tr>";
-
-            // แสดงคำเตือนการเปลี่ยนแปลงราคาถ้ามี
-            if (abs($item['added_price'] - $item['current_price']) > 0.01) {
-                echo "<tr><td colspan='5' style='background:#ffffcc;'>";
-                echo "⚠️ Price changed: was $" . number_format($item['added_price'], 2);
-                echo " now $" . number_format($item['current_price'], 2);
-                echo "</td></tr>";
-            }
-        }
-
-        echo "</table>";
-        echo "<h3>Total: $" . number_format($totals['total'], 2) . "</h3>";
-        echo "<p><a href='/checkout'><button>Proceed to Checkout</button></a></p>";
+        $view = new View('cart/index', [
+            'cartItems' => $items,
+            'subtotal' => $totals['subtotal'] ?? 0,
+            'shipping' => 50, // ค่าจัดส่งคงที่
+            'discount' => 0,
+            'total' => ($totals['total'] ?? 0) + 50
+        ]);
+        
+        $view->layout('main')->show();
     }
 
     /**

@@ -94,6 +94,20 @@ class Logger
     }
 
     /**
+     * บันทึกคำเตือน
+     * 
+     * ใช้สำหรับ: สถานการณ์ที่น่าสนใจแต่ไม่ใช่ข้อผิดพลาด
+     * ตัวอย่าง: validation.failed, rate_limit.exceeded, slow_query
+     * 
+     * @param string $event ตัวระบุเหตุการณ์
+     * @param array $context ข้อมูลบริบทเพิ่มเติม
+     */
+    public function warning(string $event, array $context = []): void
+    {
+        $this->log('WARNING', $event, $context);
+    }
+
+    /**
      * เขียนรายการล็อก
      * 
      * รูปแบบล็อก:

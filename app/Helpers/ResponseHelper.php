@@ -20,13 +20,13 @@
  * }
  * 
  * การใช้งาน:
- * Response::success($data, 'Operation successful');
- * Response::error('Validation failed', $errors, 400);
+ * ResponseHelper::success($data, 'Operation successful');
+ * ResponseHelper::error('Validation failed', $errors, 400);
  */
 
 namespace App\Helpers;
 
-class Response
+class ResponseHelper
 {
     /**
      * ส่งการตอบกลับ JSON สำเร็จ

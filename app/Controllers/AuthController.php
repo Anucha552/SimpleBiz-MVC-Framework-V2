@@ -16,6 +16,7 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\View;
 use App\Models\User;
 
 class AuthController extends Controller
@@ -37,14 +38,8 @@ class AuthController extends Controller
      */
     public function showRegister(): void
     {
-        echo "<h1>Register</h1>";
-        echo "<form method='POST' action='/register'>";
-        echo "<input type='text' name='username' placeholder='Username' required><br>";
-        echo "<input type='email' name='email' placeholder='Email' required><br>";
-        echo "<input type='password' name='password' placeholder='Password' required><br>";
-        echo "<button type='submit'>Register</button>";
-        echo "</form>";
-        echo "<p><a href='/login'>Already have account? Login</a></p>";
+        $view = new View('auth/register');
+        $view->layout('main')->show();
     }
 
     /**
@@ -84,13 +79,8 @@ class AuthController extends Controller
      */
     public function showLogin(): void
     {
-        echo "<h1>Login</h1>";
-        echo "<form method='POST' action='/login'>";
-        echo "<input type='text' name='username' placeholder='Username' required><br>";
-        echo "<input type='password' name='password' placeholder='Password' required><br>";
-        echo "<button type='submit'>Login</button>";
-        echo "</form>";
-        echo "<p><a href='/register'>Don't have account? Register</a></p>";
+        $view = new View('auth/login');
+        $view->layout('main')->show();
     }
 
     /**

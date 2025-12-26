@@ -18,6 +18,7 @@
 namespace App\Controllers\Ecommerce;
 
 use App\Core\Controller;
+use App\Core\View;
 use App\Models\Product;
 
 class ProductController extends Controller
@@ -36,25 +37,11 @@ class ProductController extends Controller
     {
         $products = $this->productModel->getAll();
 
-        echo "<h1>Products</h1>";
-        echo "<p><a href='/'>Home</a> | <a href='/cart'>Cart</a></p>";
-
-        if (empty($products)) {
-            echo "<p>No products available</p>";
-            return;
-        }
-
-        echo "<div style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;'>";
-        foreach ($products as $product) {
-            echo "<div style='border: 1px solid #ccc; padding: 15px;'>";
-            echo "<h3>" . htmlspecialchars($product['name']) . "</h3>";
-            echo "<p>" . htmlspecialchars($product['description']) . "</p>";
-            echo "<p><strong>Price: $" . number_format($product['price'], 2) . "</strong></p>";
-            echo "<p>Stock: " . $product['stock'] . "</p>";
-            echo "<a href='/products/" . $product['id'] . "'>View Details</a>";
-            echo "</div>";
-        }
-        echo "</div>";
+        $view = new View('products/index', [
+            'products' => $products
+        ]);
+        
+        $view->layout('main')->show();
     }
 
     /**
@@ -80,21 +67,14 @@ class ProductController extends Controller
             return;
         }
 
-        echo "<h1>" . htmlspecialchars($product['name']) . "</h1>";
-        echo "<p><a href='/products'>Back to Products</a></p>";
-        echo "<p>" . htmlspecialchars($product['description']) . "</p>";
-        echo "<p><strong>Price: $" . number_format($product['price'], 2) . "</strong></p>";
-        echo "<p>Stock: " . $product['stock'] . "</p>";
-        echo "<p>Status: " . $product['status'] . "</p>";
+        // ดึงสินค้าที่เกี่ยวข้อง (optional)
+        $relatedProducts = [];
 
-        if ($product['status'] === 'active' && $product['stock'] > 0) {
-            echo "<form method='POST' action='/cart/add'>";
-            echo "<input type='hidden' name='product_id' value='" . $product['id'] . "'>";
-            echo "<input type='number' name='quantity' value='1' min='1' max='" . $product['stock'] . "'>";
-            echo "<button type='submit'>Add to Cart</button>";
-            echo "</form>";
-        } else {
-            echo "<p><strong>Out of Stock</strong></p>";
-        }
+        $view = new View('products/show', [
+            'product' => $product,
+            'relatedProducts' => $relatedProducts
+        ]);
+        
+        $view->layout('main')->show();
     }
 }

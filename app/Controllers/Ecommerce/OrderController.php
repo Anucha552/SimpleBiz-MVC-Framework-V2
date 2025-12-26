@@ -22,6 +22,7 @@
 namespace App\Controllers\Ecommerce;
 
 use App\Core\Controller;
+use App\Core\View;
 use App\Models\Order;
 use App\Models\Cart;
 
@@ -127,29 +128,11 @@ class OrderController extends Controller
         $userId = $this->getUserId();
         $orders = $this->orderModel->getUserOrders($userId);
 
-        echo "<h1>My Orders</h1>";
-        echo "<p><a href='/'>Home</a> | <a href='/products'>Products</a></p>";
-
-        if (empty($orders)) {
-            echo "<p>You have no orders yet.</p>";
-            echo "<p><a href='/products'>Start Shopping</a></p>";
-            return;
-        }
-
-        echo "<table border='1' cellpadding='10'>";
-        echo "<tr><th>Order ID</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th></tr>";
-
-        foreach ($orders as $order) {
-            echo "<tr>";
-            echo "<td>#" . $order['id'] . "</td>";
-            echo "<td>$" . number_format($order['total'], 2) . "</td>";
-            echo "<td>" . ucfirst($order['status']) . "</td>";
-            echo "<td>" . date('M j, Y', strtotime($order['created_at'])) . "</td>";
-            echo "<td><a href='/orders/" . $order['id'] . "'>View Details</a></td>";
-            echo "</tr>";
-        }
-
-        echo "</table>";
+        $view = new View('orders/index', [
+            'orders' => $orders
+        ]);
+        
+        $view->layout('main')->show();
     }
 
     /**
@@ -186,25 +169,10 @@ class OrderController extends Controller
             return;
         }
 
-        echo "<h1>Order #" . $order['id'] . "</h1>";
-        echo "<p><a href='/orders'>Back to Orders</a></p>";
-        echo "<p><strong>Status:</strong> " . ucfirst($order['status']) . "</p>";
-        echo "<p><strong>Date:</strong> " . date('M j, Y g:i A', strtotime($order['created_at'])) . "</p>";
-
-        echo "<h2>Items</h2>";
-        echo "<table border='1' cellpadding='10'>";
-        echo "<tr><th>Product</th><th>Price</th><th>Quantity</th><th>Subtotal</th></tr>";
-
-        foreach ($order['items'] as $item) {
-            echo "<tr>";
-            echo "<td>" . htmlspecialchars($item['product_name']) . "</td>";
-            echo "<td>$" . number_format($item['price'], 2) . "</td>";
-            echo "<td>" . $item['qty'] . "</td>";
-            echo "<td>$" . number_format($item['subtotal'], 2) . "</td>";
-            echo "</tr>";
-        }
-
-        echo "</table>";
-        echo "<h3>Total: $" . number_format($order['total'], 2) . "</h3>";
+        $view = new View('orders/show', [
+            'order' => $order
+        ]);
+        
+        $view->layout('main')->show();
     }
 }
