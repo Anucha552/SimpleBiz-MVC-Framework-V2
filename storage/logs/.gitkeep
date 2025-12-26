@@ -1,0 +1,25 @@
+# Storage Directory
+
+This directory contains application storage:
+
+- **logs/** - Application and security logs
+
+## Log Files
+
+- `app.log` - Main application log
+  - INFO: Normal operations
+  - SECURITY: Security events
+  - ERROR: Application errors
+
+## Log Format
+
+```
+[timestamp] [level] event {context} user_id=X ip=X.X.X.X route=/path
+```
+
+## Important
+
+- Ensure this directory is writable (chmod 755)
+- Do NOT commit log files to version control
+- Rotate logs regularly in production
+- Monitor security logs for threats

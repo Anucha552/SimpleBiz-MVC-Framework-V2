@@ -1,0 +1,36 @@
+# SimpleBiz MVC Framework V2 - .gitignore
+#
+# Purpose: Prevent sensitive and generated files from being committed
+
+# Environment configuration (contains credentials)
+.env
+
+# Composer dependencies
+/vendor/
+composer.lock
+
+# Logs (may contain sensitive data)
+/storage/logs/*.log
+/storage/logs/*.txt
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# PHP
+*.cache
+.phpunit.result.cache
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~

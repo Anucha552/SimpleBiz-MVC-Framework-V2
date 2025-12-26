@@ -1,0 +1,12 @@
+# Apache Configuration for SimpleBiz MVC Framework
+#
+# Purpose: Redirect all requests to public/index.php
+# Place this file in the root directory
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Redirect to public directory
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ /public/$1 [L]
+</IfModule>
