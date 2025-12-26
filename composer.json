@@ -1,8 +1,25 @@
 {
     "name": "simplebiz/mvc-framework-v2",
-    "description": "SimpleBiz MVC Framework V2 - A clean, secure, extensible MVC framework with E-Commerce foundation",
+    "description": "SimpleBiz MVC Framework V2 - เฟรมเวิร์ก MVC ที่สะอาด ปลอดภัย และขยายได้ง่าย พร้อมโครงสร้างพื้นฐานสำหรับระบบอีคอมเมิร์ซ",
     "type": "project",
     "license": "MIT",
+    "keywords": [
+        "mvc",
+        "framework",
+        "php",
+        "e-commerce",
+        "shopping-cart",
+        "restful-api",
+        "psr-4",
+        "router",
+        "middleware",
+        "thai"
+    ],
+    "homepage": "https://github.com/simplebiz/mvc-framework-v2",
+    "support": {
+        "issues": "https://github.com/simplebiz/mvc-framework-v2/issues",
+        "source": "https://github.com/simplebiz/mvc-framework-v2"
+    },
     "authors": [
         {
             "name": "SimpleBiz Development Team",

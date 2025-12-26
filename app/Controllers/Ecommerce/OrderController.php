@@ -1,22 +1,22 @@
 <?php
 /**
- * ORDER CONTROLLER (WEB)
+ * ตัวควบคุมคำสั่งซื้อ (WEB)
  * 
- * Purpose: Handle order checkout and order history
- * Security: Authenticated users only, server-side validation
+ * จุดประสงค์: จัดการการชำระเงินและประวัติคำสั่งซื้อ
+ * ความปลอดภัย: ผู้ใช้ที่ยืนยันตัวตนเท่านั้น, การตรวจสอบฝั่งเซิร์ฟเวอร์
  * 
- * Responsibilities:
- * - Display checkout page
- * - Create order from cart
- * - Show order history
- * - Display order details
+ * ความรับผิดชอบ:
+ * - แสดงหน้าชำระเงิน
+ * - สร้างคำสั่งซื้อจากตะกร้า
+ * - แสดงประวัติคำสั่งซื้อ
+ * - แสดงรายละเอียดคำสั่งซื้อ
  * 
- * THIN CONTROLLER:
- * - Complex order logic in Order model
- * - This just handles HTTP layer
+ * ตัวควบคุมแบบบาง:
+ * - ตรรกะคำสั่งซื้อที่ซับซ้อนอยู่ในโมเดล Order
+ * - ตัวควบคุมนี้เพียงจัดการชั้น HTTP
  * 
- * Note: This is a PLACEHOLDER checkout
- * Real payment integration would happen here (Stripe, PayPal, etc.)
+ * หมายเหตุ: นี่เป็นการชำระเงินชั่วคราว
+ * การรวมระบบชำระเงินจริงจะเกิดขึ้นที่นี่ (Stripe, PayPal, ฯลฯ)
  */
 
 namespace App\Controllers\Ecommerce;
@@ -32,7 +32,7 @@ class OrderController extends Controller
 
     public function __construct()
     {
-        // Start session if not already started
+        // เริ่มเซสชันถ้ายังไม่ได้เริ่ม
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -42,7 +42,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Display checkout page
+     * แสดงหน้าชำระเงิน
      */
     public function checkout(): void
     {
@@ -88,7 +88,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Confirm and create order
+     * ยืนยันและสร้างคำสั่งซื้อ
      */
     public function confirm(): void
     {
@@ -99,7 +99,7 @@ class OrderController extends Controller
 
         $userId = $this->getUserId();
 
-        // Create order from cart
+        // สร้างคำสั่งซื้อจากตะกร้า
         $result = $this->orderModel->createFromCart($userId);
 
         if ($result['success']) {
@@ -115,7 +115,7 @@ class OrderController extends Controller
     }
 
     /**
-     * List user's orders
+     * แสดงรายการคำสั่งซื้อของผู้ใช้
      */
     public function index(): void
     {
@@ -153,9 +153,9 @@ class OrderController extends Controller
     }
 
     /**
-     * Show order details
+     * แสดงรายละเอียดคำสั่งซื้อ
      * 
-     * @param string $id Order ID from URL
+     * @param string $id รหัสคำสั่งซื้อจาก URL
      */
     public function show(string $id): void
     {
@@ -179,7 +179,7 @@ class OrderController extends Controller
             return;
         }
 
-        // Verify order belongs to current user
+        // ตรวจสอบว่าคำสั่งซื้อเป็นของผู้ใช้ปัจจุบัน
         if ($order['user_id'] !== $this->getUserId()) {
             echo "<h1>Access Denied</h1>";
             echo "<p><a href='/orders'>Back to Orders</a></p>";

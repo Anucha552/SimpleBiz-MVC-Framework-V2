@@ -1,12 +1,12 @@
 <?php
 /**
- * VIEW CLASS
+ * คลาสวิว
  * 
- * Purpose: Handles view rendering with layout support
- * Features: Master layouts, sections, content blocks
+ * จุดประสงค์: จัดการการแสดงผลวิวพร้อมรองรับเลย์เอาท์
+ * ฟีเจอร์: เลย์เอาท์หลัก, ส่วน, บล็อกเนื้อหา
  * 
- * This class is optional - controllers can render views directly
- * Use this when you need advanced features like layouts
+ * คลาสนี้เป็นตัวเลือก - ตัวควบคุมสามารถแสดงผลวิวได้โดยตรง
+ * ใช้สิ่งนี้เมื่อคุณต้องการฟีเจอร์ขั้นสูงเช่นเลย์เอาท์
  */
 
 namespace App\Core;
@@ -14,35 +14,35 @@ namespace App\Core;
 class View
 {
     /**
-     * Current view file
+     * ไฟล์วิวปัจจุบัน
      */
     private string $view;
 
     /**
-     * Data to pass to view
+     * ข้อมูลที่จะส่งไปยังวิว
      */
     private array $data;
 
     /**
-     * Layout file (optional)
+     * ไฟล์เลย์เอาท์ (ไม่บังคับ)
      */
     private ?string $layout = null;
 
     /**
-     * Content sections
+     * ส่วนของเนื้อหา
      */
     private array $sections = [];
 
     /**
-     * Current section being captured
+     * ส่วนปัจจุบันที่กำลังจับภาพ
      */
     private ?string $currentSection = null;
 
     /**
-     * Create new View instance
+     * สร้างอินสแตนซ์ View ใหม่
      * 
-     * @param string $view View file path
-     * @param array $data Data to pass to view
+     * @param string $view เส้นทางไฟล์วิว
+     * @param array $data ข้อมูลที่จะส่งไปยังวิว
      */
     public function __construct(string $view, array $data = [])
     {
@@ -51,9 +51,9 @@ class View
     }
 
     /**
-     * Set layout for this view
+     * กำหนดเลย์เอาท์สำหรับวิวนี้
      * 
-     * @param string $layout Layout file name
+     * @param string $layout ชื่อไฟล์เลย์เอาท์
      * @return self
      */
     public function layout(string $layout): self
@@ -63,14 +63,14 @@ class View
     }
 
     /**
-     * Start a section
+     * เริ่มส่วน
      * 
-     * Usage in view file:
+     * การใช้งานในไฟล์วิว:
      * <?php $this->section('title'); ?>
      * My Page Title
      * <?php $this->endSection(); ?>
      * 
-     * @param string $name Section name
+     * @param string $name ชื่อส่วน
      */
     public function section(string $name): void
     {
@@ -79,7 +79,7 @@ class View
     }
 
     /**
-     * End current section
+     * จบส่วนปัจจุบัน
      */
     public function endSection(): void
     {
@@ -90,14 +90,14 @@ class View
     }
 
     /**
-     * Yield section content in layout
+     * แสดงเนื้อหาส่วนในเลย์เอาท์
      * 
-     * Usage in layout file:
+     * การใช้งานในไฟล์เลย์เอาท์:
      * <?= $this->yieldSection('title') ?>
      * 
-     * @param string $name Section name
-     * @param string $default Default content if section not set
-     * @return string Section content
+     * @param string $name ชื่อส่วน
+     * @param string $default เนื้อหาเริ่มต้นถ้าไม่มีการตั้งค่าส่วน
+     * @return string เนื้อหาส่วน
      */
     public function yieldSection(string $name, string $default = ''): string
     {
@@ -105,16 +105,16 @@ class View
     }
 
     /**
-     * Render the view
+     * แสดงผลวิว
      * 
-     * @return string Rendered HTML
+     * @return string HTML ที่แสดงผล
      */
     public function render(): string
     {
-        // Extract data to variables
+        // แยกข้อมูลเป็นตัวแปร
         extract($this->data);
 
-        // Render view content
+        // แสดงผลเนื้อหาวิว
         ob_start();
         $viewFile = __DIR__ . '/../Views/' . $this->view . '.php';
         
@@ -125,15 +125,15 @@ class View
         require $viewFile;
         $content = ob_get_clean();
 
-        // If no layout, return content directly
+        // ถ้าไม่มีเลย์เอาท์ ให้คืนค่าเนื้อหาโดยตรง
         if (!$this->layout) {
             return $content;
         }
 
-        // Store content in 'content' section
+        // เก็บเนื้อหาในส่วน 'content'
         $this->sections['content'] = $content;
 
-        // Render layout
+        // แสดงผลเลย์เอาท์
         ob_start();
         $layoutFile = __DIR__ . '/../Views/layouts/' . $this->layout . '.php';
         
@@ -146,7 +146,7 @@ class View
     }
 
     /**
-     * Output rendered view
+     * แสดงผลวิวที่แสดงผลแล้ว
      */
     public function show(): void
     {

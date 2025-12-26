@@ -1,25 +1,25 @@
-# Storage Directory
+# โฟลเดอร์ Storage
 
-This directory contains application storage:
+โฟลเดอร์นี้เก็บข้อมูลของแอปพลิเคชัน:
 
-- **logs/** - Application and security logs
+- **logs/** - บันทึกการทำงานและความปลอดภัยของแอปพลิเคชัน
 
-## Log Files
+## ไฟล์บันทึก (Log Files)
 
-- `app.log` - Main application log
-  - INFO: Normal operations
-  - SECURITY: Security events
-  - ERROR: Application errors
+- `app.log` - บันทึกหลักของแอปพลิเคชัน
+  - INFO: การทำงานปกติ
+  - SECURITY: เหตุการณ์ด้านความปลอดภัย
+  - ERROR: ข้อผิดพลาดของแอปพลิเคชัน
 
-## Log Format
+## รูปแบบการบันทึก
 
 ```
 [timestamp] [level] event {context} user_id=X ip=X.X.X.X route=/path
 ```
 
-## Important
+## สำคัญ
 
-- Ensure this directory is writable (chmod 755)
-- Do NOT commit log files to version control
-- Rotate logs regularly in production
-- Monitor security logs for threats
+- ตรวจสอบให้แน่ใจว่าโฟลเดอร์นี้สามารถเขียนได้ (chmod 755)
+- ห้าม commit ไฟล์บันทึกไปยัง version control
+- หมุนเวียนไฟล์บันทึกเป็นประจำในสภาพแวดล้อมจริง
+- ตรวจสอบบันทึกความปลอดภัยเพื่อหาภัยคุกคาม

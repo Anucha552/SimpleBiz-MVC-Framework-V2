@@ -1,19 +1,19 @@
 <?php
 /**
- * APPLICATION CONFIGURATION
+ * ค่าคอนฟิกแอปพลิเคชัน
  * 
- * Purpose: Core application settings
+ * จุดประสงค์: การตั้งค่าหลักของแอปพลิเคชัน
  * 
- * Configuration Options:
- * - APP_NAME: Application name
- * - APP_ENV: Environment (development|production)
- * - APP_DEBUG: Debug mode (true|false)
- * - APP_URL: Base application URL
+ * ตัวเลือกการตั้งค่า:
+ * - APP_NAME: ชื่อแอปพลิเคชัน
+ * - APP_ENV: สภาพแวดล้อม (development|production)
+ * - APP_DEBUG: โหมดดีบัก (true|false)
+ * - APP_URL: URL หลักของแอปพลิเคชัน
  * 
- * IMPORTANT:
- * - Set APP_ENV=production in production
- * - Set APP_DEBUG=false in production
- * - Load sensitive config from .env file
+ * สำคัญ:
+ * - ตั้ง APP_ENV=production ในสภาพแวดล้อมจริง
+ * - ตั้ง APP_DEBUG=false ในสภาพแวดล้อมจริง
+ * - โหลดค่าคอนฟิกที่ละเอียดอ่อนจากไฟล์ .env
  */
 
 return [

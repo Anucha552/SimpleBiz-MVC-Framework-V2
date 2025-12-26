@@ -1,26 +1,26 @@
 /*
- * SHOPPING CART TABLES MIGRATION
+ * ไฟล์สร้างตารางตะกร้าสินค้า
  * 
- * Purpose: Manages user shopping carts and cart items
- * Security: Foreign keys ensure referential integrity
+ * จุดประสงค์: จัดการตะกร้าสินค้าและรายการในตะกร้าของผู้ใช้
+ * ความปลอดภัย: Foreign keys รับประกันความสมบูรณ์ของข้อมูล
  * 
- * CARTS TABLE:
- * - One cart per user session/account
- * - cart_id links to cart_items
+ * ตาราง CARTS:
+ * - หนึ่งตะกร้าต่อหนึ่ง session/บัญชีผู้ใช้
+ * - cart_id เชื่อมโยงไปยัง cart_items
  * 
- * CART_ITEMS TABLE:
- * - Stores individual products in cart
- * - price snapshot: stores price at time of adding (for reference)
- * - qty: quantity of product
+ * ตาราง CART_ITEMS:
+ * - เก็บสินค้าแต่ละรายการในตะกร้า
+ * - price snapshot: เก็บราคา ณ เวลาที่เพิ่ม (เพื่ออ้างอิง)
+ * - qty: จำนวนสินค้า
  * 
- * IMPORTANT SECURITY RULES:
- * - NEVER trust client-side prices for checkout
- * - Server MUST recalculate from products table
- * - cart_items.price is for display only, not calculation
- * - Validate qty > 0 and qty <= available stock
+ * กฎความปลอดภัยสำคัญ:
+ * - ห้ามเชื่อถือราคาที่มาจากฝั่งไคลเอนต์สำหรับการชำระเงิน
+ * - เซิร์ฟเวอร์ต้องคำนวณใหม่จากตาราง products เสมอ
+ * - cart_items.price ใช้สำหรับแสดงผลเท่านั้น ไม่ใช่สำหรับคำนวณ
+ * - ต้องตรวจสอบ qty > 0 และ qty <= สต็อกที่มีอยู่
  */
 
--- Main cart table (one per user)
+-- ตารางตะกร้าสินค้าหลัก (หนึ่งตะกร้าต่อหนึ่งผู้ใช้)
 CREATE TABLE IF NOT EXISTS carts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS carts (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Cart items table (products in cart)
+-- ตารางรายการในตะกร้า (สินค้าในตะกร้า)
 CREATE TABLE IF NOT EXISTS cart_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cart_id INT NOT NULL,

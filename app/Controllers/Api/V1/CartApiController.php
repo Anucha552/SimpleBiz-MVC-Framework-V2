@@ -1,18 +1,18 @@
 <?php
 /**
- * CART API CONTROLLER (V1)
+ * ตัวควบคุม API ตะกร้าสินค้า (V1)
  * 
- * Purpose: RESTful API for cart management
+ * จุดประสงค์: RESTful API สำหรับจัดการตะกร้าสินค้า
  * Base URL: /api/v1/cart
- * Security: Requires authentication
+ * ความปลอดภัย: ต้องการการยืนยันตัวตน
  * 
  * Endpoints:
- * - GET /api/v1/cart → Get cart contents
- * - POST /api/v1/cart/add → Add item to cart
- * - PUT /api/v1/cart/update → Update item quantity
- * - DELETE /api/v1/cart/remove/{product_id} → Remove item
+ * - GET /api/v1/cart → ดึงข้อมูลในตะกร้าสินค้า
+ * - POST /api/v1/cart/add → เพิ่มสินค้าลงตะกร้า
+ * - PUT /api/v1/cart/update → อัปเดตจำนวนสินค้า
+ * - DELETE /api/v1/cart/remove/{product_id} → ลบสินค้า
  * 
- * All endpoints require valid session or API key
+ * ทุก endpoints ต้องใช้เซสชันหรือ API key ที่ถูกต้อง
  */
 
 namespace App\Controllers\Api\V1;
@@ -26,7 +26,7 @@ class CartApiController extends Controller
 
     public function __construct()
     {
-        // Start session if not already started
+        // เริ่มเซสชันถ้ายังไม่ได้เริ่ม
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -36,7 +36,7 @@ class CartApiController extends Controller
 
     /**
      * GET /api/v1/cart
-     * Get cart contents
+     * ดึงข้อมูลในตะกร้าสินค้า
      */
     public function index(): void
     {
@@ -58,7 +58,7 @@ class CartApiController extends Controller
 
     /**
      * POST /api/v1/cart/add
-     * Add item to cart
+     * เพิ่มสินค้าลงตะกร้า
      * 
      * Body: {"product_id": 1, "quantity": 2}
      */
@@ -69,14 +69,14 @@ class CartApiController extends Controller
             return;
         }
 
-        // Get JSON input
+        // รับข้อมูล JSON
         $input = json_decode(file_get_contents('php://input'), true);
 
         if (!$input) {
-            $input = $_POST; // Fallback to form data
+            $input = $_POST; // ใช้ form data แทน
         }
 
-        // Validate required fields
+        // ตรวจสอบฟิลด์ที่จำเป็น
         if (!isset($input['product_id']) || !isset($input['quantity'])) {
             $this->json(false, null, 'Missing required fields', [
                 'product_id' => 'Required',
@@ -108,7 +108,7 @@ class CartApiController extends Controller
 
     /**
      * PUT /api/v1/cart/update
-     * Update item quantity
+     * อัปเดตจำนวนสินค้า
      * 
      * Body: {"product_id": 1, "quantity": 3}
      */
@@ -119,7 +119,7 @@ class CartApiController extends Controller
             return;
         }
 
-        // Get JSON input
+        // รับข้อมูล JSON
         $input = json_decode(file_get_contents('php://input'), true);
 
         if (!$input) {
@@ -154,9 +154,9 @@ class CartApiController extends Controller
 
     /**
      * DELETE /api/v1/cart/remove/{product_id}
-     * Remove item from cart
+     * ลบสินค้าออกจากตะกร้า
      * 
-     * @param string $productId Product ID
+     * @param string $productId รหัสสินค้า
      */
     public function remove(string $productId): void
     {

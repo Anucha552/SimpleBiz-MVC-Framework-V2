@@ -1,22 +1,22 @@
 <?php
 /**
- * DATABASE CONFIGURATION
+ * ค่าคอนฟิกฐานข้อมูล
  * 
- * Purpose: Database connection settings
+ * จุดประสงค์: การตั้งค่าการเชื่อมต่อฐานข้อมูล
  * 
- * Configuration:
- * - host: Database server hostname
- * - port: Database server port
- * - database: Database name
- * - username: Database username
- * - password: Database password
- * - charset: Character encoding
+ * การตั้งค่า:
+ * - host: ชื่อโฮสต์ของเซิร์ฟเวอร์ฐานข้อมูล
+ * - port: พอร์ตของเซิร์ฟเวอร์ฐานข้อมูล
+ * - database: ชื่อฐานข้อมูล
+ * - username: ชื่อผู้ใช้ฐานข้อมูล
+ * - password: รหัสผ่านฐานข้อมูล
+ * - charset: การเข้ารหัสอักขระ
  * 
- * SECURITY:
- * - Load credentials from environment variables
- * - NEVER commit credentials to version control
- * - Use .env file for local development
- * - Use environment variables in production
+ * ความปลอดภัย:
+ * - โหลดข้อมูลการเข้าถึงจากตัวแปรสภาพแวดล้อม
+ * - ห้าม commit ข้อมูลการเข้าถึงไปยัง version control
+ * - ใช้ไฟล์ .env สำหรับการพัฒนาในเครื่อง
+ * - ใช้ตัวแปรสภาพแวดล้อมในสภาพแวดล้อมจริง
  */
 
 return [

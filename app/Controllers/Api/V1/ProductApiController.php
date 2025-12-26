@@ -1,16 +1,16 @@
 <?php
 /**
- * PRODUCT API CONTROLLER (V1)
+ * ตัวควบคุม API สินค้า (V1)
  * 
- * Purpose: RESTful API for product management
+ * จุดประสงค์: RESTful API สำหรับจัดการสินค้า
  * Base URL: /api/v1/products
  * 
  * Endpoints:
- * - GET /api/v1/products → List all products
- * - GET /api/v1/products/{id} → Get product details
- * - GET /api/v1/products/search → Search products
+ * - GET /api/v1/products → แสดงรายการสินค้าทั้งหมด
+ * - GET /api/v1/products/{id} → ดึงรายละเอียดสินค้า
+ * - GET /api/v1/products/search → ค้นหาสินค้า
  * 
- * Response Format:
+ * รูปแบบการตอบกลับ:
  * {
  *   "success": true|false,
  *   "data": {...},
@@ -18,7 +18,7 @@
  *   "errors": [...]
  * }
  * 
- * This controller returns JSON only (no HTML)
+ * ตัวควบคุมนี้คืนค่าเป็น JSON เท่านั้น (ไม่มี HTML)
  */
 
 namespace App\Controllers\Api\V1;
@@ -37,7 +37,7 @@ class ProductApiController extends Controller
 
     /**
      * GET /api/v1/products
-     * List all products
+     * แสดงรายการสินค้าทั้งหมด
      */
     public function index(): void
     {
@@ -48,9 +48,9 @@ class ProductApiController extends Controller
 
     /**
      * GET /api/v1/products/{id}
-     * Get product by ID
+     * ดึงข้อมูลสินค้าจาก ID
      * 
-     * @param string $id Product ID
+     * @param string $id รหัสสินค้า
      */
     public function show(string $id): void
     {
@@ -73,7 +73,7 @@ class ProductApiController extends Controller
 
     /**
      * GET /api/v1/products/search?q=keyword
-     * Search products
+     * ค้นหาสินค้า
      */
     public function search(): void
     {

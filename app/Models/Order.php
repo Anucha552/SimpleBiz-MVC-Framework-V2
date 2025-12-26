@@ -1,28 +1,28 @@
 <?php
 /**
- * ORDER MODEL
+ * โมเดลคำสั่งซื้อ
  * 
- * Purpose: Manages order creation and lifecycle
- * Security: Server-side total calculation, stock validation, price verification
+ * จุดประสงค์: จัดการการสร้างคำสั่งซื้อและวงจรชีวิต
+ * ความปลอดภัย: การคำนวณยอดรวมฝั่งเซิร์ฟเวอร์, การตรวจสอบสต็อก, การตรวจสอบราคา
  * 
- * Business Rules:
- * - Orders created from cart items
- * - Prices RECALCULATED from products table (NEVER trust client)
- * - Stock validated and decremented atomically
- * - Order status: pending → paid → shipped → cancelled
- * - Stock returned on cancellation
+ * กฎทางธุรกิจ:
+ * - คำสั่งซื้อถูกสร้างจากรายการตะกร้า
+ * - ราคาถูกคำนวณใหม่จากตาราง products (ห้ามเชื่อถือไคลเอนต์)
+ * - สต็อกถูกตรวจสอบและลดลงแบบอะตอมิก
+ * - สถานะคำสั่งซื้อ: pending → paid → shipped → cancelled
+ * - คืนสต็อกเมื่อยกเลิก
  * 
- * CRITICAL SECURITY RULES:
- * - ALWAYS recalculate total from current product prices
- * - Validate stock availability before order creation
- * - Use database transactions for atomicity
- * - Log any price discrepancies (tamper attempts)
- * - Decrease stock ONLY after successful order creation
+ * กฎความปลอดภัยสำคัญ:
+ * - คำนวณยอดรวมใหม่ทุกครั้งจากราคาสินค้าปัจจุบัน
+ * - ตรวจสอบสต็อกที่มีก่อนสร้างคำสั่งซื้อ
+ * - ใช้ทรานแซกชันของฐานข้อมูลเพื่อความสมบูรณ์
+ * - บันทึกความแตกต่างของราคา (ความพยายามจัดการ)
+ * - ลดสต็อกหลังจากสร้างคำสั่งซื้อสำเร็จเท่านั้น
  * 
- * Why separate order and order_items?
- * - order: Header info (user, total, status)
- * - order_items: Line items (snapshot at purchase time)
- * - If product deleted later, order history preserved
+ * ทำไมต้องแยก order และ order_items?
+ * - order: ข้อมูลส่วนหัว (ผู้ใช้, ยอดรวม, สถานะ)
+ * - order_items: รายการสินค้า (ภาพร่วม snapshot ณ เวลาซื้อ)
+ * - ถ้าสินค้าถูกลบภายหลัง ประวัติคำสั่งซื้อยังคงอยู่
  */
 
 namespace App\Models;
@@ -43,20 +43,20 @@ class Order
     }
 
     /**
-     * Create order from cart
+     * สร้างคำสั่งซื้อจากตะกร้า
      * 
-     * Process (ATOMIC TRANSACTION):
-     * 1. Get cart items
-     * 2. Validate stock for all items
-     * 3. Recalculate total from current prices
-     * 4. Create order record
-     * 5. Create order_items records
-     * 6. Decrease stock for all products
-     * 7. Clear cart
+     * กระบวนการ (ทรานแซกชันแบบอะตอมิก):
+     * 1. ดึงรายการตะกร้า
+     * 2. ตรวจสอบสต็อกสำหรับรายการทั้งหมด
+     * 3. คำนวณยอดรวมใหม่จากราคาปัจจุบัน
+     * 4. สร้างรีคอร์ดคำสั่งซื้อ
+     * 5. สร้างรีคอร์ด order_items
+     * 6. ลดสต็อกสินค้าทั้งหมด
+     * 7. ล้างตะกร้า
      * 
-     * If ANY step fails, entire transaction is rolled back
+     * ถ้าขั้นตอนใดล้มเหลว ทรานแซกชันทั้งหมดจะถูก rollback
      * 
-     * @param int $userId User ID
+     * @param int $userId ID ผู้ใช้
      * @return array ['success' => bool, 'message' => string, 'order_id' => int|null]
      */
     public function createFromCart(int $userId): array
@@ -64,23 +64,23 @@ class Order
         $cartModel = new Cart();
         $productModel = new Product();
 
-        // Get cart items
+        // ดึงรายการตะกร้า
         $cartItems = $cartModel->getItems($userId);
 
         if (empty($cartItems)) {
             return ['success' => false, 'message' => 'Cart is empty'];
         }
 
-        // Start transaction
+        // เริ่มทรานแซกชัน
         $this->db->beginTransaction();
 
         try {
-            // Step 1: Validate stock and recalculate total
+            // ขั้นที่ 1: ตรวจสอบสต็อกและคำนวณยอดรวมใหม่
             $total = 0;
             $orderItems = [];
 
             foreach ($cartItems as $item) {
-                // Check availability (stock + status)
+                // ตรวจสอบความพร้อม (สต็อก + สถานะ)
                 $availability = $productModel->checkAvailability(
                     $item['product_id'],
                     $item['qty']
@@ -93,8 +93,8 @@ class Order
                 $product = $availability['product'];
                 $currentPrice = $product['price'];
 
-                // SECURITY: Check for price manipulation
-                // If added_price differs significantly from current_price, log it
+                // ความปลอดภัย: ตรวจสอบการจัดการราคา
+                // ถ้า added_price แตกต่างจาก current_price มาก ให้บันทึก
                 $priceDiff = abs($item['added_price'] - $currentPrice);
                 if ($priceDiff > 0.01) {
                     $this->logger->security('order.price_change_detected', [
@@ -105,7 +105,7 @@ class Order
                     ]);
                 }
 
-                // Use CURRENT price for order calculation
+                // ใช้ราคาปัจจุบันสำหรับการคำนวณคำสั่งซื้อ
                 $subtotal = $currentPrice * $item['qty'];
                 $total += $subtotal;
 
@@ -118,7 +118,7 @@ class Order
                 ];
             }
 
-            // Step 2: Create order record
+            // ขั้นที่ 2: สร้างรีคอร์ดคำสั่งซื้อ
             $stmt = $this->db->prepare("
                 INSERT INTO orders (user_id, total, status) 
                 VALUES (?, ?, 'pending')
@@ -126,7 +126,7 @@ class Order
             $stmt->execute([$userId, $total]);
             $orderId = $this->db->lastInsertId();
 
-            // Step 3: Create order_items records
+            // ขั้นที่ 3: สร้างรีคอร์ด order_items
             $stmt = $this->db->prepare("
                 INSERT INTO order_items 
                 (order_id, product_id, product_name, qty, price, subtotal) 
@@ -144,7 +144,7 @@ class Order
                 ]);
             }
 
-            // Step 4: Decrease stock for all products
+            // ขั้นที่ 4: ลดสต็อกสินค้าทั้งหมด
             foreach ($orderItems as $item) {
                 $success = $productModel->decreaseStock(
                     $item['product_id'],
@@ -156,10 +156,10 @@ class Order
                 }
             }
 
-            // Step 5: Clear cart
+            // ขั้นที่ 5: ล้างตะกร้า
             $cartModel->clear($userId);
 
-            // Commit transaction
+            // Commit ทรานแซกชัน
             $this->db->commit();
 
             $this->logger->info('order.created', [
@@ -175,7 +175,7 @@ class Order
                 'order_id' => $orderId,
             ];
         } catch (\Exception $e) {
-            // Rollback on any error
+            // Rollback เมื่อเกิดข้อผิดพลาด
             $this->db->rollBack();
 
             $this->logger->error('order.create_failed', [
@@ -191,10 +191,10 @@ class Order
     }
 
     /**
-     * Get order by ID
+     * ดึงคำสั่งซื้อจาก ID
      * 
-     * @param int $orderId Order ID
-     * @return array|null Order data or null
+     * @param int $orderId ID คำสั่งซื้อ
+     * @return array|null ข้อมูลคำสั่งซื้อหรือ null
      */
     public function findById(int $orderId): ?array
     {
@@ -210,10 +210,10 @@ class Order
     }
 
     /**
-     * Get order with items
+     * ดึงคำสั่งซื้อพร้อมรายการสินค้า
      * 
-     * @param int $orderId Order ID
-     * @return array|null Order with items or null
+     * @param int $orderId ID คำสั่งซื้อ
+     * @return array|null คำสั่งซื้อพร้อมรายการหรือ null
      */
     public function getWithItems(int $orderId): ?array
     {
@@ -223,7 +223,7 @@ class Order
             return null;
         }
 
-        // Get order items
+        // ดึงรายการคำสั่งซื้อ
         $stmt = $this->db->prepare("
             SELECT 
                 id, product_id, product_name, qty, price, subtotal 
@@ -237,10 +237,10 @@ class Order
     }
 
     /**
-     * Get user orders
+     * ดึงคำสั่งซื้อของผู้ใช้
      * 
-     * @param int $userId User ID
-     * @return array Orders array
+     * @param int $userId ID ผู้ใช้
+     * @return array อาร์เรย์คำสั่งซื้อ
      */
     public function getUserOrders(int $userId): array
     {
@@ -255,15 +255,15 @@ class Order
     }
 
     /**
-     * Update order status
+     * อัปเดตสถานะคำสั่งซื้อ
      * 
-     * Valid transitions:
+     * การเปลี่ยนสถานะที่ถูกต้อง:
      * - pending → paid
      * - paid → shipped
      * - pending/paid → cancelled
      * 
-     * @param int $orderId Order ID
-     * @param string $status New status
+     * @param int $orderId ID คำสั่งซื้อ
+     * @param string $status สถานะใหม่
      * @return array ['success' => bool, 'message' => string]
      */
     public function updateStatus(int $orderId, string $status): array
@@ -280,7 +280,7 @@ class Order
             return ['success' => false, 'message' => 'Order not found'];
         }
 
-        // If cancelling, return stock
+        // ถ้ายกเลิก คืนสต็อก
         if ($status === 'cancelled' && $order['status'] !== 'cancelled') {
             $this->returnStock($orderId);
         }
@@ -302,9 +302,9 @@ class Order
     }
 
     /**
-     * Return stock when order is cancelled
+     * คืนสต็อกเมื่อคำสั่งซื้อถูกยกเลิก
      * 
-     * @param int $orderId Order ID
+     * @param int $orderId ID คำสั่งซื้อ
      */
     private function returnStock(int $orderId): void
     {
@@ -329,11 +329,11 @@ class Order
     }
 
     /**
-     * Get all orders (admin function)
+     * ดึงคำสั่งซื้อทั้งหมด (ฟังก์ชันผู้ดูแลระบบ)
      * 
-     * @param int $limit Number of orders to retrieve
-     * @param int $offset Offset for pagination
-     * @return array Orders array
+     * @param int $limit จำนวนคำสั่งซื้อที่จะดึง
+     * @param int $offset จุดเริ่มสำหรับการแบ่งหน้า
+     * @return array อาร์เรย์คำสั่งซื้อ
      */
     public function getAll(int $limit = 50, int $offset = 0): array
     {

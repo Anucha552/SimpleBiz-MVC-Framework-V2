@@ -1,22 +1,22 @@
 /*
- * PRODUCTS TABLE MIGRATION
+ * ไฟล์สร้างตาราง PRODUCTS
  * 
- * Purpose: Stores product catalog for e-commerce
- * Security: Price stored as DECIMAL to prevent floating-point errors
+ * จุดประสงค์: เก็บแค็ตตาล็อกสินค้าสำหรับระบบอีคอมเมิร์ซ
+ * ความปลอดภัย: ราคาเก็บเป็น DECIMAL เพื่อป้องกันข้อผิดพลาดจากทศนิยม
  * 
- * Fields:
+ * ฟิลด์:
  * - id: Primary key
- * - name: Product name
- * - description: Product description
- * - price: Product price (DECIMAL for accuracy)
- * - stock: Available inventory (INT, cannot be negative)
- * - status: Product visibility (active/inactive)
- * - created_at: Product creation timestamp
+ * - name: ชื่อสินค้า
+ * - description: รายละเอียดสินค้า
+ * - price: ราคาสินค้า (DECIMAL เพื่อความแม่นยำ)
+ * - stock: สต็อกที่มีอยู่ (INT, ต้องไม่ติดลบ)
+ * - status: สถานะการแสดงสินค้า (active/inactive)
+ * - created_at: เวลาที่สร้างสินค้า
  * 
- * Business Rules:
- * - stock must be >= 0 (enforced by CHECK constraint)
- * - price must be >= 0
- * - status determines if product is visible to customers
+ * กฎทางธุรกิจ:
+ * - stock ต้อง >= 0 (บังคับด้วย CHECK constraint)
+ * - price ต้อง >= 0
+ * - status กำหนดว่าสินค้าแสดงให้ลูกค้าเห็นหรือไม่
  */
 
 CREATE TABLE IF NOT EXISTS products (

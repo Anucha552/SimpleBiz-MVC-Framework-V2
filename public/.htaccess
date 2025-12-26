@@ -1,38 +1,38 @@
-# Apache Configuration for Public Directory
+# การตั้งค่า Apache สำหรับโฟลเดอร์ Public
 #
-# Purpose: Front controller pattern - route all requests through index.php
-# Place this file in public/ directory
+# จุดประสงค์: รูปแบบ Front controller - เปลี่ยนเส้นทางคำขอทั้งหมดผ่าน index.php
+# วางไฟล์นี้ในโฟลเดอร์ public/
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Redirect Trailing Slashes If Not A Folder...
+    # เปลี่ยนเส้นทาง Trailing Slashes ถ้าไม่ใช่โฟลเดอร์...
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
     
-    # Send Requests To Front Controller...
+    # ส่งคำขอไปยัง Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
 
-# Security Headers
+# ส่วนหัวความปลอดภัย
 <IfModule mod_headers.c>
-    # Prevent clickjacking
+    # ป้องกัน clickjacking
     Header always set X-Frame-Options "SAMEORIGIN"
     
-    # Prevent MIME-type sniffing
+    # ป้องกันการตรวจสอบ MIME-type
     Header always set X-Content-Type-Options "nosniff"
     
-    # Enable XSS protection
+    # เปิดใช้งานการป้องกัน XSS
     Header always set X-XSS-Protection "1; mode=block"
     
-    # Referrer policy
+    # นโยบาย Referrer
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# PHP Security Settings
+# การตั้งค่าความปลอดภัยของ PHP
 <IfModule mod_php.c>
     php_flag display_errors Off
     php_flag log_errors On

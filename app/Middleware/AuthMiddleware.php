@@ -1,23 +1,23 @@
 <?php
 /**
- * AUTHENTICATION MIDDLEWARE
+ * MIDDLEWARE การยืนยันตัวตน
  * 
- * Purpose: Verify user is logged in before accessing protected routes
+ * จุดประสงค์: ตรวจสอบว่าผู้ใช้เข้าสู่ระบบก่อนเข้าถึงเส้นทางที่ป้องกัน
  * 
- * Usage:
- * Routes that require authentication use this middleware:
- * - /cart/* (all cart operations)
- * - /orders/* (all order operations)
- * - /checkout (checkout process)
+ * การใช้งาน:
+ * เส้นทางที่ต้องการการยืนยันตัวตนใช้ middleware นี้:
+ * - /cart/* (การดำเนินการตะกร้าทั้งหมด)
+ * - /orders/* (การดำเนินการคำสั่งซื้อทั้งหมด)
+ * - /checkout (กระบวนการชำระเงิน)
  * 
- * How It Works:
- * 1. Check if user_id exists in session
- * 2. If yes, allow request to continue
- * 3. If no, redirect to login page (web) or return 401 (API)
+ * วิธีการทำงาน:
+ * 1. ตรวจสอบว่า user_id มีอยู่ในเซสชันหรือไม่
+ * 2. ถ้าใช่ อนุญาตให้คำขอดำเนินการต่อ
+ * 3. ถ้าไม่ เปลี่ยนเส้นทางไปหน้าเข้าสู่ระบบ (web) หรือคืนค่า 401 (API)
  * 
- * SECURITY:
- * - Logs unauthorized access attempts
- * - Protects sensitive user data
+ * ความปลอดภัย:
+ * - บันทึกความพยายามเข้าถึงที่ไม่ได้รับอนุญาต
+ * - ป้องกันข้อมูลผู้ใช้ที่ละเอียดอ่อน
  */
 
 namespace App\Middleware;
@@ -31,7 +31,7 @@ class AuthMiddleware extends Middleware
 
     public function __construct()
     {
-        // Start session if not already started
+        // เริ่มเซสชันถ้ายังไม่ได้เริ่ม
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -40,35 +40,35 @@ class AuthMiddleware extends Middleware
     }
 
     /**
-     * Handle authentication check
+     * จัดการการตรวจสอบการยืนยันตัวตน
      * 
-     * @return bool True to continue, false to stop
+     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
      */
     public function handle(): bool
     {
-        // Check if user is authenticated
+        // ตรวจสอบว่าผู้ใช้ยืนยันตัวตนแล้วหรือไม่
         if ($this->isAuthenticated()) {
-            return true; // User is logged in, continue
+            return true; // ผู้ใช้เข้าสู่ระบบแล้ว ดำเนินการต่อ
         }
 
-        // User not authenticated - log attempt
+        // ผู้ใช้ไม่ได้ยืนยันตัวตน - บันทึกความพยายาม
         $this->logger->security('auth.unauthorized_access', [
             'route' => $_SERVER['REQUEST_URI'] ?? 'unknown',
             'method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
         ]);
 
-        // Determine if this is an API request or web request
+        // กำหนดว่าเป็นคำขอ API หรือคำขอ web
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         $isApiRequest = strpos($uri, '/api/') === 0;
 
         if ($isApiRequest) {
-            // API request - return JSON error
+            // คำขอ API - คืนค่าข้อผิดพลาด JSON
             $this->jsonError('Authentication required', 401);
         } else {
-            // Web request - redirect to login
+            // คำขอ web - เปลี่ยนเส้นทางไปหน้าเข้าสู่ระบบ
             $this->redirect('/login');
         }
 
-        return false; // Stop request processing
+        return false; // หยุดการประมวลผลคำขอ
     }
 }

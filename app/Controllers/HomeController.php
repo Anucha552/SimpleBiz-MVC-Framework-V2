@@ -1,8 +1,8 @@
 <?php
 /**
- * HOME CONTROLLER
+ * ตัวควบคุมหน้าหลัก
  * 
- * Purpose: Handles homepage and general pages
+ * จุดประสงค์: จัดการหน้าแรกและหน้าทั่วไป
  */
 
 namespace App\Controllers;
@@ -12,7 +12,7 @@ use App\Core\Controller;
 class HomeController extends Controller
 {
     /**
-     * Display homepage
+     * แสดงหน้าแรก
      */
     public function index(): void
     {

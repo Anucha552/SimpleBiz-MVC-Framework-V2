@@ -1,20 +1,20 @@
 <?php
 /**
- * ROUTER CLASS
+ * คลาสเราเตอร์
  * 
- * Purpose: Routes HTTP requests to appropriate controllers and methods
- * Features: Supports middleware, dynamic parameters, multiple HTTP methods
+ * จุดประสงค์: จัดเส้นทางคำขอ HTTP ไปยังตัวควบคุมและเมธอดที่เหมาะสม
+ * ฟีเจอร์: รองรับ middleware, พารามิเตอร์แบบไดนามิก, เมธอด HTTP หลายแบบ
  * 
- * How It Works:
- * 1. Routes are registered with HTTP method and pattern
- * 2. Incoming requests are matched against registered routes
- * 3. Middleware is executed before controller
- * 4. Controller method is invoked with extracted parameters
+ * วิธีการทำงาน:
+ * 1. เส้นทางถูกลงทะเบียนพร้อมเมธอด HTTP และรูปแบบ
+ * 2. คำขอที่เข้ามาจะถูกจับคู่กับเส้นทางที่ลงทะเบียนไว้
+ * 3. Middleware ถูกเรียกใช้ก่อนตัวควบคุม
+ * 4. เมธอดของตัวควบคุมถูกเรียกพร้อมพารามิเตอร์ที่แยกออกมา
  * 
- * Route Pattern Examples:
- * - /products → Static route
- * - /products/{id} → Dynamic parameter
- * - /api/v1/products/{id} → Nested with parameter
+ * ตัวอย่างรูปแบบเส้นทาง:
+ * - /products → เส้นทางแบบคงที่
+ * - /products/{id} → พารามิเตอร์แบบไดนามิก
+ * - /api/v1/products/{id} → แบบซ้อนพร้อมพารามิเตอร์
  */
 
 namespace App\Core;
@@ -22,8 +22,8 @@ namespace App\Core;
 class Router
 {
     /**
-     * Array of registered routes
-     * Structure: ['GET' => [...], 'POST' => [...], etc.]
+     * อาร์เรย์ของเส้นทางที่ลงทะเบียนไว้
+     * โครงสร้าง: ['GET' => [...], 'POST' => [...], ฯลฯ]
      */
     private array $routes = [
         'GET' => [],
@@ -33,11 +33,11 @@ class Router
     ];
 
     /**
-     * Register a GET route
+     * ลงทะเบียนเส้นทาง GET
      * 
-     * @param string $path Route pattern
-     * @param string $controller Controller@method format
-     * @param array $middleware Optional middleware classes
+     * @param string $path รูปแบบเส้นทาง
+     * @param string $controller รูปแบบ Controller@method
+     * @param array $middleware คลาส middleware (ไม่บังคับ)
      */
     public function get(string $path, string $controller, array $middleware = []): void
     {
@@ -45,11 +45,11 @@ class Router
     }
 
     /**
-     * Register a POST route
+     * ลงทะเบียนเส้นทาง POST
      * 
-     * @param string $path Route pattern
-     * @param string $controller Controller@method format
-     * @param array $middleware Optional middleware classes
+     * @param string $path รูปแบบเส้นทาง
+     * @param string $controller รูปแบบ Controller@method
+     * @param array $middleware คลาส middleware (ไม่บังคับ)
      */
     public function post(string $path, string $controller, array $middleware = []): void
     {
@@ -57,11 +57,11 @@ class Router
     }
 
     /**
-     * Register a PUT route
+     * ลงทะเบียนเส้นทาง PUT
      * 
-     * @param string $path Route pattern
-     * @param string $controller Controller@method format
-     * @param array $middleware Optional middleware classes
+     * @param string $path รูปแบบเส้นทาง
+     * @param string $controller รูปแบบ Controller@method
+     * @param array $middleware คลาส middleware (ไม่บังคับ)
      */
     public function put(string $path, string $controller, array $middleware = []): void
     {
@@ -69,11 +69,11 @@ class Router
     }
 
     /**
-     * Register a DELETE route
+     * ลงทะเบียนเส้นทาง DELETE
      * 
-     * @param string $path Route pattern
-     * @param string $controller Controller@method format
-     * @param array $middleware Optional middleware classes
+     * @param string $path รูปแบบเส้นทาง
+     * @param string $controller รูปแบบ Controller@method
+     * @param array $middleware คลาส middleware (ไม่บังคับ)
      */
     public function delete(string $path, string $controller, array $middleware = []): void
     {
@@ -81,12 +81,12 @@ class Router
     }
 
     /**
-     * Add route to routes array
+     * เพิ่มเส้นทางลงในอาร์เรย์เส้นทาง
      * 
-     * @param string $method HTTP method
-     * @param string $path Route pattern
-     * @param string $controller Controller@method format
-     * @param array $middleware Middleware classes
+     * @param string $method เมธอด HTTP
+     * @param string $path รูปแบบเส้นทาง
+     * @param string $controller รูปแบบ Controller@method
+     * @param array $middleware คลาส middleware
      */
     private function addRoute(string $method, string $path, string $controller, array $middleware): void
     {
@@ -97,27 +97,27 @@ class Router
     }
 
     /**
-     * Dispatch incoming request to appropriate controller
+     * ส่งคำขอที่เข้ามาไปยังตัวควบคุมที่เหมาะสม
      * 
-     * Process:
-     * 1. Get request method and URI
-     * 2. Find matching route pattern
-     * 3. Execute middleware chain
-     * 4. Invoke controller method with parameters
+     * กระบวนการ:
+     * 1. รับเมธอดคำขอและ URI
+     * 2. ค้นหารูปแบบเส้นทางที่ตรงกัน
+     * 3. เรียกใช้ลูกโซ่ middleware
+     * 4. เรียกเมธอดของตัวควบคุมพร้อมพารามิเตอร์
      * 
-     * @throws \Exception if route not found or controller invalid
+     * @throws \Exception ถ้าไม่พบเส้นทางหรือตัวควบคุมไม่ถูกต้อง
      */
     public function dispatch(): void
     {
         $method = $_SERVER['REQUEST_METHOD'];
         $uri = $this->getUri();
 
-        // Handle PUT/DELETE methods from form _method parameter
+        // จัดการเมธอด PUT/DELETE จากพารามิเตอร์ _method ของฟอร์ม
         if ($method === 'POST' && isset($_POST['_method'])) {
             $method = strtoupper($_POST['_method']);
         }
 
-        // Find matching route
+        // ค้นหาเส้นทางที่ตรงกัน
         $route = $this->matchRoute($method, $uri);
 
         if (!$route) {
@@ -125,21 +125,21 @@ class Router
             return;
         }
 
-        // Execute middleware chain
+        // เรียกใช้ลูกโซ่ middleware
         foreach ($route['middleware'] as $middlewareClass) {
             $middleware = new $middlewareClass();
             $result = $middleware->handle();
             
-            // If middleware returns false, stop execution
+            // ถ้า middleware คืนค่า false ให้หยุดการทำงาน
             if ($result === false) {
                 return;
             }
         }
 
-        // Parse controller and method
+        // แยกตัวควบคุมและเมธอด
         [$controllerClass, $methodName] = explode('@', $route['controller']);
         
-        // Instantiate controller
+        // สร้างอินสแตนซ์ตัวควบคุม
         if (!class_exists($controllerClass)) {
             throw new \Exception("Controller {$controllerClass} not found");
         }
@@ -150,19 +150,19 @@ class Router
             throw new \Exception("Method {$methodName} not found in {$controllerClass}");
         }
 
-        // Invoke controller method with parameters
+        // เรียกเมธอดของตัวควบคุมพร้อมพารามิเตอร์
         call_user_func_array([$controller, $methodName], $route['params']);
     }
 
     /**
-     * Match incoming URI against registered routes
+     * จับคู่ URI ที่เข้ามากับเส้นทางที่ลงทะเบียนไว้
      * 
-     * Converts route patterns like /products/{id} to regex
-     * Extracts parameter values from URI
+     * แปลงรูปแบบเส้นทางเช่น /products/{id} เป็น regex
+     * แยกค่าพารามิเตอร์จาก URI
      * 
-     * @param string $method HTTP method
-     * @param string $uri Request URI
-     * @return array|null Matched route with params or null
+     * @param string $method เมธอด HTTP
+     * @param string $uri URI ของคำขอ
+     * @return array|null เส้นทางที่ตรงกันพร้อมพารามิเตอร์หรือ null
      */
     private function matchRoute(string $method, string $uri): ?array
     {
@@ -171,13 +171,13 @@ class Router
         }
 
         foreach ($this->routes[$method] as $pattern => $route) {
-            // Convert route pattern to regex
-            // {id} becomes named capture group (?P<id>[^/]+)
+            // แปลงรูปแบบเส้นทางเป็น regex
+            // {id} กลายเป็นกลุ่มจับที่มีชื่อ (?P<id>[^/]+)
             $regex = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[^/]+)', $pattern);
             $regex = '#^' . $regex . '$#';
 
             if (preg_match($regex, $uri, $matches)) {
-                // Extract parameter values
+                // แยกค่าพารามิเตอร์
                 $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
                 
                 return [
@@ -192,35 +192,35 @@ class Router
     }
 
     /**
-     * Get clean URI from request
+     * ดึง URI ที่สะอาดจากคำขอ
      * 
-     * Removes query string and leading/trailing slashes
+     * ลบสตริงคิวรีและเครื่องหมายทับนำและท้าย
      * 
-     * @return string Clean URI path
+     * @return string เส้นทาง URI ที่สะอาด
      */
     private function getUri(): string
     {
         $uri = $_SERVER['REQUEST_URI'];
         
-        // Remove query string
+        // ลบสตริงคิวรี
         if (($pos = strpos($uri, '?')) !== false) {
             $uri = substr($uri, 0, $pos);
         }
 
-        // Remove leading and trailing slashes
+        // ลบเครื่องหมายทับนำและท้าย
         $uri = trim($uri, '/');
 
         return '/' . $uri;
     }
 
     /**
-     * Handle 404 Not Found
+     * จัดการ 404 ไม่พบหน้า
      */
     private function notFound(): void
     {
         http_response_code(404);
         
-        // Check if it's an API request
+        // ตรวจสอบว่าเป็นคำขอ API หรือไม่
         $uri = $this->getUri();
         if (strpos($uri, '/api/') === 0) {
             header('Content-Type: application/json');

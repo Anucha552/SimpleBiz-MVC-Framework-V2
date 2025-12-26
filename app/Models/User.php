@@ -1,21 +1,21 @@
 <?php
 /**
- * USER MODEL
+ * โมเดลผู้ใช้
  * 
- * Purpose: Handles user authentication and account management
- * Security: Password hashing with bcrypt, secure session management
+ * จุดประสงค์: จัดการการยืนยันตัวตนและบัญชีผู้ใช้
+ * ความปลอดภัย: การเข้ารหัสรหัสผ่านด้วย bcrypt, การจัดการเซสชันที่ปลอดภัย
  * 
- * Business Rules:
- * - Passwords must be hashed using password_hash()
- * - Username and email must be unique
- * - Validate email format
- * - Minimum password length (8 characters)
+ * กฎทางธุรกิจ:
+ * - รหัสผ่านต้องเข้ารหัสด้วย password_hash()
+ * - ชื่อผู้ใช้และอีเมลต้องไม่ซ้ำ
+ * - ตรวจสอบรูปแบบอีเมล
+ * - ความยาวรหัสผ่านขั้นต่ำ (8 ตัวอักษร)
  * 
- * SECURITY CRITICAL:
- * - NEVER store plain text passwords
- * - Use password_hash() with PASSWORD_DEFAULT
- * - Use password_verify() for authentication
- * - Log all authentication attempts
+ * ความปลอดภัยสำคัญมาก:
+ * - ห้ามเก็บรหัสผ่านแบบข้อความธรรมดา
+ * - ใช้ password_hash() กับ PASSWORD_DEFAULT
+ * - ใช้ password_verify() สำหรับการยืนยันตัวตน
+ * - บันทึกความพยายามยืนยันตัวตนทั้งหมด
  */
 
 namespace App\Models;
@@ -36,22 +36,22 @@ class User
     }
 
     /**
-     * Register new user
+     * ลงทะเบียนผู้ใช้ใหม่
      * 
-     * Process:
-     * 1. Validate input (username, email, password)
-     * 2. Check for duplicates
-     * 3. Hash password
-     * 4. Insert into database
+     * กระบวนการ:
+     * 1. ตรวจสอบข้อมูลนำเข้า (ชื่อผู้ใช้, อีเมล, รหัสผ่าน)
+     * 2. ตรวจสอบข้อมูลซ้ำ
+     * 3. เข้ารหัสรหัสผ่าน
+     * 4. แทรกลงในฐานข้อมูล
      * 
-     * @param string $username Username
-     * @param string $email Email address
-     * @param string $password Plain text password
+     * @param string $username ชื่อผู้ใช้
+     * @param string $email ที่อยู่อีเมล
+     * @param string $password รหัสผ่านแบบข้อความธรรมดา
      * @return array ['success' => bool, 'message' => string, 'user_id' => int|null]
      */
     public function register(string $username, string $email, string $password): array
     {
-        // Validate input
+        // ตรวจสอบข้อมูลนำเข้า
         if (strlen($username) < 3) {
             return ['success' => false, 'message' => 'Username must be at least 3 characters'];
         }
@@ -64,24 +64,24 @@ class User
             return ['success' => false, 'message' => 'Password must be at least 8 characters'];
         }
 
-        // Check for duplicate username
+        // ตรวจสอบชื่อผู้ใช้ซ้ำ
         $stmt = $this->db->prepare("SELECT id FROM users WHERE username = ?");
         $stmt->execute([$username]);
         if ($stmt->fetch()) {
             return ['success' => false, 'message' => 'Username already exists'];
         }
 
-        // Check for duplicate email
+        // ตรวจสอบอีเมลซ้ำ
         $stmt = $this->db->prepare("SELECT id FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->fetch()) {
             return ['success' => false, 'message' => 'Email already exists'];
         }
 
-        // Hash password (bcrypt with automatic salt)
+        // เข้ารหัสรหัสผ่าน (bcrypt พร้อม salt อัตโนมัติ)
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-        // Insert user
+        // แทรกผู้ใช้
         $stmt = $this->db->prepare("
             INSERT INTO users (username, email, password) 
             VALUES (?, ?, ?)
@@ -111,17 +111,17 @@ class User
     }
 
     /**
-     * Authenticate user login
+     * ยืนยันตัวตนการเข้าสู่ระบบของผู้ใช้
      * 
-     * Process:
-     * 1. Find user by username
-     * 2. Verify password hash
-     * 3. Create session
+     * กระบวนการ:
+     * 1. ค้นหาผู้ใช้จากชื่อผู้ใช้
+     * 2. ตรวจสอบแฮชรหัสผ่าน
+     * 3. สร้างเซสชัน
      * 
-     * SECURITY: Log all login attempts (success and failure)
+     * ความปลอดภัย: บันทึกความพยายามเข้าสู่ระบบทั้งหมด (สำเร็จและล้มเหลว)
      * 
-     * @param string $username Username
-     * @param string $password Plain text password
+     * @param string $username ชื่อผู้ใช้
+     * @param string $password รหัสผ่านแบบข้อความธรรมดา
      * @return array ['success' => bool, 'message' => string, 'user' => array|null]
      */
     public function login(string $username, string $password): array
@@ -134,7 +134,7 @@ class User
         $stmt->execute([$username]);
         $user = $stmt->fetch();
 
-        // User not found
+        // ไม่พบผู้ใช้
         if (!$user) {
             $this->logger->security('login.failed', [
                 'username' => $username,
@@ -144,7 +144,7 @@ class User
             return ['success' => false, 'message' => 'Invalid credentials'];
         }
 
-        // Verify password
+        // ตรวจสอบรหัสผ่าน
         if (!password_verify($password, $user['password'])) {
             $this->logger->security('login.failed', [
                 'user_id' => $user['id'],
@@ -155,10 +155,10 @@ class User
             return ['success' => false, 'message' => 'Invalid credentials'];
         }
 
-        // Remove password from returned data
+        // ลบรหัสผ่านออกจากข้อมูลที่คืนค่า
         unset($user['password']);
 
-        // Create session
+        // สร้างเซสชัน
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
 
@@ -175,7 +175,7 @@ class User
     }
 
     /**
-     * Logout current user
+     * ออกจากระบบผู้ใช้ปัจจุบัน
      */
     public function logout(): void
     {
@@ -189,10 +189,10 @@ class User
     }
 
     /**
-     * Get user by ID
+     * ดึงข้อมูลผู้ใช้จาก ID
      * 
-     * @param int $userId User ID
-     * @return array|null User data or null
+     * @param int $userId ID ผู้ใช้
+     * @return array|null ข้อมูลผู้ใช้หรือ null
      */
     public function findById(int $userId): ?array
     {
@@ -208,10 +208,10 @@ class User
     }
 
     /**
-     * Get user by username
+     * ดึงข้อมูลผู้ใช้จากชื่อผู้ใช้
      * 
-     * @param string $username Username
-     * @return array|null User data or null
+     * @param string $username ชื่อผู้ใช้
+     * @return array|null ข้อมูลผู้ใช้หรือ null
      */
     public function findByUsername(string $username): ?array
     {

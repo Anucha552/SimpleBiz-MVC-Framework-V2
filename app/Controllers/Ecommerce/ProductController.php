@@ -1,18 +1,18 @@
 <?php
 /**
- * PRODUCT CONTROLLER (WEB)
+ * ตัวควบคุมสินค้า (WEB)
  * 
- * Purpose: Display product catalog to users
+ * จุดประสงค์: แสดงแค็ตตาล็อกสินค้าให้ผู้ใช้
  * 
- * Responsibilities:
- * - List all products
- * - Show individual product details
- * - Search products (future)
+ * ความรับผิดชอบ:
+ * - แสดงรายการสินค้าทั้งหมด
+ * - แสดงรายละเอียดสินค้าแต่ละรายการ
+ * - ค้นหาสินค้า (ในอนาคต)
  * 
- * This controller is THIN:
- * - Just fetches data from Product model
- * - Displays it to user
- * - No business logic here!
+ * ตัวควบคุมนี้เป็นแบบบาง:
+ * - เพียงดึงข้อมูลจากโมเดล Product
+ * - แสดงผลให้ผู้ใช้
+ * - ไม่มีตรรกะทางธุรกิจที่นี่!
  */
 
 namespace App\Controllers\Ecommerce;
@@ -30,7 +30,7 @@ class ProductController extends Controller
     }
 
     /**
-     * List all products
+     * แสดงรายการสินค้าทั้งหมด
      */
     public function index(): void
     {
@@ -58,13 +58,13 @@ class ProductController extends Controller
     }
 
     /**
-     * Show product details
+     * แสดงรายละเอียดสินค้า
      * 
-     * @param string $id Product ID from URL
+     * @param string $id รหัสสินค้าจาก URL
      */
     public function show(string $id): void
     {
-        // Validate ID
+        // ตรวจสอบ ID
         $productId = $this->validateInt($id);
         
         if (!$productId) {

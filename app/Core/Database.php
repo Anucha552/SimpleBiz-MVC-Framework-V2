@@ -1,20 +1,20 @@
 <?php
 /**
- * DATABASE CONNECTION CLASS
+ * คลาสการเชื่อมต่อฐานข้อมูล
  * 
- * Purpose: Provides secure PDO database connection using singleton pattern
- * Security: Uses prepared statements exclusively to prevent SQL injection
+ * จุดประสงค์: จัดเตรียมการเชื่อมต่อฐานข้อมูล PDO ที่ปลอดภัยโดยใช้รูปแบบ singleton
+ * ความปลอดภัย: ใช้ prepared statements เท่านั้นเพื่อป้องกัน SQL injection
  * 
- * Why Singleton?
- * - Ensures only one database connection exists throughout application lifecycle
- * - Reduces connection overhead and resource usage
- * - Centralizes connection management
+ * ทำไมต้อง Singleton?
+ * - รับประกันว่ามีการเชื่อมต่อฐานข้อมูลเพียงหนึ่งเดียวตลอดช่วงชีวิตแอปพลิเคชัน
+ * - ลดภาระการเชื่อมต่อและการใช้ทรัพยากร
+ * - รวมศูนย์การจัดการการเชื่อมต่อ
  * 
- * SECURITY RULES:
- * - NEVER use string concatenation for queries
- * - ALWAYS use prepared statements with bound parameters
- * - Disable emulated prepares for true prepared statements
- * - Set error mode to throw exceptions for better debugging
+ * กฎความปลอดภัย:
+ * - ห้ามใช้การต่อสตริงสำหรับคำสั่ง query
+ * - ต้องใช้ prepared statements กับพารามิเตอร์ที่ผูกไว้เสมอ
+ * - ปิดการใช้งาน emulated prepares เพื่อใช้ prepared statements จริง
+ * - ตั้งค่าโหมดข้อผิดพลาดให้แสดง exceptions เพื่อการดีบักที่ดีขึ้น
  */
 
 namespace App\Core;
@@ -25,18 +25,18 @@ use PDOException;
 class Database
 {
     /**
-     * Singleton instance
+     * อินสแตนซ์ Singleton
      */
     private static ?Database $instance = null;
     
     /**
-     * PDO connection object
+     * อ็อบเจ็กต์การเชื่อมต่อ PDO
      */
     private ?PDO $connection = null;
 
     /**
-     * Private constructor to prevent direct instantiation
-     * Enforces singleton pattern
+     * คอนสตรัคเตอร์แบบ private เพื่อป้องกันการสร้างอินสแตนซ์โดยตรง
+     * บังคับใช้รูปแบบ singleton
      */
     private function __construct()
     {
@@ -44,7 +44,7 @@ class Database
     }
 
     /**
-     * Get singleton instance
+     * ดึงอินสแตนซ์ singleton
      * 
      * @return Database
      */
@@ -57,21 +57,21 @@ class Database
     }
 
     /**
-     * Establish database connection
+     * สร้างการเชื่อมต่อฐานข้อมูล
      * 
-     * Configuration is loaded from config/database.php
+     * การกำหนดค่าโหลดจาก config/database.php
      * 
-     * PDO Options Explained:
-     * - ATTR_ERRMODE: Throw exceptions on errors (better than silent failures)
-     * - ATTR_DEFAULT_FETCH_MODE: Return associative arrays by default
-     * - ATTR_EMULATE_PREPARES: False for real prepared statements (more secure)
-     * - ATTR_STRINGIFY_FETCHES: False to preserve data types
+     * ตัวเลือก PDO อธิบาย:
+     * - ATTR_ERRMODE: แสดง exceptions เมื่อเกิดข้อผิดพลาด (ดีกว่าการล้มเหลวอย่างเงียบ)
+     * - ATTR_DEFAULT_FETCH_MODE: คืนค่าอาร์เรย์แบบ associative โดยค่าเริ่มต้น
+     * - ATTR_EMULATE_PREPARES: False สำหรับ prepared statements จริง (ปลอดภัยกว่า)
+     * - ATTR_STRINGIFY_FETCHES: False เพื่อรักษาประเภทข้อมูล
      * 
-     * @throws PDOException if connection fails
+     * @throws PDOException ถ้าการเชื่อมต่อล้มเหลว
      */
     private function connect(): void
     {
-        // Load database configuration
+        // โหลดการกำหนดค่าฐานข้อมูล
         $config = require __DIR__ . '/../../config/database.php';
 
         $host = $config['host'];
@@ -91,7 +91,7 @@ class Database
                 PDO::ATTR_STRINGIFY_FETCHES => false, // Preserve data types
             ]);
         } catch (PDOException $e) {
-            // In production, log this error instead of displaying it
+            // ในโหมดโปรดักชัน ให้บันทึกข้อผิดพลาดนี้แทนการแสดงผล
             if (getenv('APP_ENV') === 'production') {
                 error_log("Database connection failed: " . $e->getMessage());
                 throw new PDOException("Database connection failed");
@@ -102,7 +102,7 @@ class Database
     }
 
     /**
-     * Get PDO connection
+     * ดึงการเชื่อมต่อ PDO
      * 
      * @return PDO
      */
@@ -112,12 +112,12 @@ class Database
     }
 
     /**
-     * Prevent cloning of singleton
+     * ป้องกันการโคลน singleton
      */
     private function __clone() {}
 
     /**
-     * Prevent unserialization of singleton
+     * ป้องกันการ unserialize ของ singleton
      */
     public function __wakeup()
     {

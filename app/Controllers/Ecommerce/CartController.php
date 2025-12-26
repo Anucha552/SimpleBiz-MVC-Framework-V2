@@ -1,19 +1,19 @@
 <?php
 /**
- * CART CONTROLLER (WEB)
+ * ตัวควบคุมตะกร้าสินค้า (WEB)
  * 
- * Purpose: Shopping cart management
- * Security: Validates user authentication via middleware
+ * จุดประสงค์: จัดการตะกร้าสินค้า
+ * ความปลอดภัย: ตรวจสอบการยืนยันตัวตนผู้ใช้ผ่าน middleware
  * 
- * Responsibilities:
- * - Display cart contents
- * - Add items to cart
- * - Update quantities
- * - Remove items
+ * ความรับผิดชอบ:
+ * - แสดงเนื้อหาในตะกร้าสินค้า
+ * - เพิ่มสินค้าลงตะกร้า
+ * - อัปเดตจำนวน
+ * - ลบสินค้า
  * 
- * THIN CONTROLLER:
- * - All validation and business logic in Cart model
- * - Controller just coordinates and displays
+ * ตัวควบคุมแบบบาง:
+ * - การตรวจสอบและตรรกะทางธุรกิจทั้งหมดอยู่ในโมเดล Cart
+ * - ตัวควบคุมเพียงประสานงานและแสดงผล
  */
 
 namespace App\Controllers\Ecommerce;
@@ -27,7 +27,7 @@ class CartController extends Controller
 
     public function __construct()
     {
-        // Start session if not already started
+        // เริ่มเซสชันถ้ายังไม่ได้เริ่ม
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -36,7 +36,7 @@ class CartController extends Controller
     }
 
     /**
-     * Display cart contents
+     * แสดงเนื้อหาในตะกร้าสินค้า
      */
     public function index(): void
     {
@@ -80,7 +80,7 @@ class CartController extends Controller
             echo "</td>";
             echo "</tr>";
 
-            // Show price change warning if applicable
+            // แสดงคำเตือนการเปลี่ยนแปลงราคาถ้ามี
             if (abs($item['added_price'] - $item['current_price']) > 0.01) {
                 echo "<tr><td colspan='5' style='background:#ffffcc;'>";
                 echo "⚠️ Price changed: was $" . number_format($item['added_price'], 2);
@@ -95,7 +95,7 @@ class CartController extends Controller
     }
 
     /**
-     * Add item to cart
+     * เพิ่มสินค้าลงตะกร้า
      */
     public function add(): void
     {
@@ -104,7 +104,7 @@ class CartController extends Controller
             return;
         }
 
-        // Validate input
+        // ตรวจสอบข้อมูลนำเข้า
         $missing = $this->validateRequired(['product_id', 'quantity']);
         
         if (!empty($missing)) {
@@ -122,7 +122,7 @@ class CartController extends Controller
 
         $userId = $this->getUserId();
 
-        // Call model to add item
+        // เรียกใช้โมเดลเพื่อเพิ่มสินค้า
         $result = $this->cartModel->addItem($userId, $productId, $quantity);
 
         if ($result['success']) {
@@ -134,7 +134,7 @@ class CartController extends Controller
     }
 
     /**
-     * Update cart item quantity
+     * อัปเดตจำนวนสินค้าในตะกร้า
      */
     public function update(): void
     {
@@ -165,7 +165,7 @@ class CartController extends Controller
     }
 
     /**
-     * Remove item from cart
+     * ลบสินค้าออกจากตะกร้า
      */
     public function remove(): void
     {

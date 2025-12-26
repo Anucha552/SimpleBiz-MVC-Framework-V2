@@ -1,29 +1,29 @@
 <?php
 /**
- * LOGGER CLASS
+ * คลาสล็อกเกอร์
  * 
- * Purpose: Provides semantic logging with security focus
- * Security: Logs suspicious activities for audit trail
+ * จุดประสงค์: จัดเตรียมการบันทึกล็อกเชิงความหมายโดยเน้นความปลอดภัย
+ * ความปลอดภัย: บันทึกกิจกรรมที่น่าสงสัยสำหรับการตรวจสอบ
  * 
- * Log Levels:
- * - info: General application events (cart.add, order.created)
- * - security: Security-related events (login.failed, price.tamper)
- * - error: Application errors (db.failure, validation.failed)
+ * ระดับล็อก:
+ * - info: เหตุการณ์แอปพลิเคชันทั่วไป (cart.add, order.created)
+ * - security: เหตุการณ์ที่เกี่ยวข้องกับความปลอดภัย (login.failed, price.tamper)
+ * - error: ข้อผิดพลาดของแอปพลิเคชัน (db.failure, validation.failed)
  * 
- * Log Format:
+ * รูปแบบล็อก:
  * [timestamp] [level] [event] [context] [user_id] [ip] [route]
  * 
- * Why Logging Matters:
- * - Track user behavior and system health
- * - Detect security threats and fraud attempts
- * - Debug production issues
- * - Compliance and audit requirements
+ * ทำไมการบันทึกล็อกถึงสำคัญ:
+ * - ติดตามพฤติกรรมผู้ใช้และสุขภาพระบบ
+ * - ตรวจจับภัยคุกคามด้านความปลอดภัยและความพยายามฉ้อโกง
+ * - ดีบักปัญหาในโปรดักชัน
+ * - ข้อกำหนดด้านการปฏิบัติตามและการตรวจสอบ
  * 
- * SECURITY FOCUS:
- * - Log all authentication attempts
- * - Log price manipulation attempts
- * - Log suspicious cart activities
- * - Log stock validation failures
+ * เน้นความปลอดภัย:
+ * - บันทึกความพยายามในการยืนยันตัวตนทั้งหมด
+ * - บันทึกความพยายามจัดการราคา
+ * - บันทึกกิจกรรมตะกร้าที่น่าสงสัย
+ * - บันทึกความล้มเหลวในการตรวจสอบสต็อก
  */
 
 namespace App\Core;
@@ -31,20 +31,20 @@ namespace App\Core;
 class Logger
 {
     /**
-     * Log file path
+     * เส้นทางไฟล์ล็อก
      */
     private string $logFile;
 
     /**
-     * Create logger instance
+     * สร้างอินสแตนซ์ logger
      * 
-     * @param string $logFile Path to log file
+     * @param string $logFile เส้นทางไฟล์ล็อก
      */
     public function __construct(string $logFile = null)
     {
         $this->logFile = $logFile ?? __DIR__ . '/../../storage/logs/app.log';
         
-        // Ensure log directory exists
+        // ตรวจสอบว่ามีไดเรกทอรีล็อกหรือไม่
         $logDir = dirname($this->logFile);
         if (!is_dir($logDir)) {
             mkdir($logDir, 0755, true);
@@ -52,13 +52,13 @@ class Logger
     }
 
     /**
-     * Log informational message
+     * บันทึกข้อความข้อมูล
      * 
-     * Use for: Normal application events
-     * Examples: cart.add, product.view, order.created
+     * ใช้สำหรับ: เหตุการณ์แอปพลิเคชันปกติ
+     * ตัวอย่าง: cart.add, product.view, order.created
      * 
-     * @param string $event Event identifier
-     * @param array $context Additional context data
+     * @param string $event ตัวระบุเหตุการณ์
+     * @param array $context ข้อมูลบริบทเพิ่มเติม
      */
     public function info(string $event, array $context = []): void
     {
@@ -66,13 +66,13 @@ class Logger
     }
 
     /**
-     * Log security event
+     * บันทึกเหตุการณ์ความปลอดภัย
      * 
-     * Use for: Security-related events
-     * Examples: login.failed, price.tamper, api.unauthorized
+     * ใช้สำหรับ: เหตุการณ์ที่เกี่ยวข้องกับความปลอดภัย
+     * ตัวอย่าง: login.failed, price.tamper, api.unauthorized
      * 
-     * @param string $event Event identifier
-     * @param array $context Additional context data
+     * @param string $event ตัวระบุเหตุการณ์
+     * @param array $context ข้อมูลบริบทเพิ่มเติม
      */
     public function security(string $event, array $context = []): void
     {
@@ -80,13 +80,13 @@ class Logger
     }
 
     /**
-     * Log error
+     * บันทึกข้อผิดพลาด
      * 
-     * Use for: Application errors
-     * Examples: db.failure, validation.failed, exception.thrown
+     * ใช้สำหรับ: ข้อผิดพลาดของแอปพลิเคชัน
+     * ตัวอย่าง: db.failure, validation.failed, exception.thrown
      * 
-     * @param string $event Event identifier
-     * @param array $context Additional context data
+     * @param string $event ตัวระบุเหตุการณ์
+     * @param array $context ข้อมูลบริบทเพิ่มเติม
      */
     public function error(string $event, array $context = []): void
     {
@@ -94,28 +94,28 @@ class Logger
     }
 
     /**
-     * Write log entry
+     * เขียนรายการล็อก
      * 
-     * Log Format:
+     * รูปแบบล็อก:
      * [2024-01-15 10:30:45] [SECURITY] order.price_tamper 
      * {"expected":100,"received":50,"product_id":5} 
      * user_id=12 ip=192.168.1.1 route=/checkout
      * 
-     * @param string $level Log level
-     * @param string $event Event identifier
-     * @param array $context Context data
+     * @param string $level ระดับล็อก
+     * @param string $event ตัวระบุเหตุการณ์
+     * @param array $context ข้อมูลบริบท
      */
     private function log(string $level, string $event, array $context): void
     {
         $timestamp = date('Y-m-d H:i:s');
         
-        // Get request context
+        // รับบริบทคำขอ
         $userId = $_SESSION['user_id'] ?? 'guest';
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $route = $_SERVER['REQUEST_URI'] ?? 'unknown';
         $method = $_SERVER['REQUEST_METHOD'] ?? 'unknown';
 
-        // Build log message
+        // สร้างข้อความล็อก
         $contextJson = !empty($context) ? json_encode($context) : '{}';
         
         $logMessage = sprintf(
@@ -130,22 +130,22 @@ class Logger
             $route
         );
 
-        // Write to log file
+        // เขียนลงไฟล์ล็อก
         file_put_contents($this->logFile, $logMessage, FILE_APPEND | LOCK_EX);
 
-        // For critical security events, also log to PHP error log
+        // สำหรับเหตุการณ์ความปลอดภัยที่สำคัญ ให้บันทึกลงล็อกข้อผิดพลาด PHP ด้วย
         if ($level === 'SECURITY') {
             error_log("SECURITY EVENT: {$event} - " . json_encode($context));
         }
     }
 
     /**
-     * Get recent log entries
+     * ดึงรายการล็อกล่าสุด
      * 
-     * Useful for admin dashboards
+     * มีประโยชน์สำหรับแดชบอร์ดผู้ดูแลระบบ
      * 
-     * @param int $lines Number of lines to retrieve
-     * @return array Log entries
+     * @param int $lines จำนวนบรรทัดที่จะดึง
+     * @return array รายการล็อก
      */
     public function getRecent(int $lines = 100): array
     {
@@ -158,9 +158,9 @@ class Logger
     }
 
     /**
-     * Clear log file
+     * ล้างไฟล์ล็อก
      * 
-     * WARNING: Use with caution
+     * คำเตือน: ใช้ด้วยความระมัดระวัง
      */
     public function clear(): void
     {

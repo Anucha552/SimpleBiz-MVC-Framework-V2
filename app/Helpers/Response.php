@@ -1,16 +1,16 @@
 <?php
 /**
- * RESPONSE HELPER
+ * คลาสช่วยเหลือการตอบกลับ
  * 
- * Purpose: Standardized JSON response formatting for API endpoints
+ * จุดประสงค์: จัดรูปแบบการตอบกลับ JSON มาตรฐานสำหรับ API endpoints
  * 
- * Benefits:
- * - Consistent API response structure
- * - Easier to maintain
- * - Type-safe response building
- * - Proper HTTP status codes
+ * ประโยชน์:
+ * - โครงสร้างการตอบกลับ API ที่สม่ำเสมอ
+ * - ง่ายต่อการดูแลรักษา
+ * - การสร้างการตอบกลับที่ปลอดภัยเรื่องประเภทข้อมูล
+ * - รหัสสถานะ HTTP ที่เหมาะสม
  * 
- * Standard Response Format:
+ * รูปแบบการตอบกลับมาตรฐาน:
  * {
  *   "success": true|false,
  *   "data": {...},
@@ -19,7 +19,7 @@
  *   "meta": {...}
  * }
  * 
- * Usage:
+ * การใช้งาน:
  * Response::success($data, 'Operation successful');
  * Response::error('Validation failed', $errors, 400);
  */
@@ -29,12 +29,12 @@ namespace App\Helpers;
 class Response
 {
     /**
-     * Send success JSON response
+     * ส่งการตอบกลับ JSON สำเร็จ
      * 
-     * @param mixed $data Response data
-     * @param string $message Success message
-     * @param array $meta Optional metadata (pagination, etc.)
-     * @param int $statusCode HTTP status code
+     * @param mixed $data ข้อมูลการตอบกลับ
+     * @param string $message ข้อความสำเร็จ
+     * @param array $meta ข้อมูลเมตา (ไม่บังคับ) เช่น pagination
+     * @param int $statusCode รหัสสถานะ HTTP
      */
     public static function success($data = null, string $message = 'Success', array $meta = [], int $statusCode = 200): void
     {
@@ -42,11 +42,11 @@ class Response
     }
 
     /**
-     * Send error JSON response
+     * ส่งการตอบกลับ JSON ข้อผิดพลาด
      * 
-     * @param string $message Error message
-     * @param array $errors Detailed error array
-     * @param int $statusCode HTTP status code
+     * @param string $message ข้อความข้อผิดพลาด
+     * @param array $errors อาร์เรย์รายละเอียดข้อผิดพลาด
+     * @param int $statusCode รหัสสถานะ HTTP
      */
     public static function error(string $message, array $errors = [], int $statusCode = 400): void
     {
@@ -54,10 +54,10 @@ class Response
     }
 
     /**
-     * Send created response (201)
+     * ส่งการตอบกลับสร้างสำเร็จ (201)
      * 
-     * @param mixed $data Created resource data
-     * @param string $message Success message
+     * @param mixed $data ข้อมูลทรัพยากรที่สร้างขึ้น
+     * @param string $message ข้อความสำเร็จ
      */
     public static function created($data, string $message = 'Resource created'): void
     {
@@ -65,7 +65,7 @@ class Response
     }
 
     /**
-     * Send no content response (204)
+     * ส่งการตอบกลับไม่มีเนื้อหา (204)
      */
     public static function noContent(): void
     {
@@ -74,9 +74,9 @@ class Response
     }
 
     /**
-     * Send not found response (404)
+     * ส่งการตอบกลับไม่พบทรัพยากร (404)
      * 
-     * @param string $message Error message
+     * @param string $message ข้อความข้อผิดพลาด
      */
     public static function notFound(string $message = 'Resource not found'): void
     {
@@ -84,9 +84,9 @@ class Response
     }
 
     /**
-     * Send unauthorized response (401)
+     * ส่งการตอบกลับไม่ได้รับอนุญาต (401)
      * 
-     * @param string $message Error message
+     * @param string $message ข้อความข้อผิดพลาด
      */
     public static function unauthorized(string $message = 'Authentication required'): void
     {
@@ -94,9 +94,9 @@ class Response
     }
 
     /**
-     * Send forbidden response (403)
+     * ส่งการตอบกลับถูกห้าม (403)
      * 
-     * @param string $message Error message
+     * @param string $message ข้อความข้อผิดพลาด
      */
     public static function forbidden(string $message = 'Access denied'): void
     {
@@ -104,10 +104,10 @@ class Response
     }
 
     /**
-     * Send validation error response (422)
+     * ส่งการตอบกลับข้อผิดพลาดการตรวจสอบ (422)
      * 
-     * @param array $errors Validation errors
-     * @param string $message Error message
+     * @param array $errors ข้อผิดพลาดการตรวจสอบ
+     * @param string $message ข้อความข้อผิดพลาด
      */
     public static function validationError(array $errors, string $message = 'Validation failed'): void
     {
@@ -115,9 +115,9 @@ class Response
     }
 
     /**
-     * Send internal server error response (500)
+     * ส่งการตอบกลับข้อผิดพลาดเซิร์ฟเวอร์ภายใน (500)
      * 
-     * @param string $message Error message
+     * @param string $message ข้อความข้อผิดพลาด
      */
     public static function serverError(string $message = 'Internal server error'): void
     {
@@ -125,14 +125,14 @@ class Response
     }
 
     /**
-     * Send JSON response
+     * ส่งการตอบกลับ JSON
      * 
-     * @param bool $success Success status
-     * @param mixed $data Response data
-     * @param string $message Message
-     * @param array $errors Error details
-     * @param array $meta Metadata
-     * @param int $statusCode HTTP status code
+     * @param bool $success สถานะความสำเร็จ
+     * @param mixed $data ข้อมูลการตอบกลับ
+     * @param string $message ข้อความ
+     * @param array $errors รายละเอียดข้อผิดพลาด
+     * @param array $meta ข้อมูลเมตา
+     * @param int $statusCode รหัสสถานะ HTTP
      */
     private static function send(
         bool $success,
@@ -167,13 +167,13 @@ class Response
     }
 
     /**
-     * Send paginated response
+     * ส่งการตอบกลับแบบแบ่งหน้า
      * 
-     * @param array $data Data array
-     * @param int $page Current page
-     * @param int $perPage Items per page
-     * @param int $total Total items
-     * @param string $message Success message
+     * @param array $data อาร์เรย์ข้อมูล
+     * @param int $page หน้าปัจจุบัน
+     * @param int $perPage จำนวนรายการต่อหน้า
+     * @param int $total จำนวนรายการทั้งหมด
+     * @param string $message ข้อความสำเร็จ
      */
     public static function paginated(
         array $data,

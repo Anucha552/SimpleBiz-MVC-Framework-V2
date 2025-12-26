@@ -1,20 +1,20 @@
 <?php
 /**
- * PRODUCT MODEL
+ * โมเดลสินค้า
  * 
- * Purpose: Manages product catalog and inventory
- * Security: Validates stock levels, prevents negative inventory
+ * จุดประสงค์: จัดการแค็ตตาล็อกสินค้าและสินค้าคงคลัง
+ * ความปลอดภัย: ตรวจสอบระดับสต็อก, ป้องกันสต็อกติดลบ
  * 
- * Business Rules:
- * - Price must be >= 0
- * - Stock must be >= 0
- * - Only 'active' products visible to customers
- * - Stock validation before order placement
- * - Price stored as DECIMAL for accuracy
+ * กฎทางธุรกิจ:
+ * - ราคาต้อง >= 0
+ * - สต็อกต้อง >= 0
+ * - มีเฉพาะสินค้า 'active' เท่านั้นที่แสดงให้ลูกค้า
+ * - ตรวจสอบสต็อกก่อนวางคำสั่งซื้อ
+ * - ราคาเก็บแบบ DECIMAL เพื่อความแม่นยำ
  * 
- * IMPORTANT:
- * - Prices are read from database, NEVER from client input
- * - Stock is managed server-side only
+ * สำคัญ:
+ * - ราคาถูกอ่านจากฐานข้อมูล ห้ามเชื่อถือข้อมูลจากไคลเอนต์
+ * - สต็อกจัดการฝั่งเซิร์ฟเวอร์เท่านั้น
  */
 
 namespace App\Models;
@@ -35,12 +35,12 @@ class Product
     }
 
     /**
-     * Get all active products
+     * ดึงสินค้าที่ใช้งานได้ทั้งหมด
      * 
-     * Returns only products with status='active'
-     * Ordered by creation date (newest first)
+     * คืนค่าเฉพาะสินค้าที่มีสถานะ='active' เท่านั้น
+     * เรียงตามวันที่สร้าง (ใหม่สุดก่อน)
      * 
-     * @return array Products array
+     * @return array อาร์เรย์สินค้า
      */
     public function getAll(): array
     {
@@ -55,10 +55,10 @@ class Product
     }
 
     /**
-     * Get product by ID
+     * ดึงข้อมูลสินค้าจาก ID
      * 
-     * @param int $id Product ID
-     * @return array|null Product data or null
+     * @param int $id ID สินค้า
+     * @return array|null ข้อมูลสินค้าหรือ null
      */
     public function findById(int $id): ?array
     {
@@ -74,15 +74,15 @@ class Product
     }
 
     /**
-     * Check if product is available
+     * ตรวจสอบว่าสินค้ามีจำหน่ายหรือไม่
      * 
-     * Validates:
-     * - Product exists
-     * - Product is active
-     * - Sufficient stock available
+     * ตรวจสอบ:
+     * - สินค้ามีอยู่จริง
+     * - สินค้าใช้งานได้
+     * - มีสต็อกเพียงพอ
      * 
-     * @param int $productId Product ID
-     * @param int $quantity Requested quantity
+     * @param int $productId ID สินค้า
+     * @param int $quantity จำนวนที่ต้องการ
      * @return array ['available' => bool, 'product' => array|null, 'reason' => string]
      */
     public function checkAvailability(int $productId, int $quantity): array
@@ -121,19 +121,19 @@ class Product
     }
 
     /**
-     * Decrease product stock
+     * ลดสต็อกสินค้า
      * 
-     * CRITICAL: Call this ONLY after successful order placement
-     * Transaction-safe: Uses optimistic locking to prevent race conditions
+     * สำคัญ: เรียกใช้หลังจากวางคำสั่งซื้อสำเร็จเท่านั้น
+     * ปลอดภัยในทรานแซกชัน: ใช้ optimistic locking เพื่อป้องกัน race conditions
      * 
-     * @param int $productId Product ID
-     * @param int $quantity Quantity to decrease
-     * @return bool Success status
+     * @param int $productId ID สินค้า
+     * @param int $quantity จำนวนที่จะลด
+     * @return bool สถานะความสำเร็จ
      */
     public function decreaseStock(int $productId, int $quantity): bool
     {
-        // Use WHERE clause with stock check to prevent negative stock
-        // This prevents race conditions between check and update
+        // ใช้ WHERE clause พร้อมการตรวจสอบสต็อกเพื่อป้องกันสต็อกติดลบ
+        // สิ่งนี้ป้องกัน race conditions ระหว่างการตรวจสอบและการอัปเดต
         $stmt = $this->db->prepare("
             UPDATE products 
             SET stock = stock - ? 
@@ -161,13 +161,13 @@ class Product
     }
 
     /**
-     * Increase product stock
+     * เพิ่มสต็อกสินค้า
      * 
-     * Used for order cancellations or stock replenishment
+     * ใช้สำหรับการยกเลิกคำสั่งซื้อหรือการเติมสต็อก
      * 
-     * @param int $productId Product ID
-     * @param int $quantity Quantity to increase
-     * @return bool Success status
+     * @param int $productId ID สินค้า
+     * @param int $quantity จำนวนที่จะเพิ่ม
+     * @return bool สถานะความสำเร็จ
      */
     public function increaseStock(int $productId, int $quantity): bool
     {
@@ -191,14 +191,14 @@ class Product
     }
 
     /**
-     * Create new product
+     * สร้างสินค้าใหม่
      * 
-     * @param array $data Product data
+     * @param array $data ข้อมูลสินค้า
      * @return array ['success' => bool, 'message' => string, 'product_id' => int|null]
      */
     public function create(array $data): array
     {
-        // Validate required fields
+        // ตรวจสอบฟิลด์ที่จำเป็น
         $required = ['name', 'price', 'stock'];
         foreach ($required as $field) {
             if (!isset($data[$field])) {
@@ -206,12 +206,12 @@ class Product
             }
         }
 
-        // Validate price
+        // ตรวจสอบราคา
         if ($data['price'] < 0) {
             return ['success' => false, 'message' => 'Price must be >= 0'];
         }
 
-        // Validate stock
+        // ตรวจสอบสต็อก
         if ($data['stock'] < 0) {
             return ['success' => false, 'message' => 'Stock must be >= 0'];
         }
@@ -252,10 +252,10 @@ class Product
     }
 
     /**
-     * Search products by name
+     * ค้นหาสินค้าจากชื่อ
      * 
-     * @param string $query Search query
-     * @return array Products array
+     * @param string $query คำค้นหา
+     * @return array อาร์เรย์สินค้า
      */
     public function search(string $query): array
     {

@@ -1,11 +1,11 @@
 <?php
 /**
- * API ROUTES (Version 1)
+ * เส้นทาง API (เวอร์ชัน 1)
  * 
- * Purpose: RESTful API endpoints (JSON responses)
- * Base Path: /api/v1
+ * จุดประสงค์: จุดเชื่อมต่อ RESTful API (การตอบกลับแบบ JSON)
+ * เส้นทางหลัก: /api/v1
  * 
- * Response Format:
+ * รูปแบบการตอบกลับ:
  * {
  *   "success": true|false,
  *   "data": {...},
@@ -13,19 +13,19 @@
  *   "errors": [...]
  * }
  * 
- * Authentication:
- * - Most endpoints require user authentication (session)
- * - Sensitive endpoints require API key
+ * การยืนยันตัวตน:
+ * - จุดเชื่อมต่อส่วนใหญ่ต้องมีการยืนยันตัวตนผู้ใช้ (session)
+ * - จุดเชื่อมต่อที่ละเอียดอ่อนต้องมี API key
  * 
  * Middleware:
- * - AuthMiddleware: Validates user session
- * - ApiKeyMiddleware: Validates API key
+ * - AuthMiddleware: ตรวจสอบ session ของผู้ใช้
+ * - ApiKeyMiddleware: ตรวจสอบ API key
  * 
- * HTTP Methods:
- * - GET: Retrieve data
- * - POST: Create new resource
- * - PUT: Update existing resource
- * - DELETE: Delete resource
+ * เมธอด HTTP:
+ * - GET: ดึงข้อมูล
+ * - POST: สร้างทรัพยากรใหม่
+ * - PUT: อัปเดตทรัพยากรที่มีอยู่
+ * - DELETE: ลบทรัพยากร
  */
 
 use App\Core\Router;
@@ -33,16 +33,16 @@ use App\Middleware\AuthMiddleware;
 use App\Middleware\ApiKeyMiddleware;
 
 // ============================================================
-// PRODUCTS API
+// API สินค้า
 // ============================================================
 
-// Public endpoints (no auth required)
+// จุดเชื่อมต่อสาธารณะ (ไม่ต้องยืนยันตัวตน)
 $router->get('/api/v1/products', 'App\Controllers\Api\V1\ProductApiController@index');
 $router->get('/api/v1/products/{id}', 'App\Controllers\Api\V1\ProductApiController@show');
 $router->get('/api/v1/products/search', 'App\Controllers\Api\V1\ProductApiController@search');
 
 // ============================================================
-// CART API (Requires Authentication)
+// API ตะกร้าสินค้า (ต้องยืนยันตัวตน)
 // ============================================================
 
 $router->get('/api/v1/cart', 'App\Controllers\Api\V1\CartApiController@index', [AuthMiddleware::class]);
@@ -51,14 +51,14 @@ $router->put('/api/v1/cart/update', 'App\Controllers\Api\V1\CartApiController@up
 $router->delete('/api/v1/cart/remove/{product_id}', 'App\Controllers\Api\V1\CartApiController@remove', [AuthMiddleware::class]);
 
 // ============================================================
-// ORDERS API (Requires Authentication + API Key)
+// API คำสั่งซื้อ (ต้องยืนยันตัวตน + API Key)
 // ============================================================
 
-// List and view orders (auth only)
+// แสดงรายการและดูคำสั่งซื้อ (ยืนยันตัวตนเท่านั้น)
 $router->get('/api/v1/orders', 'App\Controllers\Api\V1\OrderApiController@index', [AuthMiddleware::class]);
 $router->get('/api/v1/orders/{id}', 'App\Controllers\Api\V1\OrderApiController@show', [AuthMiddleware::class]);
 
-// Create and modify orders (auth + API key)
+// สร้างและแก้ไขคำสั่งซื้อ (ยืนยันตัวตน + API key)
 $router->post('/api/v1/orders/create', 'App\Controllers\Api\V1\OrderApiController@create', [
     AuthMiddleware::class,
     ApiKeyMiddleware::class,

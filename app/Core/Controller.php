@@ -1,22 +1,22 @@
 <?php
 /**
- * BASE CONTROLLER CLASS
+ * คลาสตัวควบคุมพื้นฐาน
  * 
- * Purpose: Parent class for all controllers, provides common functionality
- * Philosophy: Keep controllers THIN - delegate business logic to models
+ * จุดประสงค์: คลาสแม่สำหรับตัวควบคุมทั้งหมด ให้ฟังก์ชันการทำงานทั่วไป
+ * ปรัชญา: รักษาตัวควบคุมให้บาง - มอบหมายตรรกะทางธุรกิจให้โมเดล
  * 
- * Controller Responsibilities:
- * - Validate incoming requests
- * - Call model methods for business logic
- * - Pass data to views or return responses
- * - Handle HTTP responses (redirects, status codes)
+ * ความรับผิดชอบของตัวควบคุม:
+ * - ตรวจสอบความถูกต้องของคำขอที่เข้ามา
+ * - เรียกเมธอดของโมเดลสำหรับตรรกะทางธุรกิจ
+ * - ส่งข้อมูลไปยังวิวหรือคืนค่าการตอบกลับ
+ * - จัดการการตอบกลับ HTTP (การเปลี่ยนเส้นทาง, รหัสสถานะ)
  * 
- * Controller SHOULD NOT:
- * - Contain complex business logic
- * - Directly manipulate database
- * - Perform calculations or data processing
+ * ตัวควบคุมไม่ควร:
+ * - มีตรรกะทางธุรกิจที่ซับซ้อน
+ * - จัดการฐานข้อมูลโดยตรง
+ * - ดำเนินการคำนวณหรือประมวลผลข้อมูล
  * 
- * All business logic belongs in Model classes!
+ * ตรรกะทางธุรกิจทั้งหมดอยู่ในคลาสโมเดล!
  */
 
 namespace App\Core;
@@ -24,21 +24,21 @@ namespace App\Core;
 class Controller
 {
     /**
-     * Render a view with data
+     * แสดงผลวิวพร้อมข้อมูล
      * 
-     * Views are located in app/Views/
-     * Example: view('products/index', ['products' => $products])
-     * Will load: app/Views/products/index.php
+     * วิวอยู่ใน app/Views/
+     * ตัวอย่าง: view('products/index', ['products' => $products])
+     * จะโหลด: app/Views/products/index.php
      * 
-     * @param string $view View file path (without .php extension)
-     * @param array $data Data to pass to view
+     * @param string $view เส้นทางไฟล์วิว (ไม่มีนามสกุล .php)
+     * @param array $data ข้อมูลที่จะส่งไปยังวิว
      */
     protected function view(string $view, array $data = []): void
     {
-        // Extract data array to variables
+        // แยกอาร์เรย์ข้อมูลเป็นตัวแปร
         extract($data);
 
-        // Build view file path
+        // สร้างเส้นทางไฟล์วิว
         $viewFile = __DIR__ . '/../Views/' . $view . '.php';
 
         if (!file_exists($viewFile)) {
@@ -49,9 +49,9 @@ class Controller
     }
 
     /**
-     * Redirect to another URL
+     * เปลี่ยนเส้นทางไปยัง URL อื่น
      * 
-     * @param string $url URL to redirect to
+     * @param string $url URL ที่จะเปลี่ยนเส้นทางไป
      */
     protected function redirect(string $url): void
     {
@@ -60,9 +60,9 @@ class Controller
     }
 
     /**
-     * Return JSON response
+     * คืนค่าการตอบกลับแบบ JSON
      * 
-     * Standard JSON format for API responses:
+     * รูปแบบ JSON มาตรฐานสำหรับการตอบกลับ API:
      * {
      *   "success": true|false,
      *   "data": {...},
@@ -70,11 +70,11 @@ class Controller
      *   "errors": [...]
      * }
      * 
-     * @param bool $success Success status
-     * @param mixed $data Response data
-     * @param string $message Optional message
-     * @param array $errors Optional error array
-     * @param int $statusCode HTTP status code
+     * @param bool $success สถานะความสำเร็จ
+     * @param mixed $data ข้อมูลการตอบกลับ
+     * @param string $message ข้อความเพิ่มเติม (ไม่บังคับ)
+     * @param array $errors อาร์เรย์ข้อผิดพลาด (ไม่บังคับ)
+     * @param int $statusCode รหัสสถานะ HTTP
      */
     protected function json(bool $success, $data = null, string $message = '', array $errors = [], int $statusCode = 200): void
     {
@@ -102,12 +102,12 @@ class Controller
     }
 
     /**
-     * Validate required POST parameters
+     * ตรวจสอบพารามิเตอร์ POST ที่จำเป็น
      * 
-     * Returns array of missing parameters or empty array if all present
+     * คืนค่าอาร์เรย์ของพารามิเตอร์ที่ขาดหายหรืออาร์เรย์ว่างถ้ามีครบ
      * 
-     * @param array $required Array of required parameter names
-     * @return array Missing parameter names
+     * @param array $required อาร์เรย์ของชื่อพารามิเตอร์ที่จำเป็น
+     * @return array ชื่อพารามิเตอร์ที่ขาดหาย
      */
     protected function validateRequired(array $required): array
     {
@@ -123,13 +123,13 @@ class Controller
     }
 
     /**
-     * Sanitize input string
+     * ทำความสะอาดสตริงที่ป้อนเข้า
      * 
-     * Removes HTML tags and trims whitespace
-     * Use this for user-provided text inputs
+     * ลบแท็ก HTML และช่องว่าง
+     * ใช้สำหรับข้อมูลข้อความที่ผู้ใช้ป้อนเข้ามา
      * 
-     * @param string $input Raw input
-     * @return string Sanitized input
+     * @param string $input ข้อมูลดิบ
+     * @return string ข้อมูลที่ทำความสะอาดแล้ว
      */
     protected function sanitize(string $input): string
     {
@@ -137,13 +137,13 @@ class Controller
     }
 
     /**
-     * Validate integer input
+     * ตรวจสอบความถูกต้องของข้อมูลจำนวนเต็ม
      * 
-     * Ensures value is a positive integer
-     * Used for IDs, quantities, etc.
+     * ตรวจสอบว่าค่าเป็นจำนวนเต็มบวก
+     * ใช้สำหรับ ID, จำนวน, ฯลฯ
      * 
-     * @param mixed $value Value to validate
-     * @return int|null Valid integer or null
+     * @param mixed $value ค่าที่จะตรวจสอบ
+     * @return int|null จำนวนเต็มที่ถูกต้องหรือ null
      */
     protected function validateInt($value): ?int
     {
@@ -152,13 +152,13 @@ class Controller
     }
 
     /**
-     * Validate decimal/float input
+     * ตรวจสอบความถูกต้องของข้อมูลทศนิยม
      * 
-     * Ensures value is a positive number
-     * Used for prices, amounts, etc.
+     * ตรวจสอบว่าค่าเป็นจำนวนบวก
+     * ใช้สำหรับราคา, จำนวนเงิน, ฯลฯ
      * 
-     * @param mixed $value Value to validate
-     * @return float|null Valid float or null
+     * @param mixed $value ค่าที่จะตรวจสอบ
+     * @return float|null ทศนิยมที่ถูกต้องหรือ null
      */
     protected function validateFloat($value): ?float
     {
@@ -167,9 +167,9 @@ class Controller
     }
 
     /**
-     * Get current authenticated user ID
+     * ดึง ID ของผู้ใช้ที่ยืนยันตัวตนปัจจุบัน
      * 
-     * @return int|null User ID or null if not authenticated
+     * @return int|null ID ผู้ใช้หรือ null ถ้าไม่ได้ยืนยันตัวตน
      */
     protected function getUserId(): ?int
     {
@@ -177,7 +177,7 @@ class Controller
     }
 
     /**
-     * Check if user is authenticated
+     * ตรวจสอบว่าผู้ใช้ยืนยันตัวตนหรือไม่
      * 
      * @return bool
      */

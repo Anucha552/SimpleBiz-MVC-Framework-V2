@@ -1,12 +1,12 @@
-# Apache Configuration for SimpleBiz MVC Framework
+# การตั้งค่า Apache สำหรับ SimpleBiz MVC Framework
 #
-# Purpose: Redirect all requests to public/index.php
-# Place this file in the root directory
+# จุดประสงค์: เปลี่ยนเส้นทางคำขอทั้งหมดไปยัง public/index.php
+# วางไฟล์นี้ในโฟลเดอร์รากของโปรเจค
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Redirect to public directory
+    # เปลี่ยนเส้นทางไปยังโฟลเดอร์ public
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ /public/$1 [L]
 </IfModule>

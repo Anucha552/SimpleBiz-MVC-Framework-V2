@@ -1,15 +1,15 @@
 /*
- * USERS TABLE MIGRATION
+ * ไฟล์สร้างตาราง USERS
  * 
- * Purpose: Stores user accounts for authentication
- * Security: Passwords must be hashed using password_hash()
+ * จุดประสงค์: เก็บบัญชีผู้ใช้สำหรับการยืนยันตัวตน
+ * ความปลอดภัย: รหัสผ่านต้อง hash ด้วย password_hash()
  * 
- * Fields:
+ * ฟิลด์:
  * - id: Primary key
- * - username: Unique username for login
- * - email: Unique email address
- * - password: Hashed password (bcrypt/argon2)
- * - created_at: Account creation timestamp
+ * - username: ชื่อผู้ใช้ที่ไม่ซ้ำกันสำหรับเข้าสู่ระบบ
+ * - email: อีเมลที่ไม่ซ้ำกัน
+ * - password: รหัสผ่านที่ hash แล้ว (bcrypt/argon2)
+ * - created_at: เวลาที่สร้างบัญชี
  */
 
 CREATE TABLE IF NOT EXISTS users (

@@ -1,32 +1,32 @@
 /*
- * ORDERS TABLES MIGRATION
+ * ไฟล์สร้างตารางคำสั่งซื้อ
  * 
- * Purpose: Manages customer orders and order items
- * Security: Prices are recalculated server-side at checkout
+ * จุดประสงค์: จัดการคำสั่งซื้อและรายการสินค้าในคำสั่งซื้อ
+ * ความปลอดภัย: ราคาถูกคำนวณใหม่ฝั่งเซิร์ฟเวอร์ตอนชำระเงิน
  * 
- * ORDERS TABLE:
- * - Stores order header (user, total, status, date)
- * - Status tracks order lifecycle
+ * ตาราง ORDERS:
+ * - เก็บข้อมูลส่วนหัวของคำสั่งซื้อ (ผู้ใช้, ยอดรวม, สถานะ, วันที่)
+ * - สถานะติดตามวงจรชีวิตของคำสั่งซื้อ
  * 
- * ORDER_ITEMS TABLE:
- * - Stores snapshot of purchased items
- * - price is locked at purchase time (not linked to products table)
- * - subtotal = qty * price (calculated)
+ * ตาราง ORDER_ITEMS:
+ * - เก็บภาพรวมของสินค้าที่ซื้อ
+ * - ราคาถูกล็อค ณ เวลาที่ซื้อ (ไม่เชื่อมโยงกับตาราง products)
+ * - subtotal = qty * price (คำนวณ)
  * 
- * ORDER STATUS WORKFLOW:
- * - pending: Order placed, awaiting payment
- * - paid: Payment received, ready to ship
- * - shipped: Order dispatched
- * - cancelled: Order cancelled
+ * ขั้นตอนสถานะคำสั่งซื้อ:
+ * - pending: วางคำสั่งซื้อแล้ว รอชำระเงิน
+ * - paid: ได้รับการชำระเงิน พร้อมจัดส่ง
+ * - shipped: จัดส่งแล้ว
+ * - cancelled: ยกเลิกแล้ว
  * 
- * SECURITY RULES:
- * - Total is calculated server-side from order_items
- * - Stock is decremented ONLY after successful order
- * - Validate stock availability before order creation
- * - Log any price manipulation attempts
+ * กฎความปลอดภัย:
+ * - ยอดรวมคำนวณฝั่งเซิร์ฟเวอร์จาก order_items
+ * - สต็อกลดลงเฉพาะเมื่อสร้างคำสั่งซื้อสำเร็จเท่านั้น
+ * - ตรวจสอบสต็อกที่มีอยู่ก่อนสร้างคำสั่งซื้อ
+ * - บันทึกความพยายามจัดการราคาทุกครั้ง
  */
 
--- Main orders table
+-- ตารางคำสั่งซื้อหลัก
 CREATE TABLE IF NOT EXISTS orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS orders (
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Order items table (snapshot of purchased products)
+-- ตารางรายการคำสั่งซื้อ (ภาพรวมสินค้าที่ซื้อ)
 CREATE TABLE IF NOT EXISTS order_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,

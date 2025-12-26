@@ -1,16 +1,16 @@
 <?php
 /**
- * AUTHENTICATION CONTROLLER
+ * ตัวควบคุมการยืนยันตัวตน
  * 
- * Purpose: Handles user registration, login, logout
- * Security: Password hashing, session management
+ * จุดประสงค์: จัดการการลงทะเบียน, เข้าสู่ระบบ, ออกจากระบบ
+ * ความปลอดภัย: การเข้ารหัสรหัสผ่าน, การจัดการเซสชัน
  * 
- * Controller Responsibility:
- * - Validate request input
- * - Call User model for business logic
- * - Handle response (redirect or error message)
+ * ความรับผิดชอบของตัวควบคุม:
+ * - ตรวจสอบความถูกต้องของข้อมูลที่ส่งเข้ามา
+ * - เรียกใช้โมเดล User สำหรับตรรกะทางธุรกิจ
+ * - จัดการการตอบกลับ (เปลี่ยนเส้นทางหรือข้อความผิดพลาด)
  * 
- * Business logic is in User model!
+ * ตรรกะทางธุรกิจอยู่ในโมเดล User!
  */
 
 namespace App\Controllers;
@@ -24,7 +24,7 @@ class AuthController extends Controller
 
     public function __construct()
     {
-        // Start session if not already started
+        // เริ่มเซสชันถ้ายังไม่ได้เริ่ม
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -33,7 +33,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Show registration form
+     * แสดงฟอร์มลงทะเบียน
      */
     public function showRegister(): void
     {
@@ -48,11 +48,11 @@ class AuthController extends Controller
     }
 
     /**
-     * Handle registration form submission
+     * จัดการการส่งฟอร์มลงทะเบียน
      */
     public function register(): void
     {
-        // Validate required fields
+        // ตรวจสอบฟิลด์ที่จำเป็น
         $missing = $this->validateRequired(['username', 'email', 'password']);
         
         if (!empty($missing)) {
@@ -60,16 +60,16 @@ class AuthController extends Controller
             return;
         }
 
-        // Sanitize inputs
+        // ทำความสะอาดข้อมูลนำเข้า
         $username = $this->sanitize($_POST['username']);
         $email = $this->sanitize($_POST['email']);
-        $password = $_POST['password']; // Don't sanitize passwords!
+        $password = $_POST['password']; // ห้ามทำความสะอาดรหัสผ่าน!
 
-        // Call model to register user
+        // เรียกใช้โมเดลเพื่อลงทะเบียนผู้ใช้
         $result = $this->userModel->register($username, $email, $password);
 
         if ($result['success']) {
-            // Auto-login after registration
+            // เข้าสู่ระบบอัตโนมัติหลังจากลงทะเบียน
             $_SESSION['user_id'] = $result['user_id'];
             $_SESSION['username'] = $username;
             $this->redirect('/products');
@@ -80,7 +80,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Show login form
+     * แสดงฟอร์มเข้าสู่ระบบ
      */
     public function showLogin(): void
     {
@@ -94,11 +94,11 @@ class AuthController extends Controller
     }
 
     /**
-     * Handle login form submission
+     * จัดการการส่งฟอร์มเข้าสู่ระบบ
      */
     public function login(): void
     {
-        // Validate required fields
+        // ตรวจสอบฟิลด์ที่จำเป็น
         $missing = $this->validateRequired(['username', 'password']);
         
         if (!empty($missing)) {
@@ -109,7 +109,7 @@ class AuthController extends Controller
         $username = $this->sanitize($_POST['username']);
         $password = $_POST['password'];
 
-        // Call model to authenticate
+        // เรียกใช้โมเดลเพื่อยืนยันตัวตน
         $result = $this->userModel->login($username, $password);
 
         if ($result['success']) {
@@ -121,7 +121,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Handle logout
+     * จัดการการออกจากระบบ
      */
     public function logout(): void
     {

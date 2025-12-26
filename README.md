@@ -1,223 +1,183 @@
-# SimpleBiz MVC Framework (Version 2)
+# SimpleBiz MVC Framework V2
 
-**A clean, secure, extensible MVC framework with E-Commerce foundation ready.**
+**เฟรมเวิร์ก MVC สำหรับระบบอีคอมเมิร์ซที่สะอาด ปลอดภัย และขยายได้ง่าย**
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-blue)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## 📋 Table of Contents
+## 🎯 ภาพรวมโปรเจค
 
-- [Overview](#overview)
-- [Core Principles](#core-principles)
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Database Setup](#database-setup)
-- [Configuration](#configuration)
-- [Architecture](#architecture)
-- [E-Commerce Features](#e-commerce-features)
-- [API Documentation](#api-documentation)
-- [Security](#security)
-- [Usage Examples](#usage-examples)
-- [Development](#development)
-- [Production Deployment](#production-deployment)
-- [License](#license)
+SimpleBiz MVC Framework V2 เป็นเฟรมเวิร์ก PHP แบบ Custom-built ที่ออกแบบมาเพื่อเป็น **ฐานรากสำหรับพัฒนาระบบอีคอมเมิร์ซ** โดยมุ่งเน้นไปที่:
 
----
+### 🏗️ สถาปัตยกรรม
+- **รูปแบบ MVC ที่ชัดเจน** - แยกส่วนการทำงานระหว่าง Models (ตรรกะธุรกิจ), Controllers (ประสานงาน), และ Views (การแสดงผล)
+- **PSR-4 Autoloading** - โครงสร้าง namespace มาตรฐาน
+- **Router ที่ยืดหยุ่น** - รองรับ dynamic routes, parameters, และ middleware
+- **Database Layer** - PDO singleton พร้อมการป้องกัน SQL Injection
 
-## 🎯 Overview
+### 🛒 ฟีเจอร์อีคอมเมิร์ซหลัก
+- **ระบบสินค้า** - จัดการสินค้า ราคา สต็อก และสถานะ
+- **ตะกร้าสินค้า** - เพิ่ม แก้ไข ลบสินค้าพร้อมการตรวจสอบความพร้อม
+- **ระบบคำสั่งซื้อ** - สร้างคำสั่งซื้อจากตะกร้า พร้อมการคำนวณราคาฝั่งเซิร์ฟเวอร์
+- **การจัดการสต็อก** - ระบบลดสต็อกแบบ atomic พร้อม optimistic locking
+- **การยืนยันตัวตน** - ลงทะเบียน เข้าสู่ระบบด้วย bcrypt hashing
 
-SimpleBiz MVC Framework V2 is a **professional PHP framework** built from scratch with:
+### 🔒 ความปลอดภัย
+- **PDO Prepared Statements** - ป้องกัน SQL Injection 100%
+- **Password Hashing** - bcrypt พร้อม automatic salt
+- **Server-side Price Validation** - ห้ามเชื่อถือราคาจากฝั่ง client
+- **Input Validation** - ตรวจสอบข้อมูลทุกประเภท
+- **Security Logging** - บันทึกเหตุการณ์สำคัญทั้งหมด
 
-- **Clean MVC architecture** - Separation of concerns
-- **E-Commerce foundation** - Products, cart, orders ready to extend
-- **RESTful API** - JSON API for modern frontends
-- **Security-first approach** - PDO prepared statements, input validation, logging
-- **Teaching-focused** - Extensive comments explaining WHY, not just HOW
+### 🌐 RESTful API
+- **JSON Endpoints** - API สำหรับ Products, Cart, Orders
+- **Authentication** - Session-based authentication
+- **API Key Protection** - รักษาความปลอดภัย sensitive endpoints
+- **Versioned API** - `/api/v1` สำหรับการพัฒนาต่อเนื่อง
 
-**Important:** This is NOT a complete e-commerce shop. It's a **secure, extendable foundation** for building custom solutions.
-
----
-
-## 🎓 Core Principles
-
-1. **PHP 8+ Modern Standards**
-2. **MVC Architecture** - Models handle business logic, Controllers coordinate, Views display
-3. **PSR-4 Autoloading** - Clean namespace structure
-4. **Thin Controllers** - Business logic lives in Models
-5. **Single-Responsibility Functions** - Each function does ONE thing well
-6. **PDO Prepared Statements ONLY** - No SQL injection vulnerabilities
-7. **No Heavy Dependencies** - Lightweight, understandable codebase
-8. **Teaching Comments** - Learn by reading the code
+### 📚 จุดเด่นเพื่อการเรียนรู้
+- **คอมเมนต์ภาษาไทยครบถ้วน** - อธิบายทุกส่วนของโค้ดอย่างละเอียด
+- **Best Practices** - ใช้มาตรฐานการเขียนโค้ด PHP สมัยใหม่
+- **Security-First Approach** - เน้นความปลอดภัยตั้งแต่เริ่มออกแบบ
+- **Clean Code** - โครงสร้างที่อ่านและดูแลรักษาง่าย
 
 ---
 
-## ✨ Features
+## 📋 โครงสร้างโปรเจค
 
-### Core Framework
-- ✅ **Router** - Dynamic routes with parameters and middleware
-- ✅ **Database Layer** - Secure PDO singleton with connection pooling
-- ✅ **Controllers** - Base controller with helpers
-- ✅ **Models** - Business logic layer
-- ✅ **Views** - Template rendering with layout support
-- ✅ **Middleware** - Authentication and API key validation
-- ✅ **Logger** - Semantic logging (info, security, error)
-
-### E-Commerce Foundation
-- ✅ **Product Catalog** - Products with stock management
-- ✅ **Shopping Cart** - Add/update/remove items with validation
-- ✅ **Order Management** - Checkout with server-side validation
-- ✅ **User Authentication** - Registration and login with bcrypt
-- ✅ **Stock Control** - Prevent overselling with atomic operations
-- ✅ **Price Integrity** - Server-side price calculation (tamper-proof)
-
-### API
-- ✅ **RESTful Endpoints** - Standard JSON responses
-- ✅ **Authentication** - Session-based auth
-- ✅ **API Keys** - Secure endpoint protection
-- ✅ **Versioning** - `/api/v1` namespace for future compatibility
-
-### Security
-- ✅ **SQL Injection Prevention** - Prepared statements everywhere
-- ✅ **Password Hashing** - bcrypt with automatic salting
-- ✅ **Input Validation** - Server-side validation for all inputs
-- ✅ **Security Logging** - Track suspicious activities
-- ✅ **Stock Validation** - Prevent inventory fraud
-- ✅ **Price Recalculation** - Never trust client prices
+```
+SimpleBiz-MVC-Framework-V2/
+├── app/
+│   ├── Controllers/      # จัดการ HTTP requests
+│   │   ├── Api/V1/      # API controllers
+│   │   └── Ecommerce/   # Web controllers
+│   ├── Core/            # Framework core classes
+│   ├── Helpers/         # Helper functions
+│   ├── Middleware/      # Request filtering
+│   └── Models/          # Business logic
+├── config/              # Configuration files
+├── database/
+│   └── migrations/      # SQL schema files
+├── public/              # Web root (index.php)
+├── routes/              # Route definitions
+└── storage/
+    └── logs/            # Application logs
+```
 
 ---
 
-## 📦 Requirements
+## 🚀 เริ่มต้นใช้งาน
 
-- **PHP 8.0 or higher**
-- **MySQL 5.7+ or MariaDB 10.3+**
-- **Apache with mod_rewrite** (or Nginx)
-- **Composer** (for autoloading)
+### ความต้องการ
+- PHP 8.0+
+- MySQL 5.7+ / MariaDB 10.3+
+- Composer
+- Apache (mod_rewrite) หรือ Nginx
 
----
-
-## 🚀 Installation
-
-### 1. Clone or Download
+### การติดตั้งอย่างรวดเร็ว
 
 ```bash
-git clone https://github.com/yourusername/SimpleBiz-MVC-Framework-V2.git
+# 1. Clone repository
+git clone [repository-url]
 cd SimpleBiz-MVC-Framework-V2
-```
 
-### 2. Install Dependencies
-
-```bash
+# 2. ติดตั้ง dependencies
 composer install
-```
 
-### 3. Configure Environment
-
-```bash
+# 3. ตั้งค่า environment
 cp .env.example .env
-```
+# แก้ไข .env ด้วยข้อมูลฐานข้อมูล
 
-Edit `.env` with your database credentials:
-
-```env
-DB_HOST=localhost
-DB_DATABASE=simplebiz_mvc
-DB_USERNAME=root
-DB_PASSWORD=your_password
-
-APP_ENV=development
-APP_DEBUG=true
-```
-
-### 4. Create Database
-
-```sql
-CREATE DATABASE simplebiz_mvc CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-### 5. Run Migrations
-
-Execute SQL files in order:
-
-```bash
-# From MySQL command line or phpMyAdmin
+# 4. สร้างฐานข้อมูลและรัน migrations
+mysql -u root -p
+CREATE DATABASE simplebiz_mvc CHARACTER SET utf8mb4;
 USE simplebiz_mvc;
 SOURCE database/migrations/users.sql;
 SOURCE database/migrations/products.sql;
 SOURCE database/migrations/carts.sql;
 SOURCE database/migrations/orders.sql;
-```
 
-### 6. Set Permissions
-
-```bash
+# 5. ตั้งค่าสิทธิ์
 chmod -R 755 storage/logs
-```
 
-### 7. Start Development Server
-
-```bash
-composer serve
-# OR
+# 6. เริ่มเซิร์ฟเวอร์
 php -S localhost:8000 -t public
 ```
 
-Visit: http://localhost:8000
+เข้าถึงได้ที่: http://localhost:8000
 
 ---
 
-## 💾 Database Setup
+## 🎓 สำหรับใคร?
 
-### Tables Overview
+โปรเจคนี้เหมาะสำหรับ:
 
-**users** - User accounts
-- `id`, `username`, `email`, `password` (hashed), `created_at`
+✅ **นักพัฒนาที่ต้องการเรียนรู้** - ศึกษาการสร้างเฟรมเวิร์ก MVC จากศูนย์  
+✅ **โปรเจคขนาดเล็ก-กลาง** - ไม่ต้องการความซับซ้อนของ Laravel/Symfony  
+✅ **ระบบอีคอมเมิร์ซแบบกำหนดเอง** - มีฐานรากพร้อมขยายตามต้องการ  
+✅ **การเรียนรู้ Security Best Practices** - ดูตัวอย่างการป้องกันช่องโหว่ต่างๆ  
 
-**products** - Product catalog
-- `id`, `name`, `description`, `price` (DECIMAL), `stock`, `status`, `created_at`
+❌ **ไม่เหมาะสำหรับ:**
+- โปรเจคขนาดใหญ่ที่ต้องการ enterprise features
+- ต้องการ ORM ที่ซับซ้อน เช่น Eloquent
+- ต้องการ dependency injection container
 
-**carts** - Shopping carts
-- `id`, `user_id`, `created_at`
+---
 
-**cart_items** - Cart contents
-- `id`, `cart_id`, `product_id`, `qty`, `price`, `created_at`
+## 📖 เอกสารเพิ่มเติม
 
-**orders** - Order headers
-- `id`, `user_id`, `total`, `status` (pending|paid|shipped|cancelled), `created_at`
+สำหรับข้อมูลโดยละเอียด กรุณาอ่าน:
+- **API Documentation** - ดูใน `routes/api.php` และ `app/Controllers/Api/`
+- **Database Schema** - ดูใน `database/migrations/`
+- **Security Guidelines** - อ่าน comments ใน Models และ Controllers
+- **Code Comments** - ทุกไฟล์มีคอมเมนต์ภาษาไทยอธิบายการทำงาน
 
-**order_items** - Order line items
-- `id`, `order_id`, `product_id`, `product_name`, `qty`, `price`, `subtotal`
+---
 
-### Sample Data (Optional)
+## 🤝 การมีส่วนร่วม
 
-```sql
--- Create test user (password: password123)
-INSERT INTO users (username, email, password) VALUES 
-('testuser', 'test@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
+เป็นโปรเจคแบบเปิด สามารถ fork และปรับแต่งได้ตามต้องการ
 
--- Create sample products
+---
+
+## 📄 ใบอนุญาต
+
+MIT License - ใช้งานได้อย่างอิสระทั้งโปรเจคส่วนตัวและเชิงพาณิชย์
+
+---
+
+## ⚠️ ข้อจำกัดความรับผิด
+
+โปรเจคนี้เป็น **เฟรมเวิร์กเพื่อการศึกษาและพัฒนา** ไม่ใช่โซลูชันอีคอมเมิร์ซที่สมบูรณ์ ควรเพิ่มฟีเจอร์เพิ่มเติม เช่น:
+- ระบบชำระเงิน (Payment Gateway)
+- ระบบจัดส่ง
+- การจัดการผู้ใช้ขั้นสูง (roles, permissions)
+- การแจ้งเตือนทาง email
+- การจัดการภาพสินค้า
+
+**ใช้ในสภาพแวดล้อมจริงด้วยความระมัดระวัง และปรับปรุงตามความต้องการด้านความปลอดภัย**
 INSERT INTO products (name, description, price, stock, status) VALUES
-('Laptop', 'High-performance laptop', 999.99, 10, 'active'),
-('Mouse', 'Wireless mouse', 29.99, 50, 'active'),
-('Keyboard', 'Mechanical keyboard', 79.99, 30, 'active');
+('แล็ปท็อป', 'แล็ปท็อปประสิทธิภาพสูง', 999.99, 10, 'active'),
+('เมาส์', 'เมาส์ไร้สาย', 29.99, 50, 'active'),
+('คีย์บอร์ด', 'คีย์บอร์ดเมคานิคัล', 79.99, 30, 'active');
 ```
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ การกำหนดค่า
 
-### Environment Variables (.env)
+### ตัวแปรสภาพแวดล้อม (.env)
 
 ```env
-# Application
+# แอปพลิเคชัน
 APP_NAME="SimpleBiz MVC Framework V2"
 APP_ENV=development
 APP_DEBUG=true
 APP_URL=http://localhost
 
-# Database
+# ฐานข้อมูล
 DB_HOST=localhost
 DB_PORT=3306
 DB_DATABASE=simplebiz_mvc
@@ -228,178 +188,150 @@ DB_PASSWORD=
 API_KEY=demo-api-key-12345
 ```
 
-### Configuration Files
+### ไฟล์การกำหนดค่า
 
-- `config/app.php` - Application settings
-- `config/database.php` - Database connection
-- `routes/web.php` - Web routes (HTML responses)
-- `routes/api.php` - API routes (JSON responses)
+- `config/app.php` - การตั้งค่าแอปพลิเคชัน
+- `config/database.php` - การเชื่อมต่อฐานข้อมูล
+- `routes/web.php` - เส้นทางเว็บ (การตอบสนอง HTML)
+- `routes/api.php` - เส้นทาง API (การตอบสนอง JSON)
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ สถาปัตยกรรม
 
-### Directory Structure
+### โครงสร้างไดเรกทอรี
 
 ```
 SimpleBiz-MVC-Framework-V2/
 │
 ├── app/
-│   ├── Core/              # Framework core classes
-│   │   ├── Router.php     # Request routing
-│   │   ├── Controller.php # Base controller
-│   │   ├── Database.php   # Database connection
-│   │   ├── View.php       # View rendering
-│   │   ├── Middleware.php # Base middleware
-│   │   └── Logger.php     # Logging system
+│   ├── Core/              # คลาสหลักของเฟรมเวิร์ก
+│   │   ├── Router.php     # การจัดการเส้นทางคำขอ
+│   │   ├── Controller.php # Controller พื้นฐาน
+│   │   ├── Database.php   # การเชื่อมต่อฐานข้อมูล
+│   │   ├── View.php       # การแสดงผล View
+│   │   ├── Middleware.php # Middleware พื้นฐาน
+│   │   └── Logger.php     # ระบบบันทึก log
 │   │
-│   ├── Controllers/       # Application controllers
+│   ├── Controllers/       # Controllers ของแอปพลิเคชัน
 │   │   ├── HomeController.php
 │   │   ├── AuthController.php
-│   │   ├── Ecommerce/     # E-commerce controllers
+│   │   ├── Ecommerce/     # Controllers อีคอมเมิร์ซ
 │   │   │   ├── ProductController.php
 │   │   │   ├── CartController.php
 │   │   │   └── OrderController.php
-│   │   └── Api/V1/        # API controllers
-│   │       ├── ProductApiController.php
-│   │       ├── CartApiController.php
-│   │       └── OrderApiController.php
+│   │   └── Api/V1/        # Controllers API
 │   │
-│   ├── Models/            # Business logic
+│   ├── Models/            # ตรรกะทางธุรกิจ
 │   │   ├── User.php
 │   │   ├── Product.php
 │   │   ├── Cart.php
 │   │   └── Order.php
 │   │
-│   ├── Middleware/        # Request filters
+│   ├── Middleware/        # ตัวกรองคำขอ
 │   │   ├── AuthMiddleware.php
 │   │   └── ApiKeyMiddleware.php
 │   │
-│   └── Helpers/           # Utility classes
+│   └── Helpers/           # คลาสยูทิลิตี้
 │       └── Response.php
 │
-├── config/                # Configuration files
+├── config/                # ไฟล์การกำหนดค่า
 │   ├── app.php
 │   └── database.php
 │
 ├── database/
-│   └── migrations/        # SQL migration files
+│   └── migrations/        # ไฟล์ SQL migration
 │
-├── public/                # Public web root
-│   ├── index.php          # Entry point
-│   └── .htaccess          # Apache config
+├── public/                # Web root สาธารณะ
+│   ├── index.php          # จุดเริ่มต้น
+│   └── .htaccess          # การกำหนดค่า Apache
 │
-├── routes/                # Route definitions
+├── routes/                # คำจำกัดความเส้นทาง
 │   ├── web.php
 │   └── api.php
 │
 ├── storage/
 │   └── logs/              # Application logs
 │
-├── .env.example           # Environment template
-├── .gitignore
-├── .htaccess
-├── composer.json
+├── .env.example           # Template สภาพแวดล้อม
 └── README.md
 ```
 
-### MVC Flow
+### การไหลของ MVC
 
 ```
-Request → index.php → Router → Middleware → Controller → Model → Response
+คำขอ → index.php → Router → Middleware → Controller → Model → การตอบสนอง
 ```
 
-1. **Router** matches URL to controller
-2. **Middleware** validates authentication/permissions
-3. **Controller** coordinates request handling
-4. **Model** executes business logic
-5. **Response** returned to client (HTML or JSON)
+1. **Router** จับคู่ URL กับ controller
+2. **Middleware** ตรวจสอบการยืนยันตัวตน/สิทธิ์
+3. **Controller** ประสานงานการจัดการคำขอ
+4. **Model** ดำเนินการตรรกะทางธุรกิจ
+5. **การตอบสนอง** ส่งคืนให้ลูกค้า (HTML หรือ JSON)
 
 ---
 
-## 🛒 E-Commerce Features (Foundation)
+## 🛒 ฟีเจอร์อีคอมเมิร์ซ (ฐานราก)
 
-### What's Included
+### สิ่งที่รวมอยู่
 
-#### Product Management
-- List active products
-- View product details
-- Stock tracking
-- Product search (API)
+#### การจัดการสินค้า
+- แสดงรายการสินค้าที่ใช้งานอยู่
+- ดูรายละเอียดสินค้า
+- ติดตามสต็อก
+- ค้นหาสินค้า (API)
 
-#### Shopping Cart
-- Add products to cart
-- Update quantities
-- Remove items
-- Stock validation
-- Price integrity checks
+#### ตะกร้าสินค้า
+- เพิ่มสินค้าลงตะกร้า
+- อัพเดทจำนวน
+- ลบสินค้า
+- การตรวจสอบสต็อก
+- การตรวจสอบความถูกต้องของราคา
 
-#### Order Processing
-- Checkout from cart
-- Server-side price recalculation
-- Atomic stock decrementation
-- Order history
-- Order status tracking
+#### การประมวลผลคำสั่งซื้อ
+- Checkout จากตะกร้า
+- การคำนวณราคาใหม่ฝั่งเซิร์ฟเวอร์
+- การลดสต็อกแบบ Atomic
+- ประวัติคำสั่งซื้อ
+- การติดตามสถานะคำสั่งซื้อ
 
-### Security Rules
+### กฎความปลอดภัย
 
-**CRITICAL:** This framework enforces strict security rules:
+**สำคัญมาก:** เฟรมเวิร์กนี้บังคับใช้กฎความปลอดภัยที่เข้มงวด:
 
-1. **Price Calculation**
-   - NEVER trust client-submitted prices
-   - Server recalculates totals from database
-   - Logs price tampering attempts
+1. **การคำนวณราคา**
+   - ห้ามเชื่อถือราคาที่ส่งมาจากลูกค้า
+   - เซิร์ฟเวอร์คำนวณยอดรวมใหม่จากฐานข้อมูล
+   - บันทึกความพยายามแก้ไขราคา
 
-2. **Stock Management**
-   - Validates availability before adding to cart
-   - Atomic stock updates prevent race conditions
-   - Returns stock on order cancellation
+2. **การจัดการสต็อก**
+   - ตรวจสอบความพร้อมก่อนเพิ่มลงตะกร้า
+   - การอัพเดทสต็อกแบบ Atomic ป้องกัน race conditions
+   - คืนสต็อกเมื่อยกเลิกคำสั่งซื้อ
 
-3. **Input Validation**
-   - All user inputs sanitized
-   - IDs and quantities validated as integers
-   - SQL injection prevented via prepared statements
+3. **การตรวจสอบอินพุต**
+   - ทำความสะอาดอินพุตผู้ใช้ทั้งหมด
+   - ตรวจสอบ IDs และจำนวนเป็นจำนวนเต็ม
+   - ป้องกัน SQL injection ด้วย prepared statements
 
-### What's NOT Included
+### สิ่งที่ไม่รวมอยู่
 
-This is a **foundation**, not a complete shop:
+นี่เป็น **ฐานราก** ไม่ใช่ร้านค้าที่สมบูรณ์:
 
-- ❌ Payment gateway integration (Stripe, PayPal)
-- ❌ Shipping calculations
-- ❌ Tax calculations
-- ❌ Email notifications
-- ❌ Admin panel
-- ❌ Product categories
-- ❌ Product images
-- ❌ Reviews/ratings
+- ❌ การผสานเกตเวย์การชำระเงิน (Stripe, PayPal)
+- ❌ การคำนวณค่าจัดส่ง
+- ❌ การคำนวณภาษี
+- ❌ การแจ้งเตือนทางอีเมล
+- ❌ แผงผู้ดูแลระบบ
+- ❌ หมวดหมู่สินค้า
+- ❌ รูปภาพสินค้า
+- ❌ รีวิว/คะแนน
 
-**These are intentionally left out** so you can customize to your needs.
-
-### Extending for Production
-
-To build a real shop, add:
-
-1. **Payment Integration**
-   ```php
-   // In OrderController::confirm()
-   $stripe = new StripeClient($apiKey);
-   $charge = $stripe->charges->create([...]);
-   ```
-
-2. **Email Notifications**
-   ```php
-   // After order creation
-   Mail::send($user->email, 'order_confirmation', $orderData);
-   ```
-
-3. **Admin Panel**
-   - Create `AdminController` with authentication
-   - Add product CRUD operations
-   - Order management interface
+**สิ่งเหล่านี้ไม่รวมโดยเจตนา** เพื่อให้คุณสามารถปรับแต่งตามความต้องการของคุณ
 
 ---
 
-## 📡 API Documentation
+## 📡 เอกสาร API
 
 ### Base URL
 
@@ -407,223 +339,151 @@ To build a real shop, add:
 http://localhost:8000/api/v1
 ```
 
-### Authentication
+### การยืนยันตัวตน
 
-Most endpoints require authentication:
+Endpoints ส่วนใหญ่ต้องการการยืนยันตัวตน:
 
-**Session-based:**
+**แบบ Session:**
 ```bash
-# Login first to create session
+# ล็อกอินก่อนเพื่อสร้าง session
 curl -X POST http://localhost:8000/login \
   -d "username=testuser&password=password123"
 ```
 
 **API Key:**
 ```bash
-# Include in header
+# รวมใน header
 curl -H "X-API-Key: demo-api-key-12345" \
   http://localhost:8000/api/v1/orders/create
 ```
 
-### Response Format
+### รูปแบบการตอบสนอง
 
-All API responses follow this structure:
+การตอบสนอง API ทั้งหมดเป็นไปตามโครงสร้างนี้:
 
 ```json
 {
   "success": true,
   "data": {...},
-  "message": "Success message",
+  "message": "ข้อความความสำเร็จ",
   "errors": []
 }
 ```
 
 ### Endpoints
 
-#### Products
+#### สินค้า
 
 **GET /api/v1/products**
-List all active products
+แสดงรายการสินค้าที่ใช้งานทั้งหมด
 
 ```bash
 curl http://localhost:8000/api/v1/products
 ```
 
-Response:
+การตอบสนอง:
 ```json
 {
   "success": true,
   "data": [
     {
       "id": 1,
-      "name": "Laptop",
+      "name": "แล็ปท็อป",
       "price": "999.99",
       "stock": 10,
       "status": "active"
     }
   ],
-  "message": "Products retrieved successfully"
+  "message": "ดึงข้อมูลสินค้าสำเร็จ"
 }
 ```
 
 **GET /api/v1/products/{id}**
-Get product details
-
-```bash
-curl http://localhost:8000/api/v1/products/1
-```
+ดูรายละเอียดสินค้า
 
 **GET /api/v1/products/search?q=laptop**
-Search products
+ค้นหาสินค้า
 
-```bash
-curl http://localhost:8000/api/v1/products/search?q=laptop
-```
+#### ตะกร้า
 
-#### Cart
+**GET /api/v1/cart** (ต้องยืนยันตัวตน)
+ดูเนื้อหาตะกร้า
 
-**GET /api/v1/cart** (Auth Required)
-Get cart contents
+**POST /api/v1/cart/add** (ต้องยืนยันตัวตน)
+เพิ่มสินค้าลงตะกร้า
 
-```bash
-curl -b cookies.txt http://localhost:8000/api/v1/cart
-```
+**PUT /api/v1/cart/update** (ต้องยืนยันตัวตน)
+อัพเดทจำนวน
 
-**POST /api/v1/cart/add** (Auth Required)
-Add item to cart
+**DELETE /api/v1/cart/remove/{product_id}** (ต้องยืนยันตัวตน)
+ลบสินค้า
 
-```bash
-curl -X POST -b cookies.txt \
-  -H "Content-Type: application/json" \
-  -d '{"product_id": 1, "quantity": 2}' \
-  http://localhost:8000/api/v1/cart/add
-```
+#### คำสั่งซื้อ
 
-**PUT /api/v1/cart/update** (Auth Required)
-Update quantity
+**GET /api/v1/orders** (ต้องยืนยันตัวตน)
+แสดงรายการคำสั่งซื้อของผู้ใช้
 
-```bash
-curl -X PUT -b cookies.txt \
-  -H "Content-Type: application/json" \
-  -d '{"product_id": 1, "quantity": 3}' \
-  http://localhost:8000/api/v1/cart/update
-```
-
-**DELETE /api/v1/cart/remove/{product_id}** (Auth Required)
-Remove item
-
-```bash
-curl -X DELETE -b cookies.txt \
-  http://localhost:8000/api/v1/cart/remove/1
-```
-
-#### Orders
-
-**GET /api/v1/orders** (Auth Required)
-List user's orders
-
-```bash
-curl -b cookies.txt http://localhost:8000/api/v1/orders
-```
-
-**GET /api/v1/orders/{id}** (Auth Required)
-Get order details
-
-```bash
-curl -b cookies.txt http://localhost:8000/api/v1/orders/1
-```
-
-**POST /api/v1/orders/create** (Auth + API Key Required)
-Create order from cart
-
-```bash
-curl -X POST -b cookies.txt \
-  -H "X-API-Key: demo-api-key-12345" \
-  http://localhost:8000/api/v1/orders/create
-```
-
-**PUT /api/v1/orders/{id}/status** (Auth + API Key Required)
-Update order status
-
-```bash
-curl -X PUT -b cookies.txt \
-  -H "X-API-Key: demo-api-key-12345" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "paid"}' \
-  http://localhost:8000/api/v1/orders/1/status
-```
+**POST /api/v1/orders/create** (ต้องยืนยันตัวตน + API Key)
+สร้างคำสั่งซื้อจากตะกร้า
 
 ---
 
-## 🔒 Security
+## 🔒 ความปลอดภัย
 
-### Built-in Protections
+### การป้องกันที่มีอยู่
 
-1. **SQL Injection Prevention**
-   - All database queries use PDO prepared statements
-   - Parameters bound separately from SQL
+1. **การป้องกัน SQL Injection**
+   - คิวรีฐานข้อมูลทั้งหมดใช้ PDO prepared statements
+   - พารามิเตอร์ถูกผูกแยกจาก SQL
 
-2. **Password Security**
-   - Passwords hashed with `password_hash()` (bcrypt)
-   - Automatic salt generation
-   - Never stored as plain text
+2. **ความปลอดภัยของรหัสผ่าน**
+   - รหัสผ่านแฮชด้วย `password_hash()` (bcrypt)
+   - การสร้าง salt อัตโนมัติ
+   - ไม่เก็บเป็นข้อความธรรมดา
 
-3. **Price Tampering Prevention**
-   - Client prices ignored
-   - Server recalculates from database
-   - Discrepancies logged as security events
+3. **การป้องกันการแก้ไขราคา**
+   - ราคาจากลูกค้าถูกละเลย
+   - เซิร์ฟเวอร์คำนวณใหม่จากฐานข้อมูล
+   - บันทึกความแตกต่างเป็นเหตุการณ์ความปลอดภัย
 
-4. **Stock Fraud Prevention**
-   - Atomic stock updates with optimistic locking
-   - Validates availability before checkout
-   - Returns stock on cancellation
+4. **การป้องกันการฉ้อโกงสต็อก**
+   - การอัพเดทสต็อกแบบ Atomic พร้อม optimistic locking
+   - ตรวจสอบความพร้อมก่อน checkout
+   - คืนสต็อกเมื่อยกเลิก
 
-5. **Input Validation**
-   - All inputs sanitized
-   - Type validation (integers, floats, strings)
-   - SQL injection impossible with prepared statements
+5. **การตรวจสอบอินพุต**
+   - ทำความสะอาดอินพุตทั้งหมด
+   - การตรวจสอบประเภท (integers, floats, strings)
+   - SQL injection เป็นไปไม่ได้ด้วย prepared statements
 
-6. **Authentication**
-   - Session-based authentication
-   - Middleware protects sensitive routes
-   - Logs unauthorized access attempts
+### รายการตรวจสอบความปลอดภัยสำหรับ Production
 
-7. **Logging**
-   - All security events logged
-   - Failed login attempts tracked
-   - Price manipulation logged
-   - Audit trail for compliance
+ก่อนติดตั้ง:
 
-### Production Security Checklist
-
-Before deploying:
-
-- [ ] Set `APP_ENV=production` in `.env`
-- [ ] Set `APP_DEBUG=false` in `.env`
-- [ ] Change default API keys
-- [ ] Use HTTPS (SSL certificate)
-- [ ] Restrict database user permissions
-- [ ] Enable firewall on server
-- [ ] Set up log rotation
-- [ ] Regular security audits
-- [ ] Keep PHP and MySQL updated
-- [ ] Use strong session configuration
-- [ ] Implement rate limiting (optional)
-- [ ] Add CSRF token protection (optional)
+- [ ] ตั้งค่า `APP_ENV=production` ใน `.env`
+- [ ] ตั้งค่า `APP_DEBUG=false` ใน `.env`
+- [ ] เปลี่ยน API keys เริ่มต้น
+- [ ] ใช้ HTTPS (ใบรับรอง SSL)
+- [ ] จำกัดสิทธิ์ผู้ใช้ฐานข้อมูล
+- [ ] เปิดใช้งาน firewall บนเซิร์ฟเวอร์
+- [ ] ตั้งค่าการหมุนเวียน log
+- [ ] ตรวจสอบความปลอดภัยเป็นประจำ
+- [ ] อัพเดท PHP และ MySQL
+- [ ] ใช้การกำหนดค่า session ที่แข็งแกร่ง
 
 ---
 
-## 📚 Usage Examples
+## 📚 ตัวอย่างการใช้งาน
 
-### Creating a New Route
+### สร้างเส้นทางใหม่
 
-**1. Define Route** (`routes/web.php`)
+**1. กำหนดเส้นทาง** (`routes/web.php`)
 
 ```php
 $router->get('/about', 'App\Controllers\PageController@about');
 ```
 
-**2. Create Controller** (`app/Controllers/PageController.php`)
+**2. สร้าง Controller** (`app/Controllers/PageController.php`)
 
 ```php
 <?php
@@ -635,19 +495,19 @@ class PageController extends Controller
 {
     public function about(): void
     {
-        echo "<h1>About Us</h1>";
-        // Or use view:
-        // $this->view('pages/about', ['title' => 'About']);
+        echo "<h1>เกี่ยวกับเรา</h1>";
+        // หรือใช้ view:
+        // $this->view('pages/about', ['title' => 'เกี่ยวกับเรา']);
     }
 }
 ```
 
-### Adding Business Logic to Model
+### เพิ่มตรรกะทางธุรกิจไปยัง Model
 
-**Example: Add product discount**
+**ตัวอย่าง: เพิ่มส่วนลดสินค้า**
 
 ```php
-// In app/Models/Product.php
+// ใน app/Models/Product.php
 
 public function applyDiscount(int $productId, float $percentage): bool
 {
@@ -672,89 +532,47 @@ public function applyDiscount(int $productId, float $percentage): bool
 }
 ```
 
-### Creating API Endpoint
-
-**1. Define API Route** (`routes/api.php`)
-
-```php
-$router->get('/api/v1/stats', 'App\Controllers\Api\V1\StatsApiController@index');
-```
-
-**2. Create API Controller**
-
-```php
-<?php
-namespace App\Controllers\Api\V1;
-
-use App\Core\Controller;
-use App\Models\Order;
-
-class StatsApiController extends Controller
-{
-    public function index(): void
-    {
-        $orderModel = new Order();
-        $stats = [
-            'total_orders' => $orderModel->getCount(),
-            'total_revenue' => $orderModel->getTotalRevenue(),
-        ];
-        
-        $this->json(true, $stats, 'Stats retrieved');
-    }
-}
-```
-
 ---
 
-## 🛠️ Development
+## 🛠️ การพัฒนา
 
-### Running Development Server
+### รันเซิร์ฟเวอร์พัฒนา
 
 ```bash
 composer serve
-# OR
+# หรือ
 php -S localhost:8000 -t public
 ```
 
-### Viewing Logs
+### ดู Logs
 
 ```bash
 tail -f storage/logs/app.log
 ```
 
-### Testing API with curl
+### ทดสอบ API ด้วย curl
 
 ```bash
-# Get products
+# ดูสินค้า
 curl http://localhost:8000/api/v1/products
 
-# Login
+# ล็อกอิน
 curl -X POST -c cookies.txt \
   -d "username=testuser&password=password123" \
   http://localhost:8000/login
 
-# Add to cart
+# เพิ่มลงตะกร้า
 curl -X POST -b cookies.txt \
   -H "Content-Type: application/json" \
   -d '{"product_id": 1, "quantity": 1}' \
   http://localhost:8000/api/v1/cart/add
 ```
 
-### Code Style
-
-Follow these conventions:
-
-- **PSR-4 Autoloading** - Namespaces match directory structure
-- **Camel Case** - Methods: `getUserOrders()`, Variables: `$userId`
-- **Pascal Case** - Classes: `OrderController`
-- **Comments** - Explain WHY, not WHAT
-- **Single Responsibility** - One function, one purpose
-
 ---
 
-## 🚀 Production Deployment
+## 🚀 การติดตั้งใน Production
 
-### Apache Configuration
+### การกำหนดค่า Apache
 
 ```apache
 <VirtualHost *:80>
@@ -771,105 +589,36 @@ Follow these conventions:
 </VirtualHost>
 ```
 
-### Nginx Configuration
-
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com;
-    root /var/www/simplebiz/public;
-    index index.php;
-    
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-    
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.0-fpm.sock;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-}
-```
-
-### Optimization
+### การปรับแต่ง
 
 ```bash
-# Optimize Composer autoloader
+# ปรับแต่ง Composer autoloader
 composer install --optimize-autoloader --no-dev
 
-# Set proper permissions
+# ตั้งค่าสิทธิ์ที่เหมาะสม
 chmod -R 755 storage
 chown -R www-data:www-data storage
-
-# Enable opcache (php.ini)
-opcache.enable=1
-opcache.memory_consumption=128
 ```
 
 ---
 
-## 📖 Learning Resources
+## 📄 ใบอนุญาต
 
-### Understanding the Code
-
-Start reading in this order:
-
-1. `public/index.php` - Entry point
-2. `app/Core/Router.php` - Request routing
-3. `app/Core/Controller.php` - Base controller
-4. `app/Models/Product.php` - Business logic example
-5. `app/Controllers/Ecommerce/ProductController.php` - Controller example
-
-### Key Concepts
-
-- **MVC Pattern** - Separation of concerns
-- **Dependency Injection** - Pass dependencies to constructors
-- **Prepared Statements** - SQL injection prevention
-- **Middleware** - Request filtering
-- **PSR-4 Autoloading** - Class loading standard
+โปรเจกต์นี้ใช้สิทธิ์แบบ MIT License
 
 ---
 
-## 🤝 Contributing
+## 🙏 กิตติกรรมประกาศ
 
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
+สร้างด้วย ❤️ เป็นเฟรมเวิร์กสำหรับสอนเกี่ยวกับ:
+- แนวปฏิบัติ PHP สมัยใหม่
+- สถาปัตยกรรม MVC
+- พื้นฐานอีคอมเมิร์ซ
+- การพัฒนา API
+- แนวปฏิบัติด้านความปลอดภัย
 
 ---
 
-## 🙏 Acknowledgments
+**จำไว้:** นี่เป็นฐานรากสำหรับเริ่มต้นอีคอมเมิร์ซที่ปลอดภัยและขยายได้ — ไม่ใช่ร้านค้าที่สมบูรณ์ ปรับแต่งตามความต้องการของคุณ!
 
-Built with ❤️ as a teaching framework for learning:
-- Modern PHP practices
-- MVC architecture
-- E-commerce fundamentals
-- API development
-- Security best practices
-
----
-
-## 📞 Support
-
-For questions or issues:
-- Create an issue on GitHub
-- Review code comments (extensive documentation)
-- Check logs in `storage/logs/app.log`
-
----
-
-**Remember:** This is a secure, extendable e-commerce starter foundation — not a full shop. Customize it for your needs!
-
-Happy Coding! 🚀
+ขอให้เขียนโค้ดสนุก! 🚀

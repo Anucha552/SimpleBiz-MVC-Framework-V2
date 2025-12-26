@@ -1,32 +1,32 @@
 <?php
 /**
- * API KEY MIDDLEWARE
+ * MIDDLEWARE API KEY
  * 
- * Purpose: Verify API key for sensitive API endpoints
+ * จุดประสงค์: ตรวจสอบ API key สำหรับ API endpoints ที่ละเอียดอ่อน
  * 
- * Usage:
- * Protected API routes require valid API key:
- * - POST /api/v1/orders/* (order creation)
- * - PUT /api/v1/orders/* (order updates)
+ * การใช้งาน:
+ * เส้นทาง API ที่ป้องกันต้องการ API key ที่ถูกต้อง:
+ * - POST /api/v1/orders/* (การสร้างคำสั่งซื้อ)
+ * - PUT /api/v1/orders/* (การอัปเดตคำสั่งซื้อ)
  * 
- * How It Works:
- * 1. Check for API key in header (X-API-Key) or query string
- * 2. Validate key against stored keys
- * 3. Allow or deny request
+ * วิธีการทำงาน:
+ * 1. ตรวจสอบ API key ใน header (X-API-Key) หรือ query string
+ * 2. ตรวจสอบคีย์กับคีย์ที่เก็บไว้
+ * 3. อนุญาตหรือปฏิเสธคำขอ
  * 
- * SECURITY:
- * - Log all invalid API key attempts
- * - Rate limit failures (future enhancement)
- * - Support multiple valid keys
+ * ความปลอดภัย:
+ * - บันทึกความพยายามใช้ API key ที่ไม่ถูกต้องทั้งหมด
+ * - จำกัดอัตราความล้มเหลว (การปรับปรุงในอนาคต)
+ * - รองรับคีย์ที่ถูกต้องหลายตัว
  * 
- * API Key Format:
+ * รูปแบบ API Key:
  * - Header: X-API-Key: your-api-key-here
  * - Query: ?api_key=your-api-key-here
  * 
- * Where to Store Keys:
- * - Environment variables (.env)
- * - Database (for multi-tenant apps)
- * - Config files (for simple apps)
+ * ที่เก็บคีย์:
+ * - ตัวแปรสภาพแวดล้อม (.env)
+ * - ฐานข้อมูล (สำหรับแอป multi-tenant)
+ * - ไฟล์กำหนดค่า (สำหรับแอปง่ายๆ)
  */
 
 namespace App\Middleware;
@@ -39,14 +39,14 @@ class ApiKeyMiddleware extends Middleware
     private Logger $logger;
 
     /**
-     * Valid API keys
+     * API keys ที่ถูกต้อง
      * 
-     * In production:
-     * - Load from database
-     * - Load from environment variables
-     * - Use hashed keys
+     * ในโปรดักชัน:
+     * - โหลดจากฐานข้อมูล
+     * - โหลดจากตัวแปรสภาพแวดล้อม
+     * - ใช้คีย์ที่เข้ารหัสแล้ว
      * 
-     * Example keys for demo purposes:
+     * ตัวอย่างคีย์สำหรับการสาธิต:
      */
     private array $validKeys = [
         'demo-api-key-12345',
@@ -57,7 +57,7 @@ class ApiKeyMiddleware extends Middleware
     {
         $this->logger = new Logger();
 
-        // Load API keys from environment if available
+        // โหลด API keys จากสภาพแวดล้อมถ้ามี
         $envKey = getenv('API_KEY');
         if ($envKey) {
             $this->validKeys[] = $envKey;
@@ -65,13 +65,13 @@ class ApiKeyMiddleware extends Middleware
     }
 
     /**
-     * Handle API key verification
+     * จัดการการตรวจสอบ API key
      * 
-     * @return bool True to continue, false to stop
+     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
      */
     public function handle(): bool
     {
-        // Get API key from header or query string
+        // รับ API key จาก header หรือ query string
         $apiKey = $this->getApiKey();
 
         if (!$apiKey) {
@@ -83,44 +83,44 @@ class ApiKeyMiddleware extends Middleware
             return false;
         }
 
-        // Validate API key
+        // ตรวจสอบ API key
         if (!$this->isValidKey($apiKey)) {
             $this->logger->security('api.invalid_key', [
                 'route' => $_SERVER['REQUEST_URI'] ?? 'unknown',
-                'key_provided' => substr($apiKey, 0, 10) . '...', // Log partial key only
+                'key_provided' => substr($apiKey, 0, 10) . '...', // บันทึกเฉพาะส่วนของคีย์
             ]);
 
             $this->jsonError('Invalid API key', 401);
             return false;
         }
 
-        // Valid key - log successful access
+        // คีย์ถูกต้อง - บันทึกการเข้าถึงที่สำเร็จ
         $this->logger->info('api.key_validated', [
             'route' => $_SERVER['REQUEST_URI'] ?? 'unknown',
         ]);
 
-        return true; // Continue to controller
+        return true; // ดำเนินการต่อไปยังตัวควบคุม
     }
 
     /**
-     * Get API key from request
+     * รับ API key จากคำขอ
      * 
-     * Checks:
+     * ตรวจสอบ:
      * 1. X-API-Key header
      * 2. Authorization: Bearer {key} header
      * 3. api_key query parameter
      * 
-     * @return string|null API key or null
+     * @return string|null API key หรือ null
      */
     private function getApiKey(): ?string
     {
-        // Check X-API-Key header
+        // ตรวจสอบ X-API-Key header
         $headers = getallheaders();
         if (isset($headers['X-API-Key'])) {
             return trim($headers['X-API-Key']);
         }
 
-        // Check Authorization Bearer header
+        // ตรวจสอบ Authorization Bearer header
         if (isset($headers['Authorization'])) {
             $auth = $headers['Authorization'];
             if (preg_match('/^Bearer\s+(.+)$/i', $auth, $matches)) {
@@ -128,7 +128,7 @@ class ApiKeyMiddleware extends Middleware
             }
         }
 
-        // Check query parameter
+        // ตรวจสอบ query parameter
         if (isset($_GET['api_key'])) {
             return trim($_GET['api_key']);
         }
@@ -137,10 +137,10 @@ class ApiKeyMiddleware extends Middleware
     }
 
     /**
-     * Check if API key is valid
+     * ตรวจสอบว่า API key ถูกต้องหรือไม่
      * 
-     * @param string $key API key to validate
-     * @return bool True if valid
+     * @param string $key API key ที่จะตรวจสอบ
+     * @return bool True ถ้าถูกต้อง
      */
     private function isValidKey(string $key): bool
     {
@@ -148,11 +148,11 @@ class ApiKeyMiddleware extends Middleware
     }
 
     /**
-     * Add API key to valid keys list
+     * เพิ่ม API key ลงในรายการคีย์ที่ถูกต้อง
      * 
-     * Used by admin functions to manage API keys
+     * ใช้โดยฟังก์ชันผู้ดูแลระบบเพื่อจัดการ API keys
      * 
-     * @param string $key New API key
+     * @param string $key API key ใหม่
      */
     public function addKey(string $key): void
     {
@@ -162,9 +162,9 @@ class ApiKeyMiddleware extends Middleware
     }
 
     /**
-     * Remove API key from valid keys list
+     * ลบ API key ออกจากรายการคีย์ที่ถูกต้อง
      * 
-     * @param string $key API key to remove
+     * @param string $key API key ที่จะลบ
      */
     public function removeKey(string $key): void
     {

@@ -1,50 +1,50 @@
 <?php
 /**
- * APPLICATION ENTRY POINT
+ * จุดเริ่มต้นของแอปพลิเคชัน
  * 
- * Purpose: Front controller - all requests flow through this file
+ * จุดประสงค์: Front controller - คำขอทั้งหมดไหลผ่านไฟล์นี้
  * 
- * Responsibilities:
- * 1. Load dependencies (Composer autoloader)
- * 2. Load environment variables
- * 3. Set error reporting based on environment
- * 4. Start session
- * 5. Create router and load routes
- * 6. Dispatch request to appropriate controller
+ * หน้าที่รับผิดชอบ:
+ * 1. โหลด dependencies (Composer autoloader)
+ * 2. โหลดตัวแปรสภาพแวดล้อม
+ * 3. ตั้งค่าการรายงานข้อผิดพลาดตามสภาพแวดล้อม
+ * 4. เริ่ม session
+ * 5. สร้าง router และโหลด routes
+ * 6. ส่งคำขอไปยัง controller ที่เหมาะสม
  * 
- * How It Works:
- * - Web server (Apache/Nginx) redirects all requests here
- * - Router matches URL to controller
- * - Controller handles request and returns response
+ * วิธีการทำงาน:
+ * - Web server (Apache/Nginx) เปลี่ยนเส้นทางคำขอทั้งหมดมาที่นี่
+ * - Router จับคู่ URL กับ controller
+ * - Controller จัดการคำขอและส่งคืนการตอบกลับ
  * 
- * SECURITY:
- * - Only this file should be in public directory
- * - All other files outside web root (protected)
- * - Error display disabled in production
+ * ความปลอดภัย:
+ * - มีเพียงไฟล์นี้เท่านั้นที่ควรอยู่ในโฟลเดอร์ public
+ * - ไฟล์อื่นๆ ทั้งหมดอยู่นอก web root (ได้รับการปกป้อง)
+ * - การแสดงข้อผิดพลาดถูกปิดในสภาพแวดล้อมจริง
  */
 
-// Start session
+// เริ่ม session
 session_start();
 
-// Load Composer autoloader
+// โหลด Composer autoloader
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Load environment variables from .env file
+// โหลดตัวแปรสภาพแวดล้อมจากไฟล์ .env
 if (file_exists(__DIR__ . '/../.env')) {
     $lines = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        // Skip comments
+        // ข้าม comments
         if (strpos(trim($line), '#') === 0) {
             continue;
         }
         
-        // Parse KEY=VALUE
+        // แยก KEY=VALUE
         if (strpos($line, '=') !== false) {
             list($key, $value) = explode('=', $line, 2);
             $key = trim($key);
             $value = trim($value);
             
-            // Set environment variable
+            // ตั้งค่าตัวแปรสภาพแวดล้อม
             if (!getenv($key)) {
                 putenv("{$key}={$value}");
             }
@@ -52,10 +52,10 @@ if (file_exists(__DIR__ . '/../.env')) {
     }
 }
 
-// Load application configuration
+// โหลดการตั้งค่าแอปพลิเคชัน
 $config = require __DIR__ . '/../config/app.php';
 
-// Set error reporting based on environment
+// ตั้งค่าการรายงานข้อผิดพลาดตามสภาพแวดล้อม
 if ($config['env'] === 'production') {
     error_reporting(0);
     ini_set('display_errors', '0');
@@ -64,22 +64,22 @@ if ($config['env'] === 'production') {
     ini_set('display_errors', '1');
 }
 
-// Set timezone
+// ตั้งค่า timezone
 date_default_timezone_set($config['timezone']);
 
-// Create router instance
+// สร้าง router instance
 $router = new App\Core\Router();
 
-// Load route definitions
+// โหลดการกำหนด route
 require __DIR__ . '/../routes/web.php';
 require __DIR__ . '/../routes/api.php';
 
-// Handle errors gracefully
+// จัดการข้อผิดพลาดอย่างเหมาะสม
 try {
-    // Dispatch request
+    // ส่งคำขอ
     $router->dispatch();
 } catch (\Exception $e) {
-    // Log error
+    // บันทึกข้อผิดพลาด
     $logger = new App\Core\Logger();
     $logger->error('application.exception', [
         'message' => $e->getMessage(),
@@ -87,12 +87,12 @@ try {
         'line' => $e->getLine(),
     ]);
 
-    // Show error based on environment
+    // แสดงข้อผิดพลาดตามสภาพแวดล้อม
     if ($config['env'] === 'production') {
-        // Production: Generic error message
+        // สภาพแวดล้อมจริง: แสดงข้อความทั่วไป
         http_response_code(500);
         
-        // Check if API request
+        // ตรวจสอบว่าเป็นคำขอ API หรือไม่
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         if (strpos($uri, '/api/') === 0) {
             header('Content-Type: application/json');
@@ -105,7 +105,7 @@ try {
             echo "<p>Something went wrong. Please try again later.</p>";
         }
     } else {
-        // Development: Show detailed error
+        // สภาพแวดล้อมพัฒนา: แสดงข้อผิดพลาดโดยละเอียด
         http_response_code(500);
         echo "<h1>Application Error</h1>";
         echo "<p><strong>Message:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";

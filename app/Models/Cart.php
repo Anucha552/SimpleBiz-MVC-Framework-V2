@@ -1,26 +1,26 @@
 <?php
 /**
- * CART MODEL
+ * โมเดลตะกร้าสินค้า
  * 
- * Purpose: Manages shopping cart functionality
- * Security: Server-side price validation, stock checking
+ * จุดประสงค์: จัดการฟังก์ชันตะกร้าสินค้า
+ * ความปลอดภัย: การตรวจสอบราคาฝั่งเซิร์ฟเวอร์, การตรวจสอบสต็อก
  * 
- * Business Rules:
- * - Each user has ONE active cart
- * - Quantities must be > 0
- * - Cannot exceed available stock
- * - Prices stored for display but RECALCULATED at checkout
+ * กฎทางธุรกิจ:
+ * - แต่ละผู้ใช้มีตะกร้าที่ใช้งานได้หนึ่งตะกร้า
+ * - จำนวนต้อง > 0
+ * - ไม่สามารถเกินสต็อกที่มีอยู่
+ * - ราคาถูกเก็บไว้เพื่อแสดงผลแต่จะคำนวณใหม่ตอนชำระเงิน
  * 
- * CRITICAL SECURITY RULE:
- * - NEVER trust client-submitted prices
- * - ALWAYS fetch current price from products table
- * - cart_items.price is for display only, not for order total calculation
- * - Server recalculates everything at checkout
+ * กฎความปลอดภัยสำคัญ:
+ * - ห้ามเชื่อถือราคาที่ไคลเอนต์ส่งมา
+ * - ดึงราคาปัจจุบันจากตาราง products เสมอ
+ * - cart_items.price เป็นเพื่อแสดงผลเท่านั้น ไม่ใช่สำหรับคำนวณยอดรวมคำสั่งซื้อ
+ * - เซิร์ฟเวอร์คำนวณทุกอย่างใหม่ตอนชำระเงิน
  * 
- * Why store price in cart_items?
- * - Shows user the price when they added item
- * - If product price changes, user sees both prices
- * - BUT: checkout uses CURRENT price from products table
+ * ทำไมต้องเก็บราคาใน cart_items?
+ * - แสดงให้ผู้ใช้เห็นราคาตอนที่เพิ่มสินค้า
+ * - ถ้าราคาสินค้าเปลี่ยน ผู้ใช้จะเห็นทั้งสองราคา
+ * - แต่: การชำระเงินใช้ราคาปัจจุบันจากตาราง products
  */
 
 namespace App\Models;
@@ -41,17 +41,17 @@ class Cart
     }
 
     /**
-     * Get or create cart for user
+     * ดึงหรือสร้างตะกร้าสำหรับผู้ใช้
      * 
-     * Each user has one active cart
-     * Creates cart automatically if doesn't exist
+     * แต่ละผู้ใช้มีตะกร้าที่ใช้งานหนึ่งตะกร้า
+     * สร้างตะกร้าอัตโนมัติถ้ายังไม่มี
      * 
-     * @param int $userId User ID
-     * @return int Cart ID
+     * @param int $userId ID ผู้ใช้
+     * @return int ID ตะกร้า
      */
     public function getOrCreateCart(int $userId): int
     {
-        // Check if user has existing cart
+        // ตรวจสอบว่าผู้ใช้มีตะกร้าอยู่แล้วหรือไม่
         $stmt = $this->db->prepare("SELECT id FROM carts WHERE user_id = ?");
         $stmt->execute([$userId]);
         $cart = $stmt->fetch();
@@ -60,7 +60,7 @@ class Cart
             return $cart['id'];
         }
 
-        // Create new cart
+        // สร้างตะกร้าใหม่
         $stmt = $this->db->prepare("INSERT INTO carts (user_id) VALUES (?)");
         $stmt->execute([$userId]);
 
@@ -75,27 +75,27 @@ class Cart
     }
 
     /**
-     * Add product to cart
+     * เพิ่มสินค้าลงตะกร้า
      * 
-     * Process:
-     * 1. Validate product exists and has stock
-     * 2. Get current price from products table (SECURITY!)
-     * 3. If product already in cart, update quantity
-     * 4. Otherwise, insert new cart item
+     * กระบวนการ:
+     * 1. ตรวจสอบว่าสินค้ามีอยู่และมีสต็อก
+     * 2. ดึงราคาปัจจุบันจากตาราง products (ความปลอดภัย!)
+     * 3. ถ้าสินค้าอยู่ในตะกร้าแล้ว อัปเดตจำนวน
+     * 4. ถ้าไม่มี แทรกรายการตะกร้าใหม่
      * 
-     * @param int $userId User ID
-     * @param int $productId Product ID
-     * @param int $quantity Quantity to add
+     * @param int $userId ID ผู้ใช้
+     * @param int $productId ID สินค้า
+     * @param int $quantity จำนวนที่จะเพิ่ม
      * @return array ['success' => bool, 'message' => string]
      */
     public function addItem(int $userId, int $productId, int $quantity): array
     {
-        // Validate quantity
+        // ตรวจสอบจำนวน
         if ($quantity <= 0) {
             return ['success' => false, 'message' => 'Quantity must be greater than 0'];
         }
 
-        // Get product and validate availability
+        // ดึงข้อมูลสินค้าและตรวจสอบความพร้อม
         $productModel = new Product();
         $availability = $productModel->checkAvailability($productId, $quantity);
 
@@ -111,12 +111,12 @@ class Cart
         }
 
         $product = $availability['product'];
-        $currentPrice = $product['price']; // ALWAYS use price from database!
+        $currentPrice = $product['price']; // ใช้ราคาจากฐานข้อมูลเสมอ!
 
-        // Get or create cart
+        // ดึงหรือสร้างตะกร้า
         $cartId = $this->getOrCreateCart($userId);
 
-        // Check if product already in cart
+        // ตรวจสอบว่าสินค้าอยู่ในตะกร้าแล้วหรือไม่
         $stmt = $this->db->prepare("
             SELECT id, qty 
             FROM cart_items 
@@ -127,10 +127,10 @@ class Cart
 
         try {
             if ($existingItem) {
-                // Update quantity
+                // อัปเดตจำนวน
                 $newQuantity = $existingItem['qty'] + $quantity;
 
-                // Check if new quantity exceeds stock
+                // ตรวจสอบว่าจำนวนใหม่เกินสต็อกหรือไม่
                 if ($newQuantity > $product['stock']) {
                     return [
                         'success' => false,
@@ -145,7 +145,7 @@ class Cart
                 ");
                 $stmt->execute([$newQuantity, $currentPrice, $existingItem['id']]);
             } else {
-                // Insert new cart item
+                // แทรกรายการตะกร้าใหม่
                 $stmt = $this->db->prepare("
                     INSERT INTO cart_items (cart_id, product_id, qty, price) 
                     VALUES (?, ?, ?, ?)
@@ -173,11 +173,11 @@ class Cart
     }
 
     /**
-     * Update cart item quantity
+     * อัปเดตจำนวนรายการในตะกร้า
      * 
-     * @param int $userId User ID
-     * @param int $productId Product ID
-     * @param int $quantity New quantity
+     * @param int $userId ID ผู้ใช้
+     * @param int $productId ID สินค้า
+     * @param int $quantity จำนวนใหม่
      * @return array ['success' => bool, 'message' => string]
      */
     public function updateQuantity(int $userId, int $productId, int $quantity): array
@@ -186,7 +186,7 @@ class Cart
             return $this->removeItem($userId, $productId);
         }
 
-        // Validate stock availability
+        // ตรวจสอบสต็อกที่มี
         $productModel = new Product();
         $availability = $productModel->checkAvailability($productId, $quantity);
 
@@ -217,10 +217,10 @@ class Cart
     }
 
     /**
-     * Remove item from cart
+     * ลบรายการออกจากตะกร้า
      * 
-     * @param int $userId User ID
-     * @param int $productId Product ID
+     * @param int $userId ID ผู้ใช้
+     * @param int $productId ID สินค้า
      * @return array ['success' => bool, 'message' => string]
      */
     public function removeItem(int $userId, int $productId): array
@@ -246,13 +246,13 @@ class Cart
     }
 
     /**
-     * Get cart contents with current product details
+     * ดึงเนื้อหาตะกร้าพร้อมรายละเอียดสินค้าปัจจุบัน
      * 
-     * IMPORTANT: Joins with products table to get CURRENT prices
-     * Shows both stored price and current price for comparison
+     * สำคัญ: เชื่อมกับตาราง products เพื่อดึงราคาปัจจุบัน
+     * แสดงทั้งราคาที่เก็บไว้และราคาปัจจุบันเพื่อเปรียบเทียบ
      * 
-     * @param int $userId User ID
-     * @return array Cart items with product details
+     * @param int $userId ID ผู้ใช้
+     * @return array รายการตะกร้าพร้อมรายละเอียดสินค้า
      */
     public function getItems(int $userId): array
     {
@@ -280,12 +280,12 @@ class Cart
     }
 
     /**
-     * Calculate cart total using CURRENT prices
+     * คำนวณยอดรวมตะกร้าโดยใช้ราคาปัจจุบัน
      * 
-     * SECURITY: This uses current prices from products table
-     * NEVER trust client-submitted totals
+     * ความปลอดภัย: ใช้ราคาปัจจุบันจากตาราง products
+     * ห้ามเชื่อถือยอดรวมที่ไคลเอนต์ส่งมา
      * 
-     * @param int $userId User ID
+     * @param int $userId ID ผู้ใช้
      * @return array ['total' => float, 'item_count' => int]
      */
     public function calculateTotal(int $userId): array
@@ -296,7 +296,7 @@ class Cart
         $itemCount = 0;
 
         foreach ($items as $item) {
-            // Use current_price, not added_price!
+            // ใช้ current_price ไม่ใช่ added_price!
             $total += $item['current_price'] * $item['qty'];
             $itemCount += $item['qty'];
         }
@@ -308,9 +308,9 @@ class Cart
     }
 
     /**
-     * Clear cart after order placement
+     * ล้างตะกร้าหลังจากวางคำสั่งซื้อ
      * 
-     * @param int $userId User ID
+     * @param int $userId ID ผู้ใช้
      */
     public function clear(int $userId): void
     {
@@ -326,10 +326,10 @@ class Cart
     }
 
     /**
-     * Get cart item count
+     * ดึงจำนวนรายการในตะกร้า
      * 
-     * @param int $userId User ID
-     * @return int Total items in cart
+     * @param int $userId ID ผู้ใช้
+     * @return int จำนวนรายการทั้งหมดในตะกร้า
      */
     public function getItemCount(int $userId): int
     {

@@ -1,26 +1,26 @@
 <?php
 /**
- * BASE MIDDLEWARE CLASS
+ * คลาส MIDDLEWARE พื้นฐาน
  * 
- * Purpose: Provides middleware functionality for request filtering
+ * จุดประสงค์: จัดเตรียมฟังก์ชัน middleware สำหรับการกรองคำขอ
  * 
- * What is Middleware?
- * - Code that runs BEFORE a controller is executed
- * - Used for: authentication, authorization, validation, logging
- * - Can stop request processing if conditions aren't met
+ * Middleware คืออะไร?
+ * - โค้ดที่ทำงานก่อนที่ตัวควบคุมจะถูกเรียกใช้
+ * - ใช้สำหรับ: การยืนยันตัวตน, การอนุญาต, การตรวจสอบ, การบันทึก
+ * - สามารถหยุดการประมวลผลคำขอได้หากไม่ตรงตามเงื่อนไข
  * 
- * How It Works:
- * 1. Router invokes middleware before controller
- * 2. Middleware handle() method runs
- * 3. If returns false, request processing stops
- * 4. If returns true, request continues to controller
+ * วิธีการทำงาน:
+ * 1. Router เรียกใช้ middleware ก่อนตัวควบคุม
+ * 2. เมธอด handle() ของ Middleware ทำงาน
+ * 3. ถ้าคืนค่า false การประมวลผลคำขอจะหยุด
+ * 4. ถ้าคืนค่า true คำขอจะดำเนินการต่อไปยังตัวควบคุม
  * 
- * Use Cases:
- * - Check if user is logged in (AuthMiddleware)
- * - Verify API keys (ApiKeyMiddleware)
- * - Rate limiting
- * - CSRF token validation
- * - Request logging
+ * กรณีการใช้งาน:
+ * - ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่ (AuthMiddleware)
+ * - ตรวจสอบ API keys (ApiKeyMiddleware)
+ * - การจำกัดอัตรา
+ * - การตรวจสอบ CSRF token
+ * - การบันทึกคำขอ
  */
 
 namespace App\Core;
@@ -28,16 +28,16 @@ namespace App\Core;
 abstract class Middleware
 {
     /**
-     * Handle incoming request
+     * จัดการคำขอที่เข้ามา
      * 
-     * Child classes must implement this method
+     * คลาสลูกต้องสร้างเมธอดนี้
      * 
-     * @return bool True to continue, false to stop
+     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
      */
     abstract public function handle(): bool;
 
     /**
-     * Check if user is authenticated
+     * ตรวจสอบว่าผู้ใช้ยืนยันตัวตนหรือไม่
      * 
      * @return bool
      */
@@ -47,7 +47,7 @@ abstract class Middleware
     }
 
     /**
-     * Get current user ID
+     * ดึง ID ของผู้ใช้ปัจจุบัน
      * 
      * @return int|null
      */
@@ -57,10 +57,10 @@ abstract class Middleware
     }
 
     /**
-     * Send JSON error response and stop execution
+     * ส่งการตอบกลับข้อผิดพลาด JSON และหยุดการทำงาน
      * 
-     * @param string $message Error message
-     * @param int $statusCode HTTP status code
+     * @param string $message ข้อความข้อผิดพลาด
+     * @param int $statusCode รหัสสถานะ HTTP
      */
     protected function jsonError(string $message, int $statusCode = 401): void
     {
@@ -74,9 +74,9 @@ abstract class Middleware
     }
 
     /**
-     * Redirect to URL and stop execution
+     * เปลี่ยนเส้นทางไปยัง URL และหยุดการทำงาน
      * 
-     * @param string $url Redirect URL
+     * @param string $url URL สำหรับเปลี่ยนเส้นทาง
      */
     protected function redirect(string $url): void
     {

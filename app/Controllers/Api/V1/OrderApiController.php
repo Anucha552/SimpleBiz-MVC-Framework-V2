@@ -1,21 +1,21 @@
 <?php
 /**
- * ORDER API CONTROLLER (V1)
+ * ตัวควบคุม API คำสั่งซื้อ (V1)
  * 
- * Purpose: RESTful API for order management
+ * จุดประสงค์: RESTful API สำหรับจัดการคำสั่งซื้อ
  * Base URL: /api/v1/orders
- * Security: Requires authentication + API key
+ * ความปลอดภัย: ต้องการการยืนยันตัวตน + API key
  * 
  * Endpoints:
- * - GET /api/v1/orders → List user orders
- * - GET /api/v1/orders/{id} → Get order details
- * - POST /api/v1/orders/create → Create order from cart
- * - PUT /api/v1/orders/{id}/status → Update order status (admin)
+ * - GET /api/v1/orders → แสดงรายการคำสั่งซื้อของผู้ใช้
+ * - GET /api/v1/orders/{id} → ดึงรายละเอียดคำสั่งซื้อ
+ * - POST /api/v1/orders/create → สร้างคำสั่งซื้อจากตะกร้า
+ * - PUT /api/v1/orders/{id}/status → อัปเดตสถานะคำสั่งซื้อ (ผู้ดูแลระบบ)
  * 
- * SECURITY:
- * - Users can only access their own orders
- * - API key required for sensitive operations
- * - All price calculations server-side
+ * ความปลอดภัย:
+ * - ผู้ใช้สามารถเข้าถึงเฉพาะคำสั่งซื้อของตนเอง
+ * - ต้องใช้ API key สำหรับการดำเนินการที่ละเอียดอ่อน
+ * - การคำนวณราคาทั้งหมดทำที่ฝั่งเซิร์ฟเวอร์
  */
 
 namespace App\Controllers\Api\V1;
@@ -29,7 +29,7 @@ class OrderApiController extends Controller
 
     public function __construct()
     {
-        // Start session if not already started
+        // เริ่มเซสชันถ้ายังไม่ได้เริ่ม
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -39,7 +39,7 @@ class OrderApiController extends Controller
 
     /**
      * GET /api/v1/orders
-     * List user's orders
+     * แสดงรายการคำสั่งซื้อของผู้ใช้
      */
     public function index(): void
     {
@@ -56,9 +56,9 @@ class OrderApiController extends Controller
 
     /**
      * GET /api/v1/orders/{id}
-     * Get order details
+     * ดึงรายละเอียดคำสั่งซื้อ
      * 
-     * @param string $id Order ID
+     * @param string $id รหัสคำสั่งซื้อ
      */
     public function show(string $id): void
     {
@@ -81,7 +81,7 @@ class OrderApiController extends Controller
             return;
         }
 
-        // Verify order belongs to current user
+        // ตรวจสอบว่าคำสั่งซื้อเป็นของผู้ใช้ปัจจุบัน
         if ($order['user_id'] !== $this->getUserId()) {
             $this->json(false, null, 'Access denied', [], 403);
             return;
@@ -92,7 +92,7 @@ class OrderApiController extends Controller
 
     /**
      * POST /api/v1/orders/create
-     * Create order from cart
+     * สร้างคำสั่งซื้อจากตะกร้า
      */
     public function create(): void
     {
@@ -103,11 +103,11 @@ class OrderApiController extends Controller
 
         $userId = $this->getUserId();
 
-        // Create order from cart
+        // สร้างคำสั่งซื้อจากตะกร้า
         $result = $this->orderModel->createFromCart($userId);
 
         if ($result['success']) {
-            // Get created order details
+            // ดึงรายละเอียดคำสั่งซื้อที่สร้าง
             $order = $this->orderModel->getWithItems($result['order_id']);
 
             $this->json(true, $order, $result['message'], [], 201);
@@ -118,11 +118,11 @@ class OrderApiController extends Controller
 
     /**
      * PUT /api/v1/orders/{id}/status
-     * Update order status
+     * อัปเดตสถานะคำสั่งซื้อ
      * 
      * Body: {"status": "paid"}
      * 
-     * @param string $id Order ID
+     * @param string $id รหัสคำสั่งซื้อ
      */
     public function updateStatus(string $id): void
     {
@@ -138,7 +138,7 @@ class OrderApiController extends Controller
             return;
         }
 
-        // Get JSON input
+        // รับข้อมูล JSON
         $input = json_decode(file_get_contents('php://input'), true);
 
         if (!$input) {
@@ -152,7 +152,7 @@ class OrderApiController extends Controller
 
         $status = $this->sanitize($input['status']);
 
-        // Verify order belongs to user
+        // ตรวจสอบว่าคำสั่งซื้อเป็นของผู้ใช้
         $order = $this->orderModel->findById($orderId);
 
         if (!$order) {
@@ -165,7 +165,7 @@ class OrderApiController extends Controller
             return;
         }
 
-        // Update status
+        // อัปเดตสถานะ
         $result = $this->orderModel->updateStatus($orderId, $status);
 
         if ($result['success']) {
