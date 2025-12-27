@@ -4,64 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $this->yieldSection('title', 'SimpleBiz MVC Framework') ?></title>
+    
+    <!-- Bootstrap 5 CSS (Local) -->
+    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons (CDN) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f4f4f4;
+            background-color: #f8f9fa;
         }
         
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        /* Header */
+        /* Custom Header Styling */
         header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem 0;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
-        header .container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        header h1 {
+        .navbar-brand {
             font-size: 1.5rem;
-        }
-        
-        nav ul {
-            list-style: none;
-            display: flex;
-            gap: 2rem;
-        }
-        
-        nav a {
-            color: white;
-            text-decoration: none;
-            font-weight: 500;
-            transition: opacity 0.3s;
-        }
-        
-        nav a:hover {
-            opacity: 0.8;
+            font-weight: bold;
         }
         
         /* Main Content */
         main {
-            min-height: calc(100vh - 140px);
+            min-height: calc(100vh - 160px);
             padding: 2rem 0;
         }
         
@@ -74,121 +41,18 @@
         
         /* Footer */
         footer {
-            background: #333;
+            background: #212529;
             color: white;
             text-align: center;
-            padding: 1rem 0;
+            padding: 1.5rem 0;
             margin-top: 2rem;
         }
         
-        /* Alerts */
-        .alert {
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 4px;
-        }
-        
-        .alert-success {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
-        
+        /* Custom Alert for 'error' type (Bootstrap uses 'danger') */
         .alert-error {
             background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
+            border-color: #f5c6cb;
             color: #721c24;
-        }
-        
-        .alert-info {
-            background-color: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-        }
-        
-        /* Buttons */
-        .btn {
-            display: inline-block;
-            padding: 0.5rem 1.5rem;
-            background: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background 0.3s;
-        }
-        
-        .btn:hover {
-            background: #5568d3;
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-        }
-        
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-        
-        .btn-danger {
-            background: #dc3545;
-        }
-        
-        .btn-danger:hover {
-            background: #c82333;
-        }
-        
-        /* Forms */
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-        
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-        
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        /* Tables */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-        }
-        
-        table th,
-        table td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        table th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-        }
-        
-        table tr:hover {
-            background-color: #f8f9fa;
         }
         
         <?= $this->yieldSection('styles', '') ?>
@@ -196,30 +60,52 @@
     <?= $this->yieldSection('head', '') ?>
 </head>
 <body>
+    <!-- Bootstrap Navbar -->
     <header>
-        <div class="container">
-            <h1>🛒 SimpleBiz E-Commerce</h1>
-            <nav>
-                <ul>
-                    <li><a href="/">หน้าแรก</a></li>
-                    <li><a href="/products">สินค้า</a></li>
-                    <li><a href="/cart">ตะกร้า</a></li>
-                    <li><a href="/orders">คำสั่งซื้อ</a></li>
-                    <?php if (isset($_SESSION['user_id'])): ?>
-                        <li><a href="/logout">ออกจากระบบ</a></li>
-                    <?php else: ?>
-                        <li><a href="/login">เข้าสู่ระบบ</a></li>
-                    <?php endif; ?>
-                </ul>
-            </nav>
-        </div>
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container">
+                <a class="navbar-brand" href="/">
+                    <i class="bi bi-shop"></i> SimpleBiz E-Commerce
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/"><i class="bi bi-house"></i> หน้าแรก</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/products"><i class="bi bi-box"></i> สินค้า</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/cart"><i class="bi bi-cart"></i> ตะกร้า</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/orders"><i class="bi bi-receipt"></i> คำสั่งซื้อ</a>
+                        </li>
+                        <?php if (isset($_SESSION['user_id'])): ?>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/logout"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</a>
+                            </li>
+                        <?php else: ?>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/login"><i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบ</a>
+                            </li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+            </div>
+        </nav>
     </header>
 
     <main>
         <div class="container">
             <?php if (isset($_SESSION['flash_message'])): ?>
-                <div class="alert alert-<?= $_SESSION['flash_type'] ?? 'info' ?>">
+                <div class="alert alert-<?= $_SESSION['flash_type'] ?? 'info' ?> alert-dismissible fade show" role="alert">
                     <?= htmlspecialchars($_SESSION['flash_message']) ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
                 </div>
                 <?php 
                     unset($_SESSION['flash_message']); 
@@ -235,10 +121,13 @@
 
     <footer>
         <div class="container">
-            <p>&copy; <?= date('Y') ?> SimpleBiz MVC Framework V2. All rights reserved.</p>
+            <p class="mb-0">&copy; <?= date('Y') ?> SimpleBiz MVC Framework V2. All rights reserved.</p>
         </div>
     </footer>
 
+    <!-- Bootstrap 5 JS Bundle with Popper (Local) -->
+    <script src="/assets/js/bootstrap.bundle.min.js"></script>
+    
     <?= $this->yieldSection('scripts', '') ?>
 </body>
 </html>

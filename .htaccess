@@ -5,8 +5,17 @@
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteBase /SimpleBiz-MVC-Framework-V2/
+    
+    # ถ้าเข้าไปยัง public/ แล้ว ไม่ต้อง redirect ซ้ำ
+    RewriteCond %{REQUEST_URI} ^/SimpleBiz-MVC-Framework-V2/public/
+    RewriteRule ^(.*)$ - [L]
     
     # เปลี่ยนเส้นทางไปยังโฟลเดอร์ public
-    RewriteCond %{REQUEST_URI} !^/public/
-    RewriteRule ^(.*)$ /public/$1 [L]
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
+
+# กำหนด index file
+DirectoryIndex public/index.php

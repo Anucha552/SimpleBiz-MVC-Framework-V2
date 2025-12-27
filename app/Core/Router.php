@@ -207,6 +207,12 @@ class Router
             $uri = substr($uri, 0, $pos);
         }
 
+        // ตัด base path (สำหรับการติดตั้งในโฟลเดอร์ย่อย)
+        $scriptName = dirname($_SERVER['SCRIPT_NAME']);
+        if ($scriptName !== '/' && strpos($uri, $scriptName) === 0) {
+            $uri = substr($uri, strlen($scriptName));
+        }
+
         // ลบเครื่องหมายทับนำและท้าย
         $uri = trim($uri, '/');
 
