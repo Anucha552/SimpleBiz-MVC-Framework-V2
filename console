@@ -1,0 +1,375 @@
+<?php
+/**
+ * Console Command Runner
+ * 
+ * จุดประสงค์: รันคำสั่ง CLI ต่างๆ สำหรับจัดการ Framework
+ * 
+ * วิธีใช้งาน:
+ * php console <command> [arguments]
+ * 
+ * คำสั่งที่มี:
+ * - serve              : รันเซิร์ฟเวอร์พัฒนา
+ * - migrate           : รัน database migrations
+ * - seed              : รัน database seeders
+ * - cache:clear       : ลบ cache ทั้งหมด
+ * - make:controller   : สร้าง controller ใหม่
+ * - make:model        : สร้าง model ใหม่
+ * - make:middleware   : สร้าง middleware ใหม่
+ * - test              : รัน tests
+ * - help              : แสดงความช่วยเหลือ
+ */
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+// โหลด environment variables
+if (file_exists(__DIR__ . '/.env')) {
+    $lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            putenv(trim($key) . '=' . trim($value));
+        }
+    }
+}
+
+// สี ANSI สำหรับ terminal
+class Color {
+    const RESET = "\033[0m";
+    const RED = "\033[31m";
+    const GREEN = "\033[32m";
+    const YELLOW = "\033[33m";
+    const BLUE = "\033[34m";
+    const CYAN = "\033[36m";
+    const WHITE = "\033[37m";
+    const BOLD = "\033[1m";
+}
+
+class Console
+{
+    private array $commands = [];
+    
+    public function __construct()
+    {
+        $this->registerCommands();
+    }
+    
+    private function registerCommands(): void
+    {
+        $this->commands = [
+            'serve' => 'runServer',
+            'migrate' => 'runMigrations',
+            'seed' => 'runSeeders',
+            'cache:clear' => 'clearCache',
+            'make:controller' => 'makeController',
+            'make:model' => 'makeModel',
+            'make:middleware' => 'makeMiddleware',
+            'test' => 'runTests',
+            'help' => 'showHelp',
+        ];
+    }
+    
+    public function run(array $argv): void
+    {
+        $this->printBanner();
+        
+        if (count($argv) < 2) {
+            $this->showHelp();
+            return;
+        }
+        
+        $command = $argv[1];
+        $args = array_slice($argv, 2);
+        
+        if (!isset($this->commands[$command])) {
+            $this->error("Command '{$command}' not found.");
+            $this->info("Run 'php console help' to see available commands.");
+            exit(1);
+        }
+        
+        $method = $this->commands[$command];
+        $this->$method($args);
+    }
+    
+    private function runServer(array $args): void
+    {
+        $host = $args[0] ?? 'localhost';
+        $port = $args[1] ?? '8000';
+        
+        $this->info("Starting development server...");
+        $this->success("Server running at http://{$host}:{$port}");
+        $this->info("Press Ctrl+C to stop");
+        echo "\n";
+        
+        passthru("php -S {$host}:{$port} -t public");
+    }
+    
+    private function runMigrations(array $args): void
+    {
+        $this->info("Running migrations...");
+        passthru("php migrate.php");
+    }
+    
+    private function runSeeders(array $args): void
+    {
+        $this->info("Running database seeders...");
+        passthru("php seed.php");
+    }
+    
+    private function clearCache(array $args): void
+    {
+        $this->info("Clearing cache...");
+        
+        $cacheDir = __DIR__ . '/storage/cache';
+        if (is_dir($cacheDir)) {
+            $files = glob($cacheDir . '/*');
+            foreach ($files as $file) {
+                if (is_file($file)) {
+                    unlink($file);
+                }
+            }
+            $this->success("Cache cleared successfully!");
+        } else {
+            $this->warning("Cache directory not found.");
+        }
+    }
+    
+    private function makeController(array $args): void
+    {
+        if (empty($args)) {
+            $this->error("Please provide a controller name.");
+            $this->info("Usage: php console make:controller ControllerName");
+            return;
+        }
+        
+        $name = $args[0];
+        if (!str_ends_with($name, 'Controller')) {
+            $name .= 'Controller';
+        }
+        
+        $path = __DIR__ . "/app/Controllers/{$name}.php";
+        
+        if (file_exists($path)) {
+            $this->error("Controller already exists!");
+            return;
+        }
+        
+        $template = $this->getControllerTemplate($name);
+        file_put_contents($path, $template);
+        
+        $this->success("Controller created: app/Controllers/{$name}.php");
+    }
+    
+    private function makeModel(array $args): void
+    {
+        if (empty($args)) {
+            $this->error("Please provide a model name.");
+            $this->info("Usage: php console make:model ModelName");
+            return;
+        }
+        
+        $name = $args[0];
+        $path = __DIR__ . "/app/Models/{$name}.php";
+        
+        if (file_exists($path)) {
+            $this->error("Model already exists!");
+            return;
+        }
+        
+        $template = $this->getModelTemplate($name);
+        file_put_contents($path, $template);
+        
+        $this->success("Model created: app/Models/{$name}.php");
+    }
+    
+    private function makeMiddleware(array $args): void
+    {
+        if (empty($args)) {
+            $this->error("Please provide a middleware name.");
+            $this->info("Usage: php console make:middleware MiddlewareName");
+            return;
+        }
+        
+        $name = $args[0];
+        if (!str_ends_with($name, 'Middleware')) {
+            $name .= 'Middleware';
+        }
+        
+        $path = __DIR__ . "/app/Middleware/{$name}.php";
+        
+        if (file_exists($path)) {
+            $this->error("Middleware already exists!");
+            return;
+        }
+        
+        $template = $this->getMiddlewareTemplate($name);
+        file_put_contents($path, $template);
+        
+        $this->success("Middleware created: app/Middleware/{$name}.php");
+    }
+    
+    private function runTests(array $args): void
+    {
+        $this->info("Running tests...");
+        echo "\n";
+        $phpunitPath = __DIR__ . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'phpunit';
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $phpunitPath .= '.bat';
+        }
+
+        passthru($phpunitPath);
+    }
+    
+    private function showHelp(): void
+    {
+        echo Color::CYAN . Color::BOLD . "Available Commands:\n" . Color::RESET;
+        echo "\n";
+        
+        $commands = [
+            'serve [host] [port]' => 'Start development server (default: localhost:8000)',
+            'migrate' => 'Run database migrations',
+            'seed' => 'Run database seeders',
+            'cache:clear' => 'Clear all cache',
+            'make:controller <name>' => 'Create a new controller',
+            'make:model <name>' => 'Create a new model',
+            'make:middleware <name>' => 'Create a new middleware',
+            'test' => 'Run PHPUnit tests',
+            'help' => 'Show this help message',
+        ];
+        
+        foreach ($commands as $command => $description) {
+            echo Color::GREEN . "  {$command}" . Color::RESET;
+            echo str_repeat(' ', 30 - strlen($command));
+            echo Color::WHITE . $description . Color::RESET . "\n";
+        }
+        
+        echo "\n";
+    }
+    
+    private function getControllerTemplate(string $name): string
+    {
+        return <<<PHP
+<?php
+/**
+ * {$name}
+ * 
+ * จุดประสงค์: [อธิบายหน้าที่ของ controller]
+ */
+
+namespace App\Controllers;
+
+use App\Core\Controller;
+
+class {$name} extends Controller
+{
+    /**
+     * แสดงหน้าหลัก
+     */
+    public function index(): void
+    {
+        // TODO: Implement index method
+        echo "Hello from {$name}!";
+    }
+}
+
+PHP;
+    }
+    
+    private function getModelTemplate(string $name): string
+    {
+        $table = strtolower($name) . 's';
+        
+        return <<<PHP
+<?php
+/**
+ * {$name} Model
+ * 
+ * จุดประสงค์: [อธิบายหน้าที่ของ model]
+ */
+
+namespace App\Models;
+
+use App\Core\Model;
+
+class {$name} extends Model
+{
+    protected string \$table = '{$table}';
+    
+    protected array \$fillable = [
+        // TODO: กำหนด fillable fields
+    ];
+    
+    protected array \$guarded = ['id'];
+    
+    protected bool \$timestamps = true;
+}
+
+PHP;
+    }
+    
+    private function getMiddlewareTemplate(string $name): string
+    {
+        return <<<PHP
+<?php
+/**
+ * {$name}
+ * 
+ * จุดประสงค์: [อธิบายหน้าที่ของ middleware]
+ */
+
+namespace App\Middleware;
+
+use App\Core\Middleware;
+
+class {$name} extends Middleware
+{
+    /**
+     * จัดการคำขอ
+     * 
+     * @return bool คืนค่า true เพื่อดำเนินการต่อ, false เพื่อหยุด
+     */
+    public function handle(): bool
+    {
+        // TODO: Implement middleware logic
+        
+        return true;
+    }
+}
+
+PHP;
+    }
+    
+    private function printBanner(): void
+    {
+        echo Color::CYAN . Color::BOLD;
+        echo "\n╔════════════════════════════════════════╗\n";
+        echo "║   SimpleBiz MVC Framework Console   ║\n";
+        echo "╚════════════════════════════════════════╝\n";
+        echo Color::RESET . "\n";
+    }
+    
+    private function success(string $message): void
+    {
+        echo Color::GREEN . "✓ {$message}" . Color::RESET . "\n";
+    }
+    
+    private function error(string $message): void
+    {
+        echo Color::RED . "✗ {$message}" . Color::RESET . "\n";
+    }
+    
+    private function info(string $message): void
+    {
+        echo Color::BLUE . "ℹ {$message}" . Color::RESET . "\n";
+    }
+    
+    private function warning(string $message): void
+    {
+        echo Color::YELLOW . "⚠ {$message}" . Color::RESET . "\n";
+    }
+}
+
+// Run console
+$console = new Console();
+$console->run($argv);

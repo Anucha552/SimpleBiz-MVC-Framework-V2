@@ -224,18 +224,6 @@ class Router
      */
     private function notFound(): void
     {
-        http_response_code(404);
-        
-        // ตรวจสอบว่าเป็นคำขอ API หรือไม่
-        $uri = $this->getUri();
-        if (strpos($uri, '/api/') === 0) {
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => false,
-                'message' => 'Endpoint not found',
-            ]);
-        } else {
-            echo "404 - Page Not Found";
-        }
+        ErrorHandler::notFound();
     }
 }

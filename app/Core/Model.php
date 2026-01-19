@@ -12,6 +12,11 @@
  * - Timestamps (created_at, updated_at)
  * - Mass assignment protection
  * 
+ * @method string getTable() รับชื่อตาราง
+ * @method string getPrimaryKey() รับชื่อ primary key
+ * @method array getFillable() รับ fillable fields
+ * @method array getGuarded() รับ guarded fields
+ * 
  * ตัวอย่างการใช้งาน:
  * ```php
  * // สร้าง Model
@@ -565,5 +570,47 @@ abstract class Model
     public function isDirty(): bool
     {
         return $this->attributes !== $this->original;
+    }
+
+    // ========== Getter Methods for Testing ==========
+
+    /**
+     * รับชื่อตาราง
+     * 
+     * @return string
+     */
+    public function getTable(): string
+    {
+        return $this->table;
+    }
+
+    /**
+     * รับชื่อ primary key
+     * 
+     * @return string
+     */
+    public function getPrimaryKey(): string
+    {
+        return $this->primaryKey;
+    }
+
+    /**
+     * รับ fillable fields
+     * 
+     * @return array
+     */
+    public function getFillable(): array
+    {
+        return $this->fillable;
+    }
+
+    /**
+     * รับ guarded fields
+     * 
+     * @return array
+     */
+    public function getGuarded(): array
+    {
+        return $this->guarded;
     }
 }

@@ -86,27 +86,49 @@ cd SimpleBiz-MVC-Framework-V2
 # 2. ติดตั้ง dependencies
 composer install
 
-# 3. ตั้งค่า environment
-cp .env.example .env
-# แก้ไข .env ด้วยข้อมูลฐานข้อมูล
+# 3. ตั้งค่า environment (ไฟล์ .env ถูกสร้างไว้แล้ว)
+# แก้ไข .env ด้วยข้อมูลฐานข้อมูลของคุณ
 
 # 4. สร้างฐานข้อมูลและรัน migrations
-mysql -u root -p
-CREATE DATABASE simplebiz_mvc CHARACTER SET utf8mb4;
-USE simplebiz_mvc;
-SOURCE database/migrations/users.sql;
-SOURCE database/migrations/products.sql;
-SOURCE database/migrations/carts.sql;
-SOURCE database/migrations/orders.sql;
+php console migrate
 
-# 5. ตั้งค่าสิทธิ์
-chmod -R 755 storage/logs
+# 5. สร้างข้อมูลตัวอย่าง (optional)
+php console seed
 
 # 6. เริ่มเซิร์ฟเวอร์
-php -S localhost:8000 -t public
+php console serve
 ```
 
 เข้าถึงได้ที่: http://localhost:8000
+
+**บัญชีทดสอบ:**
+- Username: `admin`
+- Password: `password123`
+
+---
+
+## 🛠️ คำสั่ง CLI ที่มีให้ใช้งาน
+
+Framework มาพร้อมกับระบบ CLI ที่ช่วยในการพัฒนา:
+
+```bash
+# รันเซิร์ฟเวอร์พัฒนา
+php console serve [host] [port]
+
+# Database
+php console migrate          # รัน migrations
+php console seed            # รัน seeders
+
+# สร้างไฟล์ใหม่
+php console make:controller ControllerName
+php console make:model ModelName
+php console make:middleware MiddlewareName
+
+# เครื่องมืออื่นๆ
+php console cache:clear     # ลบ cache
+php console test           # รัน PHPUnit tests
+php console help           # แสดงความช่วยเหลือ
+```
 
 ---
 
@@ -115,24 +137,91 @@ php -S localhost:8000 -t public
 โปรเจคนี้เหมาะสำหรับ:
 
 ✅ **นักพัฒนาที่ต้องการเรียนรู้** - ศึกษาการสร้างเฟรมเวิร์ก MVC จากศูนย์  
-✅ **โปรเจคขนาดเล็ก-กลาง** - ไม่ต้องการความซับซ้อนของ Laravel/Symfony  
+✅ **โปรเจคขนาดเล็ก-กลาง-ใหญ่** - มีเครื่องมือครบสำหรับ production  
 ✅ **ระบบอีคอมเมิร์ซแบบกำหนดเอง** - มีฐานรากพร้อมขยายตามต้องการ  
 ✅ **การเรียนรู้ Security Best Practices** - ดูตัวอย่างการป้องกันช่องโหว่ต่างๆ  
+✅ **Production Ready** - มี Testing, Error Handling, CLI Tools ครบถ้วน
 
-❌ **ไม่เหมาะสำหรับ:**
-- โปรเจคขนาดใหญ่ที่ต้องการ enterprise features
-- ต้องการ ORM ที่ซับซ้อน เช่น Eloquent
-- ต้องการ dependency injection container
+---
+
+## ✨ ฟีเจอร์ที่เพิ่งเพิ่มเข้ามา (v2.0)
+
+### Testing Infrastructure ✅
+- PHPUnit configuration
+- Unit & Feature tests
+- Test base class พร้อม helpers
+
+### CLI Commands ✅
+- Console command runner
+- Code generators (controller, model, middleware)
+- Database tools (migrate, seed)
+- Test runner
+
+### Error Handling ✅
+- Custom error pages (404, 403, 500, 503)
+- Error handler class
+- JSON error responses
+
+### Database Seeder ✅
+- Seeder base class
+- Category, User, Product seeders
+- ข้อมูลตัวอย่างพร้อมใช้
+
+### Email Service ✅
+- Mail class พร้อม template support
+- Welcome, Order Confirmation, Password Reset templates
+- SMTP configuration
+
+ดู [CHANGELOG.md](CHANGELOG.md) สำหรับรายละเอียดเพิ่มเติม
 
 ---
 
 ## 📖 เอกสารเพิ่มเติม
 
-สำหรับข้อมูลโดยละเอียด กรุณาอ่าน:
-- **API Documentation** - ดูใน `routes/api.php` และ `app/Controllers/Api/`
-- **Database Schema** - ดูใน `database/migrations/`
-- **Security Guidelines** - อ่าน comments ใน Models และ Controllers
+Framework มีเอกสารครบถ้วนสำหรับทุกส่วน:
+
+### 📘 เอกสารหลัก
+- [CHANGELOG.md](CHANGELOG.md) - การเปลี่ยนแปลงและฟีเจอร์ใหม่ทุก version
+- [docs/READY.md](docs/READY.md) - สรุปความพร้อมและคะแนนประเมิน Framework
+- [docs/SYSTEM_CHECK.md](docs/SYSTEM_CHECK.md) - รายงานการตรวจสอบระบบครบถ้วน
+
+### 🔧 คู่มือการใช้งาน
+- [docs/CORE_USAGE.md](docs/CORE_USAGE.md) - คู่มือการใช้งาน Core Classes ทั้ง 12 คลาส
+- [docs/HELPERS_GUIDE.md](docs/HELPERS_GUIDE.md) - คู่มือ Helpers ทั้ง 7 ตัว พร้อมตัวอย่าง
+- [docs/MIDDLEWARE_GUIDE.md](docs/MIDDLEWARE_GUIDE.md) - คู่มือ Middleware ทั้ง 10 ตัว
+- [docs/VIEWS_GUIDE.md](docs/VIEWS_GUIDE.md) - คู่มือการใช้งาน Views และ Layouts
+- [docs/MODELS_GUIDE.md](docs/MODELS_GUIDE.md) - **ใหม่!** คู่มือการใช้งาน Models ทั้ง 16 ตัว
+- [docs/SERVICES_GUIDE.md](docs/SERVICES_GUIDE.md) - **อัพเดท!** คู่มือ Services (Mail, FileUpload, Cache, Logger, ErrorHandler)
+
+### 🗄️ Database & Testing
+- [docs/MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - คู่มือ Migration System
+- [docs/SEEDING_GUIDE.md](docs/SEEDING_GUIDE.md) - **ใหม่!** คู่มือการสร้างและใช้งาน Seeders
+- [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) - **ใหม่!** คู่มือการเขียน Unit และ Feature Tests
+
+### 🚀 Deployment & Security
+- [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - **อัพเดท!** คู่มือ Deploy แบบละเอียด (Apache/Nginx configs, SSL, Rollback)
+- [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) - **อัพเดท!** คู่มือการตั้งค่า Environment Variables
+- [docs/SECURITY_HARDENING.md](docs/SECURITY_HARDENING.md) - **อัพเดท!** คู่มือการรักษาความปลอดภัย
+
+### 🛠️ Tools & API
+- [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) - **อัพเดท!** คู่มือคำสั่ง CLI ละเอียด ทุกคำสั่ง
+- [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - **อัพเดท!** API Reference พร้อมตัวอย่าง Request/Response
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - โครงสร้างโปรเจคและคำแนะนำ
+
+### 📚 อื่นๆ
+- **Database Schema** - ดูใน [database/migrations/](database/migrations/)
 - **Code Comments** - ทุกไฟล์มีคอมเมนต์ภาษาไทยอธิบายการทำงาน
+
+---
+
+## 🧪 การทดสอบ
+
+รัน tests ด้วยคำสั่ง:
+```bash
+php console test
+# หรือ
+./vendor/bin/phpunit
+```
 
 ---
 

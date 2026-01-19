@@ -4,14 +4,19 @@
 
 # การตั้งค่าสภาพแวดล้อม (เก็บข้อมูลการเข้าถึง)
 .env
+.env.*
 
 # Composer dependencies
 /vendor/
-composer.lock
+# composer.lock  # เก็บไว้เพื่อให้ได้ version เดียวกัน
 
 # บันทึก (อาจเก็บข้อมูลที่ละเอียดอ่อน)
 /storage/logs/*.log
 /storage/logs/*.txt
+
+# Cache files
+/storage/cache/*
+!/storage/cache/.gitkeep
 
 # ไฟล์ระบบ
 .DS_Store
@@ -27,6 +32,7 @@ desktop.ini
 # PHP
 *.cache
 .phpunit.result.cache
+/.phpunit.cache/
 
 # ไฟล์ชั่วคราว
 *.tmp
