@@ -16,6 +16,13 @@
 10. [Router](#10-router) - ระบบ Routing
 11. [View](#11-view) - Template Engine
 12. [Database](#12-database) - การเชื่อมต่อฐานข้อมูล
+13. [Logger](#13-logger) - ระบบบันทึกข้อมูล
+14. [ErrorHandler](#14-errorhandler) - จัดการข้อผิดพลาด
+15. [Mail](#15-mail) - ส่งอีเมล
+16. [Migration](#16-migration) - Migration Base Class
+17. [MigrationRunner](#17-migrationrunner) - รันระบบ Migration
+18. [Seeder](#18-seeder) - สร้างข้อมูลตัวอย่าง
+19. [Middleware](#19-middleware) - Base Middleware
 
 ---
 
@@ -1707,6 +1714,270 @@ try {
 
 ---
 
+## 13. Logger
+
+คลาส `Logger` ใช้สำหรับบันทึกข้อมูลเหตุการณ์ต่างๆ
+
+### การใช้งานพื้นฐาน
+
+```php
+use App\Core\Logger;
+
+$logger = new Logger();
+
+// บันทึก info
+$logger->info('User logged in', ['user_id' => 123]);
+
+// บันทึก error
+$logger->error('Database connection failed', ['error' => $e->getMessage()]);
+
+// บันทึก warning
+$logger->warning('Low disk space', ['available' => '10GB']);
+
+// บันทึก debug
+$logger->debug('Processing data', ['count' => 100]);
+```
+
+ไฟล์ log จะถูกเก็บใน `storage/logs/` โดยแยกตามวันที่
+
+---
+
+## 14. ErrorHandler
+
+คลาส `ErrorHandler` ใช้สำหรับจัดการข้อผิดพลาดแบบ centralized
+
+### การใช้งานพื้นฐาน
+
+```php
+use App\Core\ErrorHandler;
+
+// แสดงหน้า 404
+ErrorHandler::show(404);
+
+// แสดงหน้า 403 พร้อมข้อความ
+ErrorHandler::show(403, 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+
+// แสดงหน้า 500
+ErrorHandler::show(500, 'เกิดข้อผิดพลาดภายในระบบ');
+
+// แสดงหน้า 503 (Maintenance Mode)
+ErrorHandler::show(503, 'ระบบอยู่ในระหว่างปรับปรุง');
+```
+
+ErrorHandler จะตรวจสอบว่าเป็น API request หรือไม่ และส่งคืน JSON หรือ HTML ตามความเหมาะสม
+
+---
+
+## 15. Mail
+
+คลาส `Mail` ใช้สำหรับส่งอีเมล
+
+### การตั้งค่า
+
+ตั้งค่าใน `.env`:
+```env
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@yourdomain.com
+MAIL_FROM_NAME="Your App Name"
+```
+
+### การใช้งานพื้นฐาน
+
+```php
+use App\Core\Mail;
+
+$mail = new Mail();
+
+// ส่งอีเมลแบบ HTML
+$mail->to('user@example.com', 'John Doe')
+     ->subject('Welcome to Our Platform')
+     ->html('<h1>Welcome!</h1><p>Thank you for joining us.</p>')
+     ->send();
+
+// ส่งอีเมลด้วย template
+$mail->to('user@example.com', 'Jane Doe')
+     ->subject('Order Confirmation')
+     ->template('emails/order-confirmation', [
+         'name' => 'Jane Doe',
+         'order_id' => 'ORD-12345',
+         'total' => 1500.00
+     ])
+     ->send();
+
+// ส่งอีเมลหลายคน
+$mail->to(['user1@example.com', 'user2@example.com'])
+     ->subject('Newsletter')
+     ->template('emails/newsletter', ['month' => 'January'])
+     ->send();
+
+// แนบไฟล์
+$mail->to('user@example.com')
+     ->subject('Invoice')
+     ->attach('/path/to/invoice.pdf')
+     ->html('<p>Please find attached invoice.</p>')
+     ->send();
+```
+
+---
+
+## 16. Migration
+
+คลาส `Migration` เป็น base class สำหรับสร้าง database migrations
+
+### การสร้าง Migration
+
+```php
+namespace Database\Migrations;
+
+use App\Core\Migration;
+
+class CreateUsersTable extends Migration
+{
+    /**
+     * รัน migration (สร้างตาราง)
+     */
+    public function up(): void
+    {
+        $sql = "CREATE TABLE users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )";
+        
+        $this->execute($sql);
+    }
+
+    /**
+     * Rollback migration (ลบตาราง)
+     */
+    public function down(): void
+    {
+        $this->execute("DROP TABLE IF EXISTS users");
+    }
+}
+```
+
+---
+
+## 17. MigrationRunner
+
+ใช้สำหรับรัน migrations ผ่านคำสั่ง CLI
+
+```bash
+# รัน migrations ทั้งหมด
+php console migrate
+
+# หรือใช้ migrate.php โดยตรง
+php migrate.php up
+
+# Rollback
+php migrate.php down
+
+# Fresh migration (ลบทุกอย่างและรันใหม่)
+php migrate.php fresh
+
+# ดูสถานะ
+php migrate.php status
+```
+
+---
+
+## 18. Seeder
+
+คลาส `Seeder` เป็น base class สำหรับสร้างข้อมูลตัวอย่าง
+
+### การสร้าง Seeder
+
+```php
+namespace Database\Seeders;
+
+use App\Core\Seeder;
+
+class UserSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $users = [
+            [
+                'name' => 'Admin User',
+                'email' => 'admin@example.com',
+                'password' => password_hash('password123', PASSWORD_BCRYPT),
+                'role' => 'admin'
+            ],
+            [
+                'name' => 'Test User',
+                'email' => 'user@example.com',
+                'password' => password_hash('password123', PASSWORD_BCRYPT),
+                'role' => 'user'
+            ]
+        ];
+
+        $this->insert('users', $users);
+    }
+}
+```
+
+### รัน Seeders
+
+```bash
+# รัน seeders ทั้งหมด
+php console seed
+
+# หรือใช้ seed.php โดยตรง
+php seed.php
+```
+
+---
+
+## 19. Middleware
+
+คลาส `Middleware` เป็น base class สำหรับสร้าง middleware
+
+### การสร้าง Middleware
+
+```php
+namespace App\Middleware;
+
+use App\Core\Middleware;
+
+class CheckAgeMiddleware extends Middleware
+{
+    public function handle(): bool
+    {
+        $age = $_GET['age'] ?? 0;
+        
+        if ($age < 18) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'คุณต้องมีอายุ 18 ปีขึ้นไป'
+            ]);
+            return false;
+        }
+        
+        return true;
+    }
+}
+```
+
+### การใช้งาน Middleware
+
+```php
+// ใน routes
+$router->get('/adult-content', 'ContentController@show', [
+    new CheckAgeMiddleware()
+]);
+```
+
+---
+
 ## สรุป
 
 คลาสทั้งหมดใน `app/Core` ถูกออกแบบมาให้ทำงานร่วมกันได้อย่างลงตัว:
@@ -1719,6 +1990,17 @@ try {
 6. **FileUpload** - อัปโหลดไฟล์
 7. **Pagination** - แบ่งหน้า
 8. **Cache** - เพิ่มความเร็ว
+9. **Controller** - Base controller สำหรับ HTTP handling
+10. **Router** - จัดการ routing และ URL
+11. **View** - แสดงผล templates
+12. **Database** - เชื่อมต่อฐานข้อมูล
+13. **Logger** - บันทึกเหตุการณ์
+14. **ErrorHandler** - จัดการข้อผิดพลาด
+15. **Mail** - ส่งอีเมล
+16. **Migration** - จัดการ database schema
+17. **MigrationRunner** - รัน migrations
+18. **Seeder** - สร้างข้อมูลตัวอย่าง
+19. **Middleware** - กรองและตรวจสอบ requests
 9. **Controller** - ควบคุมการทำงาน
 10. **Router** - จัดการเส้นทาง
 11. **View** - แสดงผล

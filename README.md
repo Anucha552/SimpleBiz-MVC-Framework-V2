@@ -178,24 +178,40 @@ php console help           # แสดงความช่วยเหลือ
 
 ## 📖 เอกสารเพิ่มเติม
 
-สำหรับข้อมูลโดยละเอียด กรุณาอ่าน:
-- [docs/CHANGELOG.md](docs/CHANGELOG.md) - การเปลี่ยนแปลงและฟีเจอร์ใหม่
-- [docs/READY.md](docs/READY.md) - สรุปความพร้อมของ Framework
-- [docs/SYSTEM_CHECK.md](docs/SYSTEM_CHECK.md) - รายงานการตรวจสอบระบบ
-- [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - คู่มือการ Deploy
-- [docs/SECURITY_HARDENING.md](docs/SECURITY_HARDENING.md) - Checklist ความปลอดภัย Production
-- [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) - ตารางค่า Environment
-- [docs/CORE_USAGE.md](docs/CORE_USAGE.md) - คู่มือการใช้งาน Core
-- [docs/HELPERS_GUIDE.md](docs/HELPERS_GUIDE.md) - คู่มือ Helpers
-- [docs/MIDDLEWARE_GUIDE.md](docs/MIDDLEWARE_GUIDE.md) - คู่มือ Middleware
-- [docs/MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - คู่มือ Migration
-- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - โครงสร้างโปรเจค
-- [docs/VIEWS_GUIDE.md](docs/VIEWS_GUIDE.md) - คู่มือ Views
-- [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - เอกสาร API
-- [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) - คู่มือ CLI
-- [docs/SERVICES_GUIDE.md](docs/SERVICES_GUIDE.md) - คู่มือบริการระบบ (Mail/FileUpload/Cache/Logger)
-- **Database Schema** - ดูใน [database/migrations/](database/migrations/)
-- **Code Comments** - ทุกไฟล์มีคอมเมนต์ภาษาไทยอธิบายการทำงาน
+เอกสารครบถ้วนและอัพเดทล่าสุด (มกราคม 2026):
+
+### 📘 เอกสารสำหรับเริ่มต้น
+- [docs/QUICK_START.md](docs/QUICK_START.md) - เริ่มต้นใช้งาน 5 นาที
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - โครงสร้างโปรเจคแบบละเอียด
+- [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) - คำสั่ง CLI ทั้งหมด
+
+### 🔧 เอกสารทางเทคนิค
+- [docs/CORE_USAGE.md](docs/CORE_USAGE.md) - คู่มือ Core Classes ครบถ้วน (19 classes)
+- [docs/HELPERS_GUIDE.md](docs/HELPERS_GUIDE.md) - Helper Functions ทั้งหมด
+- [docs/MIDDLEWARE_GUIDE.md](docs/MIDDLEWARE_GUIDE.md) - Middleware ทั้งหมดพร้อมตัวอย่าง
+- [docs/MODELS_GUIDE.md](docs/MODELS_GUIDE.md) - Models ทั้งหมดและ Relationships
+- [docs/VIEWS_GUIDE.md](docs/VIEWS_GUIDE.md) - View Templates และ Layouts
+
+### 💾 เอกสารฐานข้อมูล
+- [docs/MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - Migration System แบบละเอียด
+- [docs/SEEDING_GUIDE.md](docs/SEEDING_GUIDE.md) - การสร้างข้อมูลตัวอย่าง
+- [database/migrations/](database/migrations/) - Database Schema Files
+
+### 🌐 เอกสาร API และ Testing
+- [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - API Documentation ครบถ้วน
+- [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) - PHPUnit Testing Guide
+
+### 🚀 เอกสาร Deployment และ Production
+- [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - คู่มือ Deploy แบบละเอียด
+- [docs/SECURITY_HARDENING.md](docs/SECURITY_HARDENING.md) - Security Checklist สำหรับ Production
+- [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) - ตารางค่า Environment Variables
+
+### 📋 เอกสารอ้างอิง
+- [docs/SERVICES_GUIDE.md](docs/SERVICES_GUIDE.md) - Mail, FileUpload, Cache, Logger
+- [docs/CHANGELOG.md](docs/CHANGELOG.md) - ประวัติการเปลี่ยนแปลง
+- [docs/USE_CASES.md](docs/USE_CASES.md) - ตัวอย่างการใช้งานจริง
+
+**หมายเหตุ:** เอกสารทั้งหมดได้รับการอัพเดทให้เป็นปัจจุบันในเดือนมกราคม 2026
 
 ---
 

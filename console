@@ -8,6 +8,7 @@
  * php console <command> [arguments]
  * 
  * คำสั่งที่มี:
+ * - setup             : ตั้งค่าโปรเจคใหม่ (เปลี่ยนชื่อ, สร้าง .env, APP_KEY)
  * - serve              : รันเซิร์ฟเวอร์พัฒนา
  * - migrate           : รัน database migrations
  * - seed              : รัน database seeders
@@ -57,6 +58,7 @@ class Console
     private function registerCommands(): void
     {
         $this->commands = [
+            'setup' => 'setupProject',
             'serve' => 'runServer',
             'migrate' => 'runMigrations',
             'seed' => 'runSeeders',
@@ -89,6 +91,169 @@ class Console
         
         $method = $this->commands[$command];
         $this->$method($args);
+    }
+    
+    private function setupProject(array $args): void
+    {
+        $this->info("🚀 SimpleBiz Framework Project Setup");
+        echo "\n";
+        
+        // 1. ถามชื่อโปรเจค
+        echo Color::CYAN . "ชื่อโปรเจค (เช่น mybookstore, restaurant-ordering): " . Color::RESET;
+        $projectName = trim(fgets(STDIN));
+        
+        if (empty($projectName)) {
+            $this->error("กรุณาระบุชื่อโปรเจค!");
+            return;
+        }
+        
+        // 2. ถามคำอธิบายโปรเจค
+        echo Color::CYAN . "คำอธิบายโปรเจค: " . Color::RESET;
+        $projectDescription = trim(fgets(STDIN));
+        
+        // 3. ถามชื่อ Vendor/Company
+        echo Color::CYAN . "Vendor/Company name (เช่น mycompany): " . Color::RESET;
+        $vendorName = trim(fgets(STDIN));
+        
+        if (empty($vendorName)) {
+            $vendorName = 'mycompany';
+        }
+        
+        // 4. ถามชื่อแอปพลิเคชัน (สำหรับแสดงผล)
+        echo Color::CYAN . "ชื่อแอปพลิเคชัน (สำหรับแสดงผล เช่น My Bookstore): " . Color::RESET;
+        $appName = trim(fgets(STDIN));
+        
+        if (empty($appName)) {
+            $appName = ucwords(str_replace(['-', '_'], ' ', $projectName));
+        }
+        
+        // 5. ถามชื่อ Database
+        echo Color::CYAN . "ชื่อ Database (ถ้าไม่ระบุจะใช้ชื่อโปรเจค): " . Color::RESET;
+        $dbName = trim(fgets(STDIN));
+        
+        if (empty($dbName)) {
+            $dbName = str_replace(['-', ' '], '_', strtolower($projectName));
+        }
+        
+        // 6. ถาม Database Username
+        echo Color::CYAN . "Database Username [root]: " . Color::RESET;
+        $dbUser = trim(fgets(STDIN));
+        
+        if (empty($dbUser)) {
+            $dbUser = 'root';
+        }
+        
+        // 7. ถาม Database Password
+        echo Color::CYAN . "Database Password [เว้นว่าง]: " . Color::RESET;
+        $dbPassword = trim(fgets(STDIN));
+        
+        echo "\n";
+        $this->info("กำลังตั้งค่าโปรเจค...");
+        echo "\n";
+        
+        // 8. แก้ไข composer.json
+        $this->info("1. กำลังแก้ไข composer.json...");
+        $this->updateComposerJson($vendorName, $projectName, $projectDescription);
+        
+        // 9. สร้าง .env จาก .env.example
+        $this->info("2. กำลังสร้างไฟล์ .env...");
+        $this->createEnvFile($appName, $dbName, $dbUser, $dbPassword);
+        
+        // 10. สร้าง APP_KEY
+        $this->info("3. กำลังสร้าง APP_KEY...");
+        $appKey = $this->generateAppKey();
+        $this->updateEnvKey($appKey);
+        
+        // 11. ติดตั้ง Composer dependencies
+        $this->info("4. กำลังติดตั้ง Composer dependencies...");
+        passthru("composer install --quiet");
+        
+        echo "\n";
+        $this->success("✓ ตั้งค่าโปรเจคเสร็จสมบูรณ์!");
+        echo "\n";
+        
+        // แสดงสรุป
+        echo Color::GREEN . Color::BOLD . "สรุปข้อมูลโปรเจค:\n" . Color::RESET;
+        echo Color::WHITE . "  ชื่อโปรเจค: " . Color::CYAN . $projectName . Color::RESET . "\n";
+        echo Color::WHITE . "  Composer name: " . Color::CYAN . "{$vendorName}/{$projectName}" . Color::RESET . "\n";
+        echo Color::WHITE . "  ชื่อแอป: " . Color::CYAN . $appName . Color::RESET . "\n";
+        echo Color::WHITE . "  Database: " . Color::CYAN . $dbName . Color::RESET . "\n";
+        echo Color::WHITE . "  APP_KEY: " . Color::CYAN . $appKey . Color::RESET . "\n";
+        echo "\n";
+        
+        // แสดงคำแนะนำขั้นต่อไป
+        echo Color::YELLOW . Color::BOLD . "ขั้นตอนถัดไป:\n" . Color::RESET;
+        echo Color::WHITE . "  1. สร้าง Database: " . Color::CYAN . "CREATE DATABASE {$dbName};\n" . Color::RESET;
+        echo Color::WHITE . "  2. รัน Migrations: " . Color::CYAN . "php console migrate\n" . Color::RESET;
+        echo Color::WHITE . "  3. รัน Seeders (optional): " . Color::CYAN . "php console seed\n" . Color::RESET;
+        echo Color::WHITE . "  4. เริ่มเซิร์ฟเวอร์: " . Color::CYAN . "php console serve\n" . Color::RESET;
+        echo "\n";
+    }
+    
+    private function updateComposerJson(string $vendor, string $project, string $description): void
+    {
+        $composerFile = __DIR__ . '/composer.json';
+        
+        if (!file_exists($composerFile)) {
+            $this->error("ไม่พบไฟล์ composer.json");
+            return;
+        }
+        
+        $composer = json_decode(file_get_contents($composerFile), true);
+        
+        $composer['name'] = strtolower($vendor) . '/' . strtolower($project);
+        if (!empty($description)) {
+            $composer['description'] = $description;
+        }
+        
+        file_put_contents($composerFile, json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        
+        $this->success("  ✓ อัปเดต composer.json แล้ว");
+    }
+    
+    private function createEnvFile(string $appName, string $dbName, string $dbUser, string $dbPassword): void
+    {
+        $envExample = __DIR__ . '/.env.example';
+        $envFile = __DIR__ . '/.env';
+        
+        if (!file_exists($envExample)) {
+            $this->error("ไม่พบไฟล์ .env.example");
+            return;
+        }
+        
+        $content = file_get_contents($envExample);
+        
+        // แทนที่ค่าต่างๆ
+        $content = preg_replace('/APP_NAME=.*/', 'APP_NAME="' . $appName . '"', $content);
+        $content = preg_replace('/DB_DATABASE=.*/', 'DB_DATABASE=' . $dbName, $content);
+        $content = preg_replace('/DB_USERNAME=.*/', 'DB_USERNAME=' . $dbUser, $content);
+        $content = preg_replace('/DB_PASSWORD=.*/', 'DB_PASSWORD=' . $dbPassword, $content);
+        
+        file_put_contents($envFile, $content);
+        
+        $this->success("  ✓ สร้างไฟล์ .env แล้ว");
+    }
+    
+    private function generateAppKey(): string
+    {
+        return bin2hex(random_bytes(16));
+    }
+    
+    private function updateEnvKey(string $key): void
+    {
+        $envFile = __DIR__ . '/.env';
+        
+        if (!file_exists($envFile)) {
+            $this->error("ไม่พบไฟล์ .env");
+            return;
+        }
+        
+        $content = file_get_contents($envFile);
+        $content = preg_replace('/APP_KEY=.*/', 'APP_KEY=' . $key, $content);
+        
+        file_put_contents($envFile, $content);
+        
+        $this->success("  ✓ สร้าง APP_KEY แล้ว");
     }
     
     private function runServer(array $args): void
@@ -227,6 +392,7 @@ class Console
         echo "\n";
         
         $commands = [
+            'setup' => 'Setup new project (ตั้งค่าโปรเจคใหม่อัตโนมัติ)',
             'serve [host] [port]' => 'Start development server (default: localhost:8000)',
             'migrate' => 'Run database migrations',
             'seed' => 'Run database seeders',
