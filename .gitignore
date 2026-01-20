@@ -5,10 +5,11 @@
 # การตั้งค่าสภาพแวดล้อม (เก็บข้อมูลการเข้าถึง)
 .env
 .env.*
+!.env.example
 
 # Composer dependencies
 /vendor/
-# composer.lock  # เก็บไว้เพื่อให้ได้ version เดียวกัน
+composer.lock
 
 # บันทึก (อาจเก็บข้อมูลที่ละเอียดอ่อน)
 /storage/logs/*.log

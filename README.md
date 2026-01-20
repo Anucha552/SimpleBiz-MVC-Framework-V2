@@ -70,40 +70,185 @@ SimpleBiz-MVC-Framework-V2/
 
 ## 🚀 เริ่มต้นใช้งาน
 
-### ความต้องการ
-- PHP 8.0+
-- MySQL 5.7+ / MariaDB 10.3+
-- Composer
-- Apache (mod_rewrite) หรือ Nginx
+### ความต้องการระบบ (System Requirements)
+
+เลือกวิธีติดตั้งที่เหมาะกับคุณ:
+
+#### 🎯 **วิธีที่ 1: ใช้เครื่องมือเสริม (แนะนำสำหรับผู้เริ่มต้น)**
+
+ติดตั้งแพ็คเกจที่รวมทุกอย่างไว้แล้ว:
+
+**Windows:**
+- [Laravel Herd](https://herd.laravel.com/) ⭐ **แนะนำ!** - ใหม่ล่าสุด รวม PHP 8.3, MySQL, Composer, Nginx เร็วและใช้งานง่าย
+- [Laragon](https://laragon.org/) - ติดตั้งง่าย รวมทุกอย่าง
+- [XAMPP](https://www.apachefriends.org/) - รวม PHP 8.0+, MySQL, Apache พร้อม extensions ครบ
+
+**Mac:**
+- [Laravel Herd](https://herd.laravel.com/) ⭐ **แนะนำ!** - เร็วและเบา รวม PHP 8.3, MySQL, Composer
+- [MAMP](https://www.mamp.info/) - รวม PHP, MySQL, Apache
+- [Laragon](https://laragon.org/download/)
+
+**Linux:**
+- [Laragon](https://laragon.org/download/) - รองรับ Ubuntu/Debian
+
+**ข้อดีของ Herd:**
+- ✅ ใช้งานง่ายที่สุด - ติดตั้งครั้งเดียวใช้ได้เลย
+- ✅ รวม Composer ไว้แล้ว - ไม่ต้องติดตั้งแยก
+- ✅ เบาและเร็ว - ใช้ Nginx แทน Apache
+- ✅ รองรับ PHP หลายเวอร์ชัน - สลับได้ง่าย
+- ✅ MySQL + phpMyAdmin ในตัว
+
+**หลังติดตั้งเสร็จ:**
+- ถ้าใช้ **Herd**: พร้อมใช้งานเลย ไม่ต้องติดตั้งอะไรเพิ่ม ✅
+- ถ้าใช้ **XAMPP/Laragon/MAMP**: ต้องติดตั้ง [Composer](https://getcomposer.org/download/) เพิ่ม
+
+#### 🔧 **วิธีที่ 2: ติดตั้งแยกทีละตัว (สำหรับผู้ใช้ขั้นสูง)**
+
+ติดตั้งแต่ละส่วนด้วยตัวเอง:
+
+**1. PHP 8.0+** พร้อม Extensions ที่จำเป็น:
+   - `pdo_mysql` - เชื่อมต่อฐานข้อมูล
+   - `mbstring` - จัดการภาษาไทย/Unicode
+   - `json` - API และ JSON
+   - `openssl` - เข้ารหัสรหัสผ่าน
+   - `fileinfo` - ตรวจสอบไฟล์อัปโหลด
+
+```bash
+# ตรวจสอบ PHP และ Extensions
+php -v
+php -m | grep -E 'pdo|mbstring|json|openssl|fileinfo'
+```
+
+**2. MySQL 5.7+ หรือ MariaDB 10.3+**
+```bash
+# ตรวจสอบ
+mysql --version
+```
+
+**3. Composer**
+```bash
+# ตรวจสอบ
+composer --version
+```
+
+**4. Web Server** - Apache หรือ Nginx (หรือใช้ `php console serve`)
+
+<details>
+<summary><b>📦 คำสั่งติดตั้งตามระบบปฏิบัติการ (คลิกเพื่อดู)</b></summary>
+
+**Ubuntu/Debian:**
+```bash
+# ติดตั้ง PHP และ Extensions
+sudo apt update
+sudo apt install php8.1 php8.1-mysql php8.1-mbstring php8.1-json php8.1-curl
+
+# ติดตั้ง MySQL
+sudo apt install mysql-server
+
+# ติดตั้ง Composer
+curl -sS https://getcomposer.org/installer | php
+sudo mv composer.phar /usr/local/bin/composer
+```
+
+**CentOS/RHEL:**
+```bash
+sudo yum install php php-mysqlnd php-mbstring php-json
+sudo yum install mysql-server
+```
+
+**Mac (Homebrew):**
+```bash
+brew install php@8.1 mysql composer
+```
+
+**Windows:**
+- ดาวน์โหลด [PHP](https://windows.php.net/download/)
+- ดาวน์โหลด [MySQL](https://dev.mysql.com/downloads/installer/)
+- ดาวน์โหลด [Composer](https://getcomposer.org/download/)
+
+</details>
+
+---
+
+### ✅ เช็คลิสต์ก่อนติดตั้ง Framework
+
+ตรวจสอบว่าติดตั้งครบแล้ว:
+- [ ] PHP 8.0+ (`php -v`)
+- [ ] PHP Extensions ครบถ้วน (`php -m`)
+- [ ] MySQL/MariaDB (`mysql --version`)
+- [ ] Composer (`composer --version`)
+
+---
 
 ### การติดตั้งอย่างรวดเร็ว
 
+#### วิธีที่ 1: ใช้คำสั่ง Setup (แนะนำ - เร็วที่สุด!)
+
 ```bash
 # 1. Clone repository
-git clone [repository-url]
+git clone https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2.git
 cd SimpleBiz-MVC-Framework-V2
 
-# 2. ติดตั้ง dependencies
+# 2. ติดตั้ง Composer dependencies
 composer install
 
-# 3. ตั้งค่า environment (ไฟล์ .env ถูกสร้างไว้แล้ว)
-# แก้ไข .env ด้วยข้อมูลฐานข้อมูลของคุณ
+# 3. รันคำสั่ง setup (ตั้งค่าทุกอย่างอัตโนมัติ)
+php console setup
+# จะถามคำถาม: ชื่อโปรเจค, database, APP_KEY ฯลฯ
 
-# 4. สร้างฐานข้อมูลและรัน migrations
+# 4. สร้างฐานข้อมูล
+mysql -u root -p
+CREATE DATABASE your_database_name CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+exit;
+
+# 5. รัน migrations (สร้างตาราง)
 php console migrate
 
-# 5. สร้างข้อมูลตัวอย่าง (optional)
+# 6. รัน seeders - สร้างข้อมูลตัวอย่าง (optional)
 php console seed
 
-# 6. เริ่มเซิร์ฟเวอร์
+# 7. เริ่มเซิร์ฟเวอร์
 php console serve
 ```
 
-เข้าถึงได้ที่: http://localhost:8000
+#### วิธีที่ 2: ตั้งค่าด้วยมือ
 
-**บัญชีทดสอบ:**
-- Username: `admin`
+```bash
+# 1. Clone repository
+git clone https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2.git
+cd SimpleBiz-MVC-Framework-V2
+
+# 2. ติดตั้ง Composer dependencies
+composer install
+
+# 3. สร้างไฟล์ .env จาก template
+cp .env.example .env
+
+# 4. แก้ไข .env - ตั้งค่า database และ APP_KEY
+nano .env
+# หรือใช้ text editor อื่นๆ
+
+# 5. สร้างฐานข้อมูล
+mysql -u root -p
+CREATE DATABASE your_database_name CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+exit;
+
+# 6. รัน migrations
+php console migrate
+
+# 7. รัน seeders (optional)
+php console seed
+
+# 8. เริ่มเซิร์ฟเวอร์
+php console serve
+```
+
+เข้าถึงได้ที่: **http://localhost:8000**
+
+**บัญชีทดสอบ (หลังรัน seeder):**
+- Username: `admin` หรือ Email: `admin@simplebiz.local`
 - Password: `password123`
+- Role: Administrator
 
 ---
 
@@ -248,11 +393,6 @@ MIT License - ใช้งานได้อย่างอิสระทั้
 - การจัดการภาพสินค้า
 
 **ใช้ในสภาพแวดล้อมจริงด้วยความระมัดระวัง และปรับปรุงตามความต้องการด้านความปลอดภัย**
-INSERT INTO products (name, description, price, stock, status) VALUES
-('แล็ปท็อป', 'แล็ปท็อปประสิทธิภาพสูง', 999.99, 10, 'active'),
-('เมาส์', 'เมาส์ไร้สาย', 29.99, 50, 'active'),
-('คีย์บอร์ด', 'คีย์บอร์ดเมคานิคัล', 79.99, 30, 'active');
-```
 
 ---
 

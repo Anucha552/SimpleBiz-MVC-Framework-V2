@@ -148,25 +148,87 @@ class Console
         $dbPassword = trim(fgets(STDIN));
         
         echo "\n";
+        
+        // 8. ถามเกี่ยวกับ Git Repository
+        echo Color::YELLOW . "ต้องการจัดการ Git repository หรือไม่? (y/n) [n]: " . Color::RESET;
+        $manageGit = strtolower(trim(fgets(STDIN)));
+        
+        $gitMode = '';
+        $gitRemoteUrl = '';
+        
+        if ($manageGit === 'y' || $manageGit === 'yes') {
+            echo Color::YELLOW . "\nเลือกวิธีการ:\n" . Color::RESET;
+            echo Color::WHITE . "  1. เปลี่ยน remote URL (เก็บประวัติ commits เดิม)\n" . Color::RESET;
+            echo Color::WHITE . "  2. เริ่ม Git ใหม่ทั้งหมด (ลบประวัติเก่า)\n" . Color::RESET;
+            echo Color::CYAN . "เลือก (1/2) [1]: " . Color::RESET;
+            $gitChoice = trim(fgets(STDIN));
+            
+            if ($gitChoice === '2') {
+                $gitMode = 'reinit';
+            } else {
+                $gitMode = 'change-remote';
+            }
+            
+            echo Color::CYAN . "GitHub Repository URL (เช่น https://github.com/yourusername/yourrepo.git): " . Color::RESET;
+            $gitRemoteUrl = trim(fgets(STDIN));
+        }
+        
+        echo "\n";
         $this->info("กำลังตั้งค่าโปรเจค...");
         echo "\n";
         
-        // 8. แก้ไข composer.json
+        // 9. แก้ไข composer.json
         $this->info("1. กำลังแก้ไข composer.json...");
         $this->updateComposerJson($vendorName, $projectName, $projectDescription);
         
-        // 9. สร้าง .env จาก .env.example
+        // 10. สร้าง .env จาก .env.example
         $this->info("2. กำลังสร้างไฟล์ .env...");
         $this->createEnvFile($appName, $dbName, $dbUser, $dbPassword);
         
-        // 10. สร้าง APP_KEY
+        // 11. สร้าง APP_KEY
         $this->info("3. กำลังสร้าง APP_KEY...");
         $appKey = $this->generateAppKey();
         $this->updateEnvKey($appKey);
         
-        // 11. ติดตั้ง Composer dependencies
-        $this->info("4. กำลังติดตั้ง Composer dependencies...");
+        $step = 4;
+        
+        // 12. อัปเดต README.md
+        $this->info("{$step}. กำลังอัปเดต README.md...");
+        $this->updateReadme($projectName, $appName, $projectDescription);
+        $step++;
+        
+        // 13. อัปเดต .gitignore
+        $this->info("{$step}. กำลังตรวจสอบ .gitignore...");
+        $this->ensureGitignore();
+        $step++;
+        
+        // 14. จัดการ Git (ถ้าต้องการ)
+        if (!empty($gitRemoteUrl)) {
+            $this->info("{$step}. กำลังจัดการ Git repository...");
+            if ($gitMode === 'reinit') {
+                $this->reinitGit($gitRemoteUrl);
+            } else {
+                $this->changeGitRemote($gitRemoteUrl);
+            }
+            $step++;
+        }
+        
+        // 15. ติดตั้ง Composer dependencies
+        $this->info("{$step}. กำลังติดตั้ง Composer dependencies...");
         passthru("composer install --quiet");
+        $step++;
+        
+        // 16. Commit การเปลี่ยนแปลง (ถ้ามี Git)
+        if (!empty($gitRemoteUrl) && is_dir(__DIR__ . '/.git')) {
+            echo "\n";
+            echo Color::YELLOW . "ต้องการ commit และ push การเปลี่ยนแปลงหรือไม่? (y/n) [y]: " . Color::RESET;
+            $shouldCommit = strtolower(trim(fgets(STDIN)));
+            
+            if ($shouldCommit !== 'n' && $shouldCommit !== 'no') {
+                $this->info("{$step}. กำลัง commit และ push...");
+                $this->commitAndPush($projectName);
+            }
+        }
         
         echo "\n";
         $this->success("✓ ตั้งค่าโปรเจคเสร็จสมบูรณ์!");
@@ -254,6 +316,191 @@ class Console
         file_put_contents($envFile, $content);
         
         $this->success("  ✓ สร้าง APP_KEY แล้ว");
+    }
+    
+    private function updateReadme(string $projectName, string $appName, string $description): void
+    {
+        $readmeFile = __DIR__ . '/README.md';
+        
+        if (!file_exists($readmeFile)) {
+            $this->warning("  ⚠ ไม่พบไฟล์ README.md");
+            return;
+        }
+        
+        $content = file_get_contents($readmeFile);
+        
+        // เปลี่ยนชื่อโปรเจค
+        $content = preg_replace('/# SimpleBiz MVC Framework V2/', '# ' . $appName, $content, 1);
+        
+        // เปลี่ยนคำอธิบาย (บรรทัดแรกที่มี **)
+        if (!empty($description)) {
+            $content = preg_replace('/\*\*เฟรมเวิร์ก MVC สำหรับระบบอีคอมเมิร์ซ[^*]+\*\*/', '**' . $description . '**', $content, 1);
+        }
+        
+        file_put_contents($readmeFile, $content);
+        
+        $this->success("  ✓ อัปเดต README.md แล้ว");
+    }
+    
+    private function ensureGitignore(): void
+    {
+        $gitignoreFile = __DIR__ . '/.gitignore';
+        
+        if (!file_exists($gitignoreFile)) {
+            // สร้างไฟล์ใหม่
+            $content = $this->getDefaultGitignore();
+            file_put_contents($gitignoreFile, $content);
+            $this->success("  ✓ สร้างไฟล์ .gitignore แล้ว");
+        } else {
+            $this->success("  ✓ .gitignore มีอยู่แล้ว");
+        }
+    }
+    
+    private function getDefaultGitignore(): string
+    {
+        return <<<'EOT'
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Composer
+/vendor/
+composer.lock
+
+# Logs
+/storage/logs/*.log
+/storage/logs/*.txt
+
+# Cache
+/storage/cache/*
+!/storage/cache/.gitkeep
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# PHP
+*.cache
+.phpunit.result.cache
+/.phpunit.cache/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Node modules (if using)
+node_modules/
+
+# Build files
+/build/
+/dist/
+EOT;
+    }
+    
+    private function changeGitRemote(string $newUrl): void
+    {
+        // ตรวจสอบว่ามี .git directory อยู่หรือไม่
+        if (!is_dir(__DIR__ . '/.git')) {
+            $this->warning("  ⚠ ไม่พบ Git repository, ข้ามขั้นตอนนี้");
+            return;
+        }
+        
+        // ลบ remote origin เดิม
+        exec("git remote remove origin 2>&1", $output, $returnCode);
+        
+        // เพิ่ม remote ใหม่
+        exec("git remote add origin {$newUrl} 2>&1", $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            $this->success("  ✓ เปลี่ยน Git remote เป็น {$newUrl} แล้ว");
+        } else {
+            $this->error("  ✗ ไม่สามารถเปลี่ยน Git remote ได้");
+        }
+    }
+    
+    private function reinitGit(string $newUrl): void
+    {
+        // ลบ .git directory เดิม
+        if (is_dir(__DIR__ . '/.git')) {
+            $this->removeDirectory(__DIR__ . '/.git');
+            $this->success("  ✓ ลบ Git repository เดิมแล้ว");
+        }
+        
+        // เริ่มต้น Git ใหม่
+        exec("git init 2>&1", $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            $this->error("  ✗ ไม่สามารถเริ่มต้น Git ได้");
+            return;
+        }
+        
+        // เพิ่ม remote
+        exec("git remote add origin {$newUrl} 2>&1");
+        
+        // สร้าง branch main
+        exec("git branch -M main 2>&1");
+        
+        $this->success("  ✓ เริ่มต้น Git repository ใหม่แล้ว");
+    }
+    
+    private function commitAndPush(string $projectName): void
+    {
+        // เพิ่มไฟล์ทั้งหมด
+        exec("git add . 2>&1", $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            $this->error("  ✗ ไม่สามารถ add ไฟล์ได้");
+            return;
+        }
+        
+        // Commit
+        $commitMessage = "Initial setup for {$projectName}";
+        exec('git commit -m "' . $commitMessage . '" 2>&1', $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            $this->warning("  ⚠ ไม่มีการเปลี่ยนแปลงให้ commit หรือเกิดข้อผิดพลาด");
+            return;
+        }
+        
+        $this->success("  ✓ Commit สำเร็จ");
+        
+        // Push
+        echo Color::CYAN . "  กำลัง push ไปยัง GitHub..." . Color::RESET . "\n";
+        passthru("git push -u origin main 2>&1", $returnCode);
+        
+        if ($returnCode === 0) {
+            $this->success("  ✓ Push สำเร็จ!");
+        } else {
+            $this->warning("  ⚠ Push ไม่สำเร็จ (อาจต้อง authenticate หรือสร้าง repository บน GitHub ก่อน)");
+            $this->info("    คุณสามารถ push เองภายหลังด้วย: git push -u origin main");
+        }
+    }
+    
+    private function removeDirectory(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+        
+        $files = array_diff(scandir($dir), ['.', '..']);
+        
+        foreach ($files as $file) {
+            $path = $dir . '/' . $file;
+            is_dir($path) ? $this->removeDirectory($path) : unlink($path);
+        }
+        
+        rmdir($dir);
     }
     
     private function runServer(array $args): void

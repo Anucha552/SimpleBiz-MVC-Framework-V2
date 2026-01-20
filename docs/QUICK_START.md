@@ -24,7 +24,17 @@ cd my-project
 
 ---
 
-### ขั้นตอนที่ 3: รันคำสั่ง Setup (แนะนำ!)
+### ขั้นตอนที่ 3: ติดตั้ง Composer Dependencies
+
+```bash
+composer install
+```
+
+**หมายเหตุ:** ต้องติดตั้ง Composer ก่อนถึงจะรันคำสั่งนี้ได้ ([ดาวน์โหลด Composer](https://getcomposer.org/download/))
+
+---
+
+### ขั้นตอนที่ 4: รันคำสั่ง Setup (แนะนำ!)
 
 ```bash
 php console setup
@@ -34,7 +44,11 @@ php console setup
 - ✅ แก้ไข composer.json
 - ✅ สร้างไฟล์ .env
 - ✅ สร้าง APP_KEY
+- ✅ อัปเดต README.md
+- ✅ ตรวจสอบ/สร้าง .gitignore
+- ✅ จัดการ Git repository (เปลี่ยน remote หรือเริ่มใหม่)
 - ✅ ติดตั้ง Composer dependencies
+- ✅ Commit และ Push (ถ้าต้องการ)
 
 **ตัวอย่างการตอบคำถาม:**
 
@@ -48,24 +62,64 @@ Vendor/Company name: mycompany
 ชื่อ Database: bookstore_db
 Database Username [root]: root
 Database Password: (กด Enter ถ้าไม่มี password)
+
+ต้องการจัดการ Git repository หรือไม่? (y/n) [n]: y
+  1. เปลี่ยน remote URL (เก็บประวัติ commits เดิม)
+  2. เริ่ม Git ใหม่ทั้งหมด (ลบประวัติเก่า)
+เลือก (1/2) [1]: 1
+GitHub Repository URL: https://github.com/yourusername/bookstore.git
+
+ต้องการ commit และ push การเปลี่ยนแปลงหรือไม่? (y/n) [y]: y
 ```
+
+**หมายเหตุ:** 
+- ถ้าเลือกจัดการ Git และ push ทันที จะต้องสร้าง repository บน GitHub ก่อน
+- ระบบจะ commit ด้วยข้อความ "Initial setup for {projectName}"
 
 ---
 
-### ขั้นตอนที่ 4: สร้าง Database
+### ขั้นตอนที่ 4.1 (Optional): จัดการ Git Repository
+
+ถ้าคุณตอบ "y" ในคำถามเกี่ยวกับ Git ระหว่างการรัน `php console setup` ระบบจะจัดการให้อัตโนมัติ แต่ถ้าข้ามไป สามารถทำเองได้:
+
+**วิธีที่ 1: เปลี่ยน Git Remote (เก็บประวัติเดิม)**
+```bash
+git remote remove origin
+git remote add origin https://github.com/yourusername/yourrepo.git
+git push -u origin main
+```
+
+**วิธีที่ 2: เริ่ม Git ใหม่ทั้งหมด (ลบประวัติ)**
+```bash
+Remove-Item -Recurse -Force .git  # Windows
+# rm -rf .git  # Linux/Mac
+
+git init
+git add .
+git commit -m "Initial setup for my-project"
+git branch -M main
+git remote add origin https://github.com/yourusername/yourrepo.git
+git push -u origin main
+```
+
+**หมายเหตุ:** ต้องสร้าง repository บน GitHub ก่อน
+
+---
+
+### ขั้นตอนที่ 5: สร้าง Database
 
 ```bash
 # เข้า MySQL
 mysql -u root -p
 
-# สร้าง Database (ใช้ชื่อเดียวกับที่ระบุในขั้นตอนที่ 3)
+# สร้าง Database (ใช้ชื่อเดียวกับที่ระบุในขั้นตอนที่ 4)
 CREATE DATABASE bookstore_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 exit;
 ```
 
 ---
 
-### ขั้นตอนที่ 5: รัน Migrations
+### ขั้นตอนที่ 6: รัน Migrations
 
 ```bash
 php console migrate
@@ -75,7 +129,7 @@ php console migrate
 
 ---
 
-### ขั้นตอนที่ 6 (Optional): รัน Seeders
+### ขั้นตอนที่ 7 (Optional): รัน Seeders
 
 ```bash
 php console seed
@@ -85,7 +139,7 @@ php console seed
 
 ---
 
-### ขั้นตอนที่ 7: เริ่มเซิร์ฟเวอร์
+### ขั้นตอนที่ 8: เริ่มเซิร์ฟเวอร์
 
 ```bash
 php console serve
@@ -137,7 +191,7 @@ php console make:middleware CheckAgeMiddleware
 
 | คำสั่ง | คำอธิบาย |
 |--------|----------|
-| `php console setup` | ตั้งค่าโปรเจคใหม่อัตโนมัติ |
+| `php console setup` | ⭐ ตั้งค่าโปรเจคใหม่อัตโนมัติ (ครบวงจร รวมจัดการ Git) |
 | `php console serve` | รันเซิร์ฟเวอร์พัฒนา (localhost:8000) |
 | `php console migrate` | รัน database migrations |
 | `php console seed` | รัน database seeders |
@@ -348,6 +402,12 @@ A: ดูเอกสาร [FRAMEWORK_VS_EXAMPLES.md](FRAMEWORK_VS_EXAMPLES.md)
 ### Q: เปลี่ยนชื่อโปรเจคภายหลังได้ไหม?
 A: ได้ แก้ `composer.json` และ `.env` ใหม่
 
+### Q: ถ้าไม่ได้ตั้งค่า Git ตอน setup จะทำทีหลังได้ไหม?
+A: ได้ รัน `git remote remove origin` แล้ว `git remote add origin <url>` หรือเริ่ม Git ใหม่ก็ได้
+
+### Q: Push ไม่สำเร็จระหว่าง setup ทำไง?
+A: ตรวจสอบว่าสร้าง repository บน GitHub แล้ว และ authenticate ถูกต้อง หรือรัน `git push -u origin main` ด้วยตัวเองภายหลัง
+
 ### Q: Deploy ยังไง?
 A: ดูเอกสาร [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
@@ -383,13 +443,22 @@ php console cache:clear
 git clone https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2.git
 mv SimpleBiz-MVC-Framework-V2 my-project
 cd my-project
+composer install
+
+# รันคำสั่ง setup (จะจัดการทุกอย่างอัตโนมัติ)
 php console setup
-# ตอบคำถามตามที่ถูกถาม
+# ตอบคำถาม 8 ข้อ (ชื่อ, database, Git, etc.)
+
+# สร้าง Database
 mysql -u root -p
 CREATE DATABASE my_database;
 exit;
+
+# รัน Migrations และเริ่มเซิร์ฟเวอร์
 php console migrate
 php console serve
+
+# ถ้าเลือก commit และ push ใน setup โค้ดจะถูก push ไป GitHub อัตโนมัติแล้ว!
 ```
 
 **เปิดเบราว์เซอร์ไปที่: http://localhost:8000**
