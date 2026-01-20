@@ -251,9 +251,9 @@ class Console
             $step++;
         }
         
-        // 15. ติดตั้ง Composer dependencies
-        $this->info("{$step}. กำลังติดตั้ง Composer dependencies...");
-        passthru("composer install --quiet");
+        // 15. อัปเดต Composer dependencies
+        $this->info("{$step}. กำลังอัปเดต Composer dependencies...");
+        passthru("composer update --quiet");
         $step++;
         
         // 16. Commit การเปลี่ยนแปลง (ถ้ามี Git)
