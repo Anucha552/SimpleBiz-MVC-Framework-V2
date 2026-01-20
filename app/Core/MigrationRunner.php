@@ -18,7 +18,7 @@ class MigrationRunner
     private string $migrationsTable = 'migrations';
     private ?string $modulePath = null;
     
-    public function __construct(string $migrationsPath = null)
+    public function __construct(?string $migrationsPath = null)
     {
         $this->db = Database::getInstance()->getConnection();
         $this->logger = new Logger();

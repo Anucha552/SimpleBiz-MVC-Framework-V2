@@ -40,7 +40,7 @@ class Logger
      * 
      * @param string $logFile เส้นทางไฟล์ล็อก
      */
-    public function __construct(string $logFile = null)
+    public function __construct(?string $logFile = null)
     {
         $this->logFile = $logFile ?? __DIR__ . '/../../storage/logs/app.log';
         

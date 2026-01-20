@@ -172,43 +172,28 @@ php console help           # แสดงความช่วยเหลือ
 - Welcome, Order Confirmation, Password Reset templates
 - SMTP configuration
 
-ดู [CHANGELOG.md](CHANGELOG.md) สำหรับรายละเอียดเพิ่มเติม
+ดู [docs/CHANGELOG.md](docs/CHANGELOG.md) สำหรับรายละเอียดเพิ่มเติม
 
 ---
 
 ## 📖 เอกสารเพิ่มเติม
 
-Framework มีเอกสารครบถ้วนสำหรับทุกส่วน:
-
-### 📘 เอกสารหลัก
-- [CHANGELOG.md](CHANGELOG.md) - การเปลี่ยนแปลงและฟีเจอร์ใหม่ทุก version
-- [docs/READY.md](docs/READY.md) - สรุปความพร้อมและคะแนนประเมิน Framework
-- [docs/SYSTEM_CHECK.md](docs/SYSTEM_CHECK.md) - รายงานการตรวจสอบระบบครบถ้วน
-
-### 🔧 คู่มือการใช้งาน
-- [docs/CORE_USAGE.md](docs/CORE_USAGE.md) - คู่มือการใช้งาน Core Classes ทั้ง 12 คลาส
-- [docs/HELPERS_GUIDE.md](docs/HELPERS_GUIDE.md) - คู่มือ Helpers ทั้ง 7 ตัว พร้อมตัวอย่าง
-- [docs/MIDDLEWARE_GUIDE.md](docs/MIDDLEWARE_GUIDE.md) - คู่มือ Middleware ทั้ง 10 ตัว
-- [docs/VIEWS_GUIDE.md](docs/VIEWS_GUIDE.md) - คู่มือการใช้งาน Views และ Layouts
-- [docs/MODELS_GUIDE.md](docs/MODELS_GUIDE.md) - **ใหม่!** คู่มือการใช้งาน Models ทั้ง 16 ตัว
-- [docs/SERVICES_GUIDE.md](docs/SERVICES_GUIDE.md) - **อัพเดท!** คู่มือ Services (Mail, FileUpload, Cache, Logger, ErrorHandler)
-
-### 🗄️ Database & Testing
-- [docs/MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - คู่มือ Migration System
-- [docs/SEEDING_GUIDE.md](docs/SEEDING_GUIDE.md) - **ใหม่!** คู่มือการสร้างและใช้งาน Seeders
-- [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) - **ใหม่!** คู่มือการเขียน Unit และ Feature Tests
-
-### 🚀 Deployment & Security
-- [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - **อัพเดท!** คู่มือ Deploy แบบละเอียด (Apache/Nginx configs, SSL, Rollback)
-- [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) - **อัพเดท!** คู่มือการตั้งค่า Environment Variables
-- [docs/SECURITY_HARDENING.md](docs/SECURITY_HARDENING.md) - **อัพเดท!** คู่มือการรักษาความปลอดภัย
-
-### 🛠️ Tools & API
-- [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) - **อัพเดท!** คู่มือคำสั่ง CLI ละเอียด ทุกคำสั่ง
-- [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - **อัพเดท!** API Reference พร้อมตัวอย่าง Request/Response
-- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - โครงสร้างโปรเจคและคำแนะนำ
-
-### 📚 อื่นๆ
+สำหรับข้อมูลโดยละเอียด กรุณาอ่าน:
+- [docs/CHANGELOG.md](docs/CHANGELOG.md) - การเปลี่ยนแปลงและฟีเจอร์ใหม่
+- [docs/READY.md](docs/READY.md) - สรุปความพร้อมของ Framework
+- [docs/SYSTEM_CHECK.md](docs/SYSTEM_CHECK.md) - รายงานการตรวจสอบระบบ
+- [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - คู่มือการ Deploy
+- [docs/SECURITY_HARDENING.md](docs/SECURITY_HARDENING.md) - Checklist ความปลอดภัย Production
+- [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) - ตารางค่า Environment
+- [docs/CORE_USAGE.md](docs/CORE_USAGE.md) - คู่มือการใช้งาน Core
+- [docs/HELPERS_GUIDE.md](docs/HELPERS_GUIDE.md) - คู่มือ Helpers
+- [docs/MIDDLEWARE_GUIDE.md](docs/MIDDLEWARE_GUIDE.md) - คู่มือ Middleware
+- [docs/MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - คู่มือ Migration
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - โครงสร้างโปรเจค
+- [docs/VIEWS_GUIDE.md](docs/VIEWS_GUIDE.md) - คู่มือ Views
+- [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - เอกสาร API
+- [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) - คู่มือ CLI
+- [docs/SERVICES_GUIDE.md](docs/SERVICES_GUIDE.md) - คู่มือบริการระบบ (Mail/FileUpload/Cache/Logger)
 - **Database Schema** - ดูใน [database/migrations/](database/migrations/)
 - **Code Comments** - ทุกไฟล์มีคอมเมนต์ภาษาไทยอธิบายการทำงาน
 
