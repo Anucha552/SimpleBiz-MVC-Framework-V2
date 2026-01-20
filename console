@@ -20,7 +20,45 @@
  * - help              : แสดงความช่วยเหลือ
  */
 
+// ตรวจสอบว่าติดตั้ง Composer dependencies แล้วหรือยัง
+if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
+    echo "\033[31m"; // สีแดง
+    echo "❌ Error: ไม่พบไฟล์ vendor/autoload.php\n\n";
+    echo "\033[33m"; // สีเหลือง
+    echo "กรุณารันคำสั่งนี้ก่อน:\n";
+    echo "\033[36m"; // สีฟ้า
+    echo "  composer install\n\n";
+    echo "\033[37m"; // สีขาว
+    echo "หรือถ้ายังไม่ติดตั้ง Composer สามารถดาวน์โหลดได้ที่:\n";
+    echo "  https://getcomposer.org/download/\n";
+    echo "\033[0m"; // รีเซ็ตสี
+    exit(1);
+}
+
 require_once __DIR__ . '/vendor/autoload.php';
+
+// ตั้งค่า UTF-8 encoding สำหรับทุกระบบปฏิบัติการ
+// เนื่องจาก Framework นี้ออกแบบมาสำหรับภาษาไทย
+if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+    // Windows: ตั้งค่า code page เป็น UTF-8 (65001)
+    system('chcp 65001 > nul 2>&1');
+} else {
+    // Linux/Mac: ตั้งค่า locale เป็น UTF-8
+    setlocale(LC_ALL, 'en_US.UTF-8', 'C.UTF-8', 'UTF-8');
+    
+    // บังคับ terminal ใช้ UTF-8
+    putenv('LANG=en_US.UTF-8');
+    putenv('LC_ALL=en_US.UTF-8');
+}
+
+// ตั้งค่า PHP encoding เป็น UTF-8 ทุกระบบ
+if (function_exists('mb_internal_encoding')) {
+    mb_internal_encoding('UTF-8');
+}
+if (function_exists('mb_http_output')) {
+    mb_http_output('UTF-8');
+}
+ini_set('default_charset', 'UTF-8');
 
 // โหลด environment variables
 if (file_exists(__DIR__ . '/.env')) {
