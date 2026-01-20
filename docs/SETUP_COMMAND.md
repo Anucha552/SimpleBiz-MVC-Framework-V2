@@ -41,7 +41,9 @@ php console setup
 
 ## 💬 คำถามที่คำสั่ง setup จะถาม
 
-คำสั่งจะถามคำถาม 7 ข้อเพื่อตั้งค่าโปรเจค:
+คำสั่งจะถามคำถามเพื่อตั้งค่าโปรเจค แบ่งเป็น 2 ส่วน:
+
+### ส่วนที่ 1: ข้อมูลโปรเจค (7 คำถาม)
 
 ### 1. ชื่อโปรเจค (Project Name)
 ```
@@ -102,6 +104,54 @@ Database Password [เว้นว่าง]:
 - ถ้าไม่มี password ให้กด Enter ข้ามไป
 - Default: เว้นว่าง (no password)
 
+### ส่วนที่ 2: การจัดการ Git Repository (3 คำถาม - Optional)
+
+### 8. ต้องการจัดการ Git repository หรือไม่?
+```
+ต้องการจัดการ Git repository หรือไม่? (y/n) [n]:
+```
+- กด `y` หรือ `yes` ถ้าต้องการให้ระบบจัดการ Git ให้
+- กด `n` หรือ `no` หรือ Enter เพื่อข้าม
+- Default: `n` (ไม่จัดการ Git)
+
+**ถ้าตอบ `y` จะถามคำถามต่อ:**
+
+### 9. เลือกวิธีการจัดการ Git
+```
+เลือกวิธีการ:
+  1. เปลี่ยน remote URL (เก็บประวัติ commits เดิม)
+  2. เริ่ม Git ใหม่ทั้งหมด (ลบประวัติเก่า)
+เลือก (1/2) [1]:
+```
+- **ตัวเลือก 1** (Default): เปลี่ยนแค่ remote URL เก็บประวัติ commits เดิมไว้
+  - ใช้สำหรับ: Fork โปรเจค หรือต้องการเก็บประวัติการพัฒนา
+  - รัน: `git remote remove origin` และ `git remote add origin <URL>`
+  
+- **ตัวเลือก 2**: ลบ `.git` และเริ่มใหม่ทั้งหมด
+  - ใช้สำหรับ: เริ่มโปรเจคใหม่ ไม่ต้องการประวัติเก่า
+  - รัน: ลบโฟลเดอร์ `.git`, `git init`, และตั้ง remote ใหม่
+
+### 10. URL ของ GitHub Repository
+```
+GitHub Repository URL (เช่น https://github.com/yourusername/yourrepo.git):
+```
+- ใส่ URL ของ repository ที่สร้างไว้บน GitHub แล้ว
+- ตัวอย่าง: `https://github.com/abccompany/bookstore-ecommerce.git`
+- **สำคัญ**: ต้องสร้าง repository บน GitHub ก่อน
+
+### 11. Commit และ Push เลยไหม? (ถ้าเลือกจัดการ Git)
+```
+ต้องการ commit และ push การเปลี่ยนแปลงหรือไม่? (y/n) [y]:
+```
+- กด `y` หรือ `yes` หรือ Enter เพื่อ commit และ push ทันที
+- กด `n` หรือ `no` เพื่อข้าม (จะไม่ commit และ push)
+- Default: `y` (commit และ push)
+
+**ถ้าตอบ `y` ระบบจะ:**
+- `git add .`
+- `git commit -m "Initial setup for {projectName}"`
+- `git push -u origin main`
+
 ---
 
 ## 📋 ตัวอย่างการใช้งานจริง
@@ -121,6 +171,13 @@ Vendor/Company name (เช่น mycompany): abccompany
 Database Username [root]: root
 Database Password [เว้นว่าง]: 
 
+ต้องการจัดการ Git repository หรือไม่? (y/n) [n]: y
+เลือกวิธีการ:
+  1. เปลี่ยน remote URL (เก็บประวัติ commits เดิม)
+  2. เริ่ม Git ใหม่ทั้งหมด (ลบประวัติเก่า)
+เลือก (1/2) [1]: 1
+GitHub Repository URL: https://github.com/abccompany/bookstore-ecommerce.git
+
 กำลังตั้งค่าโปรเจค...
 
 1. กำลังแก้ไข composer.json...
@@ -129,7 +186,17 @@ Database Password [เว้นว่าง]:
   ✓ สร้างไฟล์ .env แล้ว
 3. กำลังสร้าง APP_KEY...
   ✓ สร้าง APP_KEY แล้ว
-4. กำลังติดตั้ง Composer dependencies...
+4. กำลังอัปเดต README.md...
+  ✓ อัปเดต README.md แล้ว
+5. กำลังตรวจสอบ .gitignore...
+  ✓ .gitignore พร้อมใช้งาน
+6. กำลังจัดการ Git repository...
+  ✓ เปลี่ยน remote URL เป็น https://github.com/abccompany/bookstore-ecommerce.git
+7. กำลังติดตั้ง Composer dependencies...
+
+ต้องการ commit และ push การเปลี่ยนแปลงหรือไม่? (y/n) [y]: y
+8. กำลัง commit และ push...
+  ✓ Commit และ push เรียบร้อย
 
 ✓ ตั้งค่าโปรเจคเสร็จสมบูรณ์!
 
@@ -147,7 +214,7 @@ Database Password [เว้นว่าง]:
   4. เริ่มเซิร์ฟเวอร์: php console serve
 ```
 
-### ตัวอย่างที่ 2: โปรเจค CRM (ไม่ใช้ค่า default)
+### ตัวอย่างที่ 2: โปรเจค CRM พร้อมจัดการ Git แบบเริ่มใหม่
 
 ```bash
 $ php console setup
@@ -162,10 +229,22 @@ Vendor/Company name: techcorp
 Database Username [root]: crm_admin
 Database Password [เว้นว่าง]: secure_password_123
 
+ต้องการจัดการ Git repository หรือไม่? (y/n) [n]: y
+เลือกวิธีการ:
+  1. เปลี่ยน remote URL (เก็บประวัติ commits เดิม)
+  2. เริ่ม Git ใหม่ทั้งหมด (ลบประวัติเก่า)
+เลือก (1/2) [1]: 2
+GitHub Repository URL: https://github.com/techcorp/company-crm.git
+
+กำลังตั้งค่าโปรเจค...
+...
+6. กำลังจัดการ Git repository...
+  ✓ เริ่มต้น Git repository ใหม่
+  ✓ เพิ่ม remote: https://github.com/techcorp/company-crm.git
 ...
 ```
 
-### ตัวอย่างที่ 3: ใช้ค่า default (กด Enter ทุกอย่าง)
+### ตัวอย่างที่ 3: ใช้ค่า default และไม่จัดการ Git
 
 ```bash
 $ php console setup
@@ -180,6 +259,8 @@ Vendor/Company name: [กด Enter - ใช้ mycompany]
 Database Username [root]: [กด Enter - ใช้ root]
 Database Password [เว้นว่าง]: [กด Enter - ไม่มี password]
 
+ต้องการจัดการ Git repository หรือไม่? (y/n) [n]: [กด Enter - ข้าม]
+
 กำลังตั้งค่าโปรเจค...
 ...
 ```
@@ -188,7 +269,11 @@ Database Password [เว้นว่าง]: [กด Enter - ไม่มี pa
 
 ## 🔧 สิ่งที่คำสั่ง setup ทำให้อัตโนมัติ
 
+คำสั่ง setup จะทำงานตามลำดับดังนี้:
+
 ### 1. แก้ไข composer.json
+แก้ไขชื่อโปรเจคและคำอธิบายใน `composer.json`:
+
 ```json
 // ก่อน
 {
@@ -206,7 +291,7 @@ Database Password [เว้นว่าง]: [กด Enter - ไม่มี pa
 ```
 
 ### 2. สร้างไฟล์ .env จาก .env.example
-คำสั่งจะคัดลอก `.env.example` เป็น `.env` และแก้ไขค่าต่อไปนี้:
+คัดลอก `.env.example` เป็น `.env` และแก้ไขค่าต่อไปนี้:
 
 ```env
 # ก่อน (.env.example)
@@ -230,15 +315,67 @@ DB_PASSWORD=
 - ปลอดภัยและไม่ซ้ำกัน
 - ตัวอย่าง: `a1b2c3d4e5f6789012345678901234567`
 
-### 4. ติดตั้ง Composer Dependencies
+### 4. อัปเดต README.md
+แก้ไขไฟล์ `README.md` ให้ตรงกับชื่อโปรเจคใหม่:
+- แก้ชื่อโปรเจคในหัวข้อ
+- แก้คำอธิบาย (ถ้ามี)
+- แก้ชื่อ database ในตัวอย่าง
+
+### 5. ตรวจสอบและอัปเดต .gitignore
+ตรวจสอบว่าไฟล์ `.gitignore` มีเนื้อหาที่จำเป็น:
+```
+.env
+vendor/
+storage/logs/*.log
+storage/cache/*
+!storage/logs/.gitkeep
+!storage/cache/.gitkeep
+```
+
+### 6. จัดการ Git Repository (ถ้าเลือก)
+
+**ตัวเลือก 1: เปลี่ยน remote URL**
+```bash
+git remote remove origin
+git remote add origin <URL>
+```
+- เก็บประวัติ commits เดิม
+- เหมาะสำหรับ Fork
+
+**ตัวเลือก 2: เริ่ม Git ใหม่**
+```bash
+rm -rf .git
+git init
+git add .
+git commit -m "Initial setup for {projectName}"
+git branch -M main
+git remote add origin <URL>
+```
+- ลบประวัติเก่าทั้งหมด
+- เริ่มต้นใหม่
+
+### 7. ติดตั้ง Composer Dependencies
 รันคำสั่ง:
 ```bash
 composer install --quiet
 ```
-ติดตั้ง packages ทั้งหมดที่จำเป็น (PHPUnit, Doctrine, etc.)
+ติดตั้ง packages ทั้งหมดที่จำเป็น จาก `composer.json`:
+- PHPUnit (testing framework)
+- Doctrine DBAL (database abstraction)
+- และอื่นๆ
 
-### 5. แสดงสรุปและขั้นตอนถัดไป
-แสดงข้อมูลที่ตั้งค่าและแนะนำขั้นตอนถัดไป
+สร้างโฟลเดอร์ `vendor/` และไฟล์ `vendor/autoload.php`
+
+### 8. Commit และ Push (ถ้าเลือก)
+ถ้าเลือกให้ commit และ push:
+```bash
+git add .
+git commit -m "Initial setup for {projectName}"
+git push -u origin main
+```
+
+### 9. แสดงสรุปและขั้นตอนถัดไป
+แสดงข้อมูลโปรเจคที่ตั้งค่าและแนะนำขั้นตอนถัดไป
 
 ---
 
@@ -290,8 +427,11 @@ php console serve
 
 ## 🎨 การปรับแต่งเพิ่มเติม
 
-### เปลี่ยน Git Remote (ถ้าต้องการ)
+### จัดการ Git ด้วยตัวเอง (ถ้าข้ามในขั้นตอน setup)
 
+ถ้าไม่ได้เลือกจัดการ Git ตอน setup สามารถทำเองภายหลังได้:
+
+**วิธีที่ 1: เปลี่ยน Remote URL**
 ```bash
 # ลบ remote เดิม
 git remote remove origin
@@ -299,11 +439,30 @@ git remote remove origin
 # เพิ่ม remote ใหม่ (repository ของคุณเอง)
 git remote add origin https://github.com/yourusername/your-project.git
 
-# หรือเริ่ม Git ใหม่ทั้งหมด
+# Push
+git push -u origin main
+```
+
+**วิธีที่ 2: เริ่ม Git ใหม่ทั้งหมด**
+
+**สำหรับ Windows:**
+```powershell
+Remove-Item -Recurse -Force .git
+git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote add origin https://github.com/yourusername/your-project.git
+git push -u origin main
+```
+
+**สำหรับ Linux/Mac:**
+```bash
 rm -rf .git
 git init
 git add .
 git commit -m "Initial commit"
+git branch -M main
 git remote add origin https://github.com/yourusername/your-project.git
 git push -u origin main
 ```
@@ -355,30 +514,57 @@ MAIL_PASSWORD=your-app-password
 ### Q8: คำสั่ง setup ปลอดภัยไหม?
 **A:** ปลอดภัย สร้าง APP_KEY แบบสุ่มและไม่ส่งข้อมูลออกนอกเครื่อง
 
+### Q9: ต้องสร้าง GitHub repository ก่อนหรือไม่?
+**A:** ถ้าเลือกจัดการ Git และต้องการ push ต้องสร้าง repository บน GitHub ก่อน ถ้าไม่ push ทันทีไม่จำเป็นต้องสร้างก่อน
+
+### Q10: ควรเลือก "เปลี่ยน remote" หรือ "เริ่มใหม่"?
+**A:** 
+- **เปลี่ยน remote**: เหมาะสำหรับ Fork โปรเจค หรือต้องการเก็บประวัติการพัฒนา framework
+- **เริ่มใหม่**: เหมาะสำหรับโปรเจคใหม่ทั้งหมด ไม่ต้องการประวัติเก่า (แนะนำสำหรับโปรเจคส่วนตัว)
+
+### Q11: Git push ล้มเหลว ทำไง?
+**A:** ตรวจสอบว่า:
+1. สร้าง repository บน GitHub แล้ว
+2. มีสิทธิ์ push (ใช้ SSH key หรือ Personal Access Token)
+3. Branch ชื่อถูกต้อง (main หรือ master)
+
 ---
 
 ## ⚠️ ข้อควรระวัง
 
-### 1. อย่ารันคำสั่ง setup ซ้ำหลังจากเริ่มใช้งาน
+### 1. สร้าง GitHub Repository ก่อน (ถ้าต้องการ push)
+ถ้าเลือกให้ระบบจัดการ Git และต้องการ push ทันที:
+```bash
+# สร้าง repository บน GitHub ก่อน
+# ตั้งชื่อให้ตรงกับชื่อโปรเจค
+# เลือก Public หรือ Private
+# **อย่าเลือก** "Initialize with README" (เพราะมีของเก่าอยู่แล้ว)
+```
+
+### 2. อย่ารันคำสั่ง setup ซ้ำหลังจากเริ่มใช้งาน
 หากรันซ้ำจะสร้าง APP_KEY ใหม่ และทำให้ sessions เดิมไม่สามารถใช้ได้
 
-### 2. สำรอง .env ก่อนรันคำสั่ง setup ซ้ำ
+### 3. สำรอง .env ก่อนรันคำสั่ง setup ซ้ำ
 ```bash
 cp .env .env.backup
 ```
 
-### 3. อย่า commit ไฟล์ .env
+### 4. อย่า commit ไฟล์ .env
 ไฟล์ `.env` มีข้อมูลสำคัญ (passwords, keys) อย่า commit ขึ้น Git
 ตรวจสอบว่า `.env` อยู่ใน `.gitignore`
 
-### 4. ตรวจสอบ composer.json หลังรัน setup
+### 5. ตรวจสอบ composer.json หลังรัน setup
 ตรวจสอบว่าชื่อและคำอธิบายถูกต้อง:
 ```bash
 cat composer.json
 ```
 
-### 5. เก็บ APP_KEY ไว้ในที่ปลอดภัย
+### 6. เก็บ APP_KEY ไว้ในที่ปลอดภัย
 หากสูญหาย APP_KEY จะไม่สามารถ decrypt ข้อมูลเก่าได้
+
+### 7. Git Mode "เริ่มใหม่" จะลบประวัติทั้งหมด
+ถ้าเลือกตัวเลือก 2 (เริ่ม Git ใหม่) จะลบโฟลเดอร์ `.git` ทั้งหมด
+ประวัติ commits เดิมจะหายไป **ไม่สามารถกู้คืนได้**
 
 ---
 
@@ -386,6 +572,25 @@ cat composer.json
 
 ### ตรวจสอบไฟล์ที่สร้าง/แก้ไข:
 
+**Windows PowerShell:**
+```powershell
+# 1. ตรวจสอบว่ามีไฟล์ .env
+Test-Path .env
+
+# 2. ตรวจสอบเนื้อหา .env
+Get-Content .env | Select-String "APP_NAME|APP_KEY|DB_DATABASE"
+
+# 3. ตรวจสอบ composer.json
+Get-Content composer.json | Select-String "name|description"
+
+# 4. ตรวจสอบว่า vendor/ ถูกสร้าง
+Test-Path vendor\
+
+# 5. ตรวจสอบ Git remote (ถ้าเลือกจัดการ Git)
+git remote -v
+```
+
+**Linux/Mac:**
 ```bash
 # 1. ตรวจสอบว่ามีไฟล์ .env
 ls -la .env
@@ -398,10 +603,30 @@ cat composer.json | grep -E "(name|description)"
 
 # 4. ตรวจสอบว่า vendor/ ถูกสร้าง
 ls -la vendor/
+
+# 5. ตรวจสอบ Git remote (ถ้าเลือกจัดการ Git)
+git remote -v
 ```
 
 ### ตัวอย่างผลลัพธ์ที่ถูกต้อง:
 
+**Windows:**
+```powershell
+PS> Get-Content .env | Select-String "APP_NAME|APP_KEY|DB_DATABASE"
+APP_NAME="ABC Bookstore"
+APP_KEY=a1b2c3d4e5f6789012345678901234567
+DB_DATABASE=bookstore_db
+
+PS> Get-Content composer.json | Select-String "name|description"
+    "name": "abccompany/bookstore-ecommerce",
+    "description": "Online Bookstore E-commerce Platform",
+
+PS> git remote -v
+origin  https://github.com/abccompany/bookstore-ecommerce.git (fetch)
+origin  https://github.com/abccompany/bookstore-ecommerce.git (push)
+```
+
+**Linux/Mac:**
 ```bash
 $ cat .env | grep -E "(APP_NAME|APP_KEY|DB_DATABASE)"
 APP_NAME="ABC Bookstore"
@@ -411,19 +636,51 @@ DB_DATABASE=bookstore_db
 $ cat composer.json | grep -E "(name|description)"
     "name": "abccompany/bookstore-ecommerce",
     "description": "Online Bookstore E-commerce Platform",
+
+$ git remote -v
+origin  https://github.com/abccompany/bookstore-ecommerce.git (fetch)
+origin  https://github.com/abccompany/bookstore-ecommerce.git (push)
 ```
 
 ---
 
 ## 🚀 สรุป
 
-### ขั้นตอนสั้นๆ:
+### ขั้นตอนสั้นๆ (ไม่จัดการ Git):
 ```bash
 git clone https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2.git
 mv SimpleBiz-MVC-Framework-V2 my-project
 cd my-project
 php console setup
 # ตอบคำถาม 7 ข้อ
+# ข้าม Git management (กด Enter)
+mysql -u root -p
+CREATE DATABASE my_database;
+exit;
+php console migrate
+php console serve
+```
+
+### ขั้นตอนเต็ม (พร้อมจัดการ Git):
+```bash
+# 1. Clone และเข้าโฟลเดอร์
+git clone https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2.git
+mv SimpleBiz-MVC-Framework-V2 my-project
+cd my-project
+
+# 2. สร้าง GitHub repository ใหม่ (บนเว็บ GitHub)
+# ตั้งชื่อให้ตรงกับโปรเจค เช่น my-project
+# อย่าเลือก "Initialize with README"
+
+# 3. รัน setup พร้อมจัดการ Git
+php console setup
+# ตอบคำถาม 7 ข้อเกี่ยวกับโปรเจค
+# เลือก y สำหรับจัดการ Git
+# เลือกโหมด (1=เปลี่ยน remote, 2=เริ่มใหม่)
+# ใส่ URL repository
+# เลือก y เพื่อ commit และ push
+
+# 4. สร้าง Database และรัน Migrations
 mysql -u root -p
 CREATE DATABASE my_database;
 exit;
@@ -436,6 +693,9 @@ php console serve
 - ✅ ไม่มีข้อผิดพลาด
 - 🔐 APP_KEY ปลอดภัย
 - 📦 ติดตั้ง dependencies พร้อมใช้
+- 🔧 จัดการ Git อัตโนมัติ (optional)
+- 📝 อัปเดต README.md และ composer.json
+- ✨ พร้อมเริ่มพัฒนาใน 3 นาที!
 
 **คำสั่ง setup ทำให้การเริ่มต้นโปรเจคใหม่เป็นเรื่องง่าย เพียง 3 นาทีก็พร้อมพัฒนา! 🎉**
 
