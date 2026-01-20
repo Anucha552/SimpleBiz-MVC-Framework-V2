@@ -24,7 +24,17 @@ cd my-project
 
 ---
 
-### ขั้นตอนที่ 3: รันคำสั่ง Setup (แนะนำ!)
+### ขั้นตอนที่ 3: ติดตั้ง Composer Dependencies
+
+```bash
+composer install
+```
+
+**หมายเหตุ:** ต้องติดตั้ง Composer ก่อนถึงจะรันคำสั่งนี้ได้ ([ดาวน์โหลด Composer](https://getcomposer.org/download/))
+
+---
+
+### ขั้นตอนที่ 4: รันคำสั่ง Setup (แนะนำ!)
 
 ```bash
 php console setup
@@ -34,7 +44,7 @@ php console setup
 - ✅ แก้ไข composer.json
 - ✅ สร้างไฟล์ .env
 - ✅ สร้าง APP_KEY
-- ✅ ติดตั้ง Composer dependencies
+- ✅ รัน composer update (ถ้าต้องการ)
 
 **ตัวอย่างการตอบคำถาม:**
 
@@ -52,20 +62,20 @@ Database Password: (กด Enter ถ้าไม่มี password)
 
 ---
 
-### ขั้นตอนที่ 4: สร้าง Database
+### ขั้นตอนที่ 5: สร้าง Database
 
 ```bash
 # เข้า MySQL
 mysql -u root -p
 
-# สร้าง Database (ใช้ชื่อเดียวกับที่ระบุในขั้นตอนที่ 3)
+# สร้าง Database (ใช้ชื่อเดียวกับที่ระบุในขั้นตอนที่ 4)
 CREATE DATABASE bookstore_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 exit;
 ```
 
 ---
 
-### ขั้นตอนที่ 5: รัน Migrations
+### ขั้นตอนที่ 6: รัน Migrations
 
 ```bash
 php console migrate
@@ -75,7 +85,7 @@ php console migrate
 
 ---
 
-### ขั้นตอนที่ 6 (Optional): รัน Seeders
+### ขั้นตอนที่ 7 (Optional): รัน Seeders
 
 ```bash
 php console seed
@@ -85,7 +95,7 @@ php console seed
 
 ---
 
-### ขั้นตอนที่ 7: เริ่มเซิร์ฟเวอร์
+### ขั้นตอนที่ 8: เริ่มเซิร์ฟเวอร์
 
 ```bash
 php console serve
@@ -383,6 +393,7 @@ php console cache:clear
 git clone https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2.git
 mv SimpleBiz-MVC-Framework-V2 my-project
 cd my-project
+composer install
 php console setup
 # ตอบคำถามตามที่ถูกถาม
 mysql -u root -p
