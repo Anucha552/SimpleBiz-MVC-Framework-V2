@@ -329,9 +329,6 @@ EXIT;
 ```bash
 # รัน migrations
 php console migrate
-
-# หรือใช้
-php migrate.php up
 ```
 
 ### 5.3 รัน Seeders (Optional)

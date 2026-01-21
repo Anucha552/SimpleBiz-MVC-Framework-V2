@@ -66,31 +66,29 @@ php console serve localhost 9000
 # รัน migrations ทั้งหมดที่ยังไม่ได้รัน
 php console migrate
 
-# หรือใช้ไฟล์ migrate.php โดยตรง
-php migrate.php up
-php migrate.php migrate
-
 # Rollback batch ล่าสุด
-php migrate.php down
-php migrate.php rollback
+php console migrate:rollback
 
 # Rollback หลาย batch
-php migrate.php rollback 2
+php console migrate:rollback 2
 
 # Fresh migration (ลบทุกอย่างและรันใหม่)
-php migrate.php fresh
+php console migrate:fresh
 
 # ดูสถานะ migrations
-php migrate.php status
+php console migrate:status
+
+# สร้าง migration ใหม่
+php console migrate:create CreateUsersTable
 
 # ดูรายการ modules
-php migrate.php modules
+php console migrate:modules
 
 # รัน migration เฉพาะ module
-php migrate.php up --path=core
-php migrate.php up --path=ecommerce
-php migrate.php up --path=content
-php migrate.php up --path=system
+php console migrate --path=core
+php console migrate --path=ecommerce
+php console migrate --path=content
+php console migrate --path=system
 ```
 
 ---
@@ -100,9 +98,6 @@ php migrate.php up --path=system
 ```bash
 # รัน seeders ทั้งหมด
 php console seed
-
-# หรือใช้ไฟล์ seed.php โดยตรง
-php seed.php
 ```
 
 คำสั่งนี้จะเพิ่มข้อมูลตัวอย่างลงในฐานข้อมูล:

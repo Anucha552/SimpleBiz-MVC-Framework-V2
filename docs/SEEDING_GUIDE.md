@@ -375,53 +375,22 @@ class DatabaseSeeder extends Seeder
 ### Seed Script (seed.php)
 
 **Location:** `seed.php` (in project root)
+**Recommended:** Use `php console seed` command instead.
 
-```php
-<?php
+**Note:** The `seed.php` file is maintained for backward compatibility, but the recommended way is to use the console command:
 
-require_once __DIR__ . '/vendor/autoload.php';
-
-// Load environment variables
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-$dotenv->load();
-
-// Initialize database connection
-use App\Core\Database;
-Database::getInstance();
-
-// Run seeders
-if (isset($argv[1])) {
-    // Run specific seeder
-    $seederClass = "Database\\Seeders\\" . $argv[1];
-    
-    if (class_exists($seederClass)) {
-        echo "Running seeder: {$argv[1]}\n";
-        $seeder = new $seederClass();
-        $seeder->run();
-    } else {
-        echo "Seeder not found: {$argv[1]}\n";
-    }
-} else {
-    // Run all seeders
-    $seeder = new Database\Seeders\DatabaseSeeder();
-    $seeder->run();
-}
+```bash
+php console seed
 ```
 
 ### Running Seeders from Command Line
 
 ```bash
 # Run all seeders
-php seed.php
-
-# Run specific seeder
-php seed.php UserSeeder
-php seed.php ProductSeeder
-
-# On Windows
-php seed.php
-php seed.php CategorySeeder
+php console seed
 ```
+
+**Note:** You can modify the `console` script to support specific seeders if needed.
 
 ---
 
@@ -1150,15 +1119,11 @@ public function testUserSeederCreatesUsers()
 
 ```bash
 # Run all seeders
-php seed.php
-
-# Run specific seeder
-php seed.php UserSeeder
-php seed.php ProductSeeder
+php console seed
 
 # Fresh migration + seed
-php migrate.php fresh
-php seed.php
+php console migrate:fresh
+php console seed
 ```
 
 ### Seeder Template

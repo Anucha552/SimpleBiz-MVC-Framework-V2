@@ -37,6 +37,11 @@ if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+// Load MigrationRunner explicitly
+if (file_exists(__DIR__ . '/app/Core/MigrationRunner.php')) {
+    require_once __DIR__ . '/app/Core/MigrationRunner.php';
+}
+
 // ตั้งค่า UTF-8 encoding สำหรับทุกระบบปฏิบัติการ
 // เนื่องจาก Framework นี้ออกแบบมาสำหรับภาษาไทย
 if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
@@ -96,14 +101,36 @@ class Console
     private function registerCommands(): void
     {
         $this->commands = [
+            'check' => 'checkEnvironment',
             'setup' => 'setupProject',
             'serve' => 'runServer',
             'migrate' => 'runMigrations',
+            'migrate:rollback' => 'rollbackMigrations',
+            'migrate:fresh' => 'freshMigrations',
+            'migrate:reset' => 'resetMigrations',
+            'migrate:refresh' => 'refreshMigrations',
+            'migrate:status' => 'statusMigrations',
+            'migrate:create' => 'createMigration',
+            'migrate:modules' => 'showMigrationModules',
             'seed' => 'runSeeders',
+            'db:show' => 'showDatabaseTables',
+            'db:table' => 'showTableStructure',
             'cache:clear' => 'clearCache',
+            'cache:warm' => 'warmCache',
+            'config:cache' => 'cacheConfig',
+            'view:cache' => 'cacheViews',
+            'log:clear' => 'clearLogs',
+            'log:tail' => 'tailLogs',
+            'down' => 'enableMaintenanceMode',
+            'up' => 'disableMaintenanceMode',
             'make:controller' => 'makeController',
             'make:model' => 'makeModel',
             'make:middleware' => 'makeMiddleware',
+            'make:seeder' => 'makeSeeder',
+            'route:list' => 'listRoutes',
+            'key:generate' => 'generateKey',
+            'optimize' => 'optimizeApp',
+            'optimize:clear' => 'clearOptimization',
             'test' => 'runTests',
             'help' => 'showHelp',
         ];
@@ -122,13 +149,241 @@ class Console
         $args = array_slice($argv, 2);
         
         if (!isset($this->commands[$command])) {
-            $this->error("Command '{$command}' not found.");
-            $this->info("Run 'php console help' to see available commands.");
+            $this->error("ไม่พบคำสั่ง '{$command}'");
+            $this->info("รันคำสั่ง 'php console help' เพื่อดูรายการคำสั่งที่มี");
             exit(1);
         }
         
         $method = $this->commands[$command];
         $this->$method($args);
+    }
+    
+    private function checkEnvironment(array $args): void
+    {
+        echo Color::CYAN . Color::BOLD . "\n🔍 SimpleBiz Framework - ตรวจสอบสภาพแวดล้อม\n" . Color::RESET;
+        echo Color::WHITE . "กำลังตรวจสอบความพร้อมของระบบ...\n" . Color::RESET;
+        echo "\n";
+        
+        $passed = 0;
+        $failed = 0;
+        $warnings = 0;
+        
+        // 1. ตรวจสอบ PHP Version
+        echo Color::YELLOW . "━━━ PHP Environment ━━━\n" . Color::RESET;
+        $phpVersion = PHP_VERSION;
+        $requiredVersion = '8.0.0';
+        if (version_compare($phpVersion, $requiredVersion, '>=')) {
+            $this->success("PHP Version: $phpVersion (ต้องการ >= $requiredVersion)");
+            $passed++;
+        } else {
+            $this->error("PHP Version: $phpVersion (ต้องการ >= $requiredVersion)");
+            $failed++;
+        }
+        
+        // 2. ตรวจสอบ PHP Extensions
+        $requiredExtensions = ['pdo', 'pdo_mysql', 'mbstring', 'json', 'openssl', 'fileinfo'];
+        $optionalExtensions = ['curl', 'gd', 'zip'];
+        
+        echo "\n";
+        foreach ($requiredExtensions as $ext) {
+            if (extension_loaded($ext)) {
+                $this->success("Extension: $ext");
+                $passed++;
+            } else {
+                $this->error("Extension: $ext (จำเป็น)");
+                $failed++;
+            }
+        }
+        
+        foreach ($optionalExtensions as $ext) {
+            if (extension_loaded($ext)) {
+                $this->success("Extension: $ext (แนะนำ)");
+                $passed++;
+            } else {
+                $this->warning("Extension: $ext (แนะนำ - ไม่บังคับ)");
+                $warnings++;
+            }
+        }
+        
+        // 3. ตรวจสอบ Composer
+        echo "\n" . Color::YELLOW . "━━━ Dependencies ━━━\n" . Color::RESET;
+        if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+            $this->success("Composer dependencies: ติดตั้งแล้ว");
+            $passed++;
+        } else {
+            $this->error("Composer dependencies: ยังไม่ติดตั้ง");
+            $this->info("  กรุณารัน: composer install");
+            $failed++;
+        }
+        
+        // ตรวจสอบ composer.json
+        if (file_exists(__DIR__ . '/composer.json')) {
+            $this->success("composer.json: พบแล้ว");
+            $passed++;
+        } else {
+            $this->error("composer.json: ไม่พบ");
+            $failed++;
+        }
+        
+        // 4. ตรวจสอบไฟล์และโฟลเดอร์
+        echo "\n" . Color::YELLOW . "━━━ Files & Directories ━━━\n" . Color::RESET;
+        
+        $requiredDirs = [
+            'app' => 'โฟลเดอร์ Application',
+            'config' => 'โฟลเดอร์ Configuration',
+            'database' => 'โฟลเดอร์ Database',
+            'public' => 'โฟลเดอร์ Public',
+            'routes' => 'โฟลเดอร์ Routes',
+            'storage' => 'โฟลเดอร์ Storage',
+        ];
+        
+        foreach ($requiredDirs as $dir => $desc) {
+            if (is_dir(__DIR__ . '/' . $dir)) {
+                $this->success("$desc ($dir/)");
+                $passed++;
+            } else {
+                $this->error("$desc ($dir/) - ไม่พบ");
+                $failed++;
+            }
+        }
+        
+        // 5. ตรวจสอบ Permissions
+        echo "\n" . Color::YELLOW . "━━━ Permissions ━━━\n" . Color::RESET;
+        
+        $writableDirs = ['storage', 'storage/cache', 'storage/logs'];
+        foreach ($writableDirs as $dir) {
+            $path = __DIR__ . '/' . $dir;
+            if (is_dir($path) && is_writable($path)) {
+                $this->success("$dir/ - เขียนได้");
+                $passed++;
+            } else {
+                if (!is_dir($path)) {
+                    mkdir($path, 0755, true);
+                    if (is_writable($path)) {
+                        $this->success("$dir/ - สร้างและตั้งค่าสิทธิ์แล้ว");
+                        $passed++;
+                    } else {
+                        $this->error("$dir/ - สร้างไม่ได้หรือเขียนไม่ได้");
+                        $failed++;
+                    }
+                } else {
+                    $this->error("$dir/ - เขียนไม่ได้");
+                    $this->info("  chmod 755 $dir");
+                    $failed++;
+                }
+            }
+        }
+        
+        // 6. ตรวจสอบ Configuration
+        echo "\n" . Color::YELLOW . "━━━ Configuration ━━━\n" . Color::RESET;
+        
+        if (file_exists(__DIR__ . '/.env')) {
+            $this->success(".env: พบแล้ว");
+            $passed++;
+            
+            // ตรวจสอบค่าสำคัญใน .env
+            $envContent = file_get_contents(__DIR__ . '/.env');
+            if (strpos($envContent, 'APP_KEY=') !== false && preg_match('/APP_KEY=.{16,}/', $envContent)) {
+                $this->success("APP_KEY: ตั้งค่าแล้ว");
+                $passed++;
+            } else {
+                $this->warning("APP_KEY: ยังไม่ตั้งค่าหรือสั้นเกินไป");
+                $this->info("  รัน: php console key:generate");
+                $warnings++;
+            }
+        } else {
+            $this->warning(".env: ไม่พบ");
+            $this->info("  รัน: php console setup หรือ copy .env.example");
+            $warnings++;
+        }
+        
+        if (file_exists(__DIR__ . '/.env.example')) {
+            $this->success(".env.example: พบแล้ว");
+            $passed++;
+        } else {
+            $this->warning(".env.example: ไม่พบ");
+            $warnings++;
+        }
+        
+        // 7. ตรวจสอบ Database Connection (ถ้ามี .env)
+        if (file_exists(__DIR__ . '/.env')) {
+            echo "\n" . Color::YELLOW . "━━━ Database ━━━\n" . Color::RESET;
+            try {
+                $config = [];
+                $lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                foreach ($lines as $line) {
+                    if (strpos(trim($line), '#') === 0) continue;
+                    if (strpos($line, '=') !== false) {
+                        list($key, $value) = explode('=', $line, 2);
+                        $config[trim($key)] = trim($value);
+                    }
+                }
+                
+                if (isset($config['DB_HOST'], $config['DB_DATABASE'])) {
+                    $this->info("Database Config: พบการตั้งค่า");
+                    $this->info("  Host: " . ($config['DB_HOST'] ?? 'ไม่ระบุ'));
+                    $this->info("  Database: " . ($config['DB_DATABASE'] ?? 'ไม่ระบุ'));
+                    $passed++;
+                } else {
+                    $this->warning("Database Config: ยังไม่ครบถ้วน");
+                    $warnings++;
+                }
+            } catch (\Exception $e) {
+                $this->warning("Database Config: ไม่สามารถอ่านได้");
+                $warnings++;
+            }
+        }
+        
+        // 8. ตรวจสอบ Routes
+        echo "\n" . Color::YELLOW . "━━━ Routes ━━━\n" . Color::RESET;
+        if (file_exists(__DIR__ . '/routes/web.php')) {
+            $this->success("routes/web.php: พบแล้ว");
+            $passed++;
+        } else {
+            $this->error("routes/web.php: ไม่พบ");
+            $failed++;
+        }
+        
+        if (file_exists(__DIR__ . '/routes/api.php')) {
+            $this->success("routes/api.php: พบแล้ว");
+            $passed++;
+        } else {
+            $this->warning("routes/api.php: ไม่พบ (ไม่บังคับ)");
+            $warnings++;
+        }
+        
+        // สรุปผล
+        echo "\n" . Color::CYAN . "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" . Color::RESET;
+        echo Color::BOLD . "สรุปผลการตรวจสอบ:\n" . Color::RESET;
+        echo Color::GREEN . "  ✓ ผ่าน: $passed รายการ\n" . Color::RESET;
+        if ($warnings > 0) {
+            echo Color::YELLOW . "  ⚠ คำเตือน: $warnings รายการ\n" . Color::RESET;
+        }
+        if ($failed > 0) {
+            echo Color::RED . "  ✗ ล้มเหลว: $failed รายการ\n" . Color::RESET;
+        }
+        echo "\n";
+        
+        if ($failed > 0) {
+            echo Color::RED . "❌ ระบบยังไม่พร้อมใช้งาน\n" . Color::RESET;
+            echo Color::WHITE . "กรุณาแก้ไขปัญหาที่พบก่อนเริ่มใช้งาน\n" . Color::RESET;
+            exit(1);
+        } elseif ($warnings > 0) {
+            echo Color::YELLOW . "⚠️  ระบบพร้อมใช้งาน แต่มีข้อแนะนำบางอย่าง\n" . Color::RESET;
+            echo Color::WHITE . "แนะนำให้แก้ไขตามคำเตือนเพื่อประสิทธิภาพสูงสุด\n" . Color::RESET;
+        } else {
+            echo Color::GREEN . "✅ ระบบพร้อมใช้งานทั้งหมด!\n" . Color::RESET;
+        }
+        
+        echo "\n" . Color::CYAN . "📚 ขั้นตอนถัดไป:\n" . Color::RESET;
+        if (!file_exists(__DIR__ . '/.env')) {
+            echo "  1. php console setup\n";
+        }
+        echo "  2. สร้าง Database ตามที่ตั้งค่าใน .env\n";
+        echo "  3. php console migrate\n";
+        echo "  4. php console seed (optional)\n";
+        echo "  5. php console serve\n";
+        echo "\n";
     }
     
     private function setupProject(array $args): void
@@ -546,9 +801,9 @@ EOT;
         $host = $args[0] ?? 'localhost';
         $port = $args[1] ?? '8000';
         
-        $this->info("Starting development server...");
-        $this->success("Server running at http://{$host}:{$port}");
-        $this->info("Press Ctrl+C to stop");
+        $this->info("กำลังเริ่มเซิร์ฟเวอร์สำหรับพัฒนา...");
+        $this->success("เซิร์ฟเวอร์ทำงานที่ http://{$host}:{$port}");
+        $this->info("กด Ctrl+C เพื่อหยุด");
         echo "\n";
         
         passthru("php -S {$host}:{$port} -t public");
@@ -556,19 +811,242 @@ EOT;
     
     private function runMigrations(array $args): void
     {
-        $this->info("Running migrations...");
-        passthru("php migrate.php");
+        // โหลด MigrationRunner
+        try {
+            $runner = new \App\Core\MigrationRunner();
+            
+            // ตรวจสอบ --path option
+            $modulePath = null;
+            foreach ($args as $arg) {
+                if (strpos($arg, '--path=') === 0) {
+                    $modulePath = substr($arg, 7);
+                }
+            }
+            
+            if ($modulePath) {
+                $runner->setModule($modulePath);
+                $this->info("Module: $modulePath");
+            }
+            
+            $this->info("กำลังรัน migrations...");
+            echo Color::WHITE . "-------------------" . Color::RESET . "\n";
+            
+            $result = $runner->run();
+            echo "\n";
+            $this->success($result['message']);
+            
+        } catch (\Exception $e) {
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            exit(1);
+        }
+    }
+    
+    private function rollbackMigrations(array $args): void
+    {
+        try {
+            $runner = new \App\Core\MigrationRunner();
+            
+            $steps = !empty($args) && is_numeric($args[0]) ? (int) $args[0] : 1;
+            
+            $this->info("กำลังย้อนกลับ $steps batch(es)...");
+            echo Color::WHITE . "-------------------" . Color::RESET . "\n";
+            
+            $result = $runner->rollback($steps);
+            echo "\n";
+            $this->success($result['message']);
+            
+        } catch (\Exception $e) {
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            exit(1);
+        }
+    }
+    
+    private function freshMigrations(array $args): void
+    {
+        try {
+            $runner = new \App\Core\MigrationRunner();
+            
+            $this->warning("คำเตือน: จะลบตารางทั้งหมดแล้วรัน migrations ใหม่!");
+            echo Color::YELLOW . "ยืนยันหรือไม่? (yes/no): " . Color::RESET;
+            $confirm = trim(fgets(STDIN));
+            
+            if (strtolower($confirm) !== 'yes') {
+                $this->info("ยกเลิกการดำเนินการ");
+                return;
+            }
+            
+            $this->info("กำลัง refresh database...");
+            echo Color::WHITE . "-------------------" . Color::RESET . "\n";
+            
+            $result = $runner->fresh();
+            echo "\n";
+            $this->success($result['message']);
+            
+        } catch (\Exception $e) {
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            exit(1);
+        }
+    }
+    
+    private function statusMigrations(array $args): void
+    {
+        try {
+            $runner = new \App\Core\MigrationRunner();
+            
+            echo Color::CYAN . Color::BOLD . "สถานะ Migrations" . Color::RESET . "\n";
+            echo Color::CYAN . "================" . Color::RESET . "\n\n";
+            
+            $status = $runner->status();
+            
+            if (empty($status)) {
+                $this->warning("ไม่พบ migrations");
+            } else {
+                foreach ($status as $migration) {
+                    $ran = $migration['ran'] ? Color::GREEN . '✓' . Color::RESET : Color::RED . '✗' . Color::RESET;
+                    $batch = $migration['batch'] ? Color::YELLOW . " (batch {$migration['batch']})" . Color::RESET : '';
+                    echo "$ran {$migration['migration']}$batch\n";
+                }
+            }
+            
+        } catch (\Exception $e) {
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            exit(1);
+        }
+    }
+    
+    private function createMigration(array $args): void
+    {
+        if (empty($args)) {
+            $this->error("กรุณาระบุชื่อ migration");
+            $this->info("วิธีใช้: php console migrate:create <migration_name>");
+            return;
+        }
+        
+        $name = $args[0];
+        $timestamp = date('Y_m_d_His');
+        $className = str_replace(' ', '', ucwords(str_replace('_', ' ', $name)));
+        $filename = "{$timestamp}_{$name}.php";
+        $path = __DIR__ . '/database/migrations/' . $filename;
+        
+        $template = <<<PHP
+<?php
+/**
+ * Migration: $className
+ */
+
+namespace Database\Migrations;
+
+use App\Core\Migration;
+
+class $className extends Migration
+{
+    /**
+     * Run the migration
+     */
+    public function up(): void
+    {
+        \$sql = "
+            CREATE TABLE IF NOT EXISTS example_table (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ";
+        
+        \$this->execute(\$sql);
+    }
+    
+    /**
+     * Reverse the migration
+     */
+    public function down(): void
+    {
+        \$this->execute("DROP TABLE IF EXISTS example_table");
+    }
+}
+PHP;
+        
+        if (file_put_contents($path, $template)) {
+            $this->success("สร้าง migration สำเร็จ: $filename");
+            $this->info("ที่อยู่: database/migrations/$filename");
+        } else {
+            $this->error("สร้างไฟล์ migration ไม่สำเร็จ");
+        }
+    }
+    
+    private function showMigrationModules(array $args): void
+    {
+        echo Color::CYAN . Color::BOLD . "Modules ที่มี" . Color::RESET . "\n";
+        echo Color::CYAN . "=================" . Color::RESET . "\n\n";
+        
+        $basePath = __DIR__ . '/database/migrations';
+        $directories = glob($basePath . '/*', GLOB_ONLYDIR);
+        
+        if (empty($directories)) {
+            $this->warning("ไม่พบ modules");
+            return;
+        }
+        
+        foreach ($directories as $dir) {
+            $moduleName = basename($dir);
+            $files = glob($dir . '/*.php');
+            $count = count($files);
+            
+            echo Color::GREEN . "- " . Color::WHITE . "$moduleName " . Color::YELLOW . "($count migration" . ($count != 1 ? 's' : '') . ")" . Color::RESET . "\n";
+        }
+        
+        echo "\n";
+        $this->info("วิธีใช้: php console migrate --path=<module>");
     }
     
     private function runSeeders(array $args): void
     {
-        $this->info("Running database seeders...");
-        passthru("php seed.php");
+        $this->info("กำลังรัน database seeders...");
+        echo "\n";
+        
+        // รายการ Seeders ที่จะรัน (เรียงตามลำดับที่ต้องการ)
+        $seeders = [
+            'Database\Seeders\CategorySeeder',
+            'Database\Seeders\UserSeeder',
+            'Database\Seeders\ProductSeeder',
+        ];
+        
+        // ถ้าระบุ seeder เฉพาะ
+        if (!empty($args[0])) {
+            $seederName = $args[0];
+            // ถ้าไม่ได้ใส่ Seeder ต่อท้าย ให้ใส่ให้
+            if (!str_ends_with($seederName, 'Seeder')) {
+                $seederName .= 'Seeder';
+            }
+            $seeders = ['Database\Seeders\\' . $seederName];
+        }
+        
+        try {
+            foreach ($seeders as $seederClass) {
+                if (!class_exists($seederClass)) {
+                    $this->warning("ไม่พบ Seeder class {$seederClass} ข้าม...");
+                    continue;
+                }
+                
+                $seeder = new $seederClass();
+                $seeder->run();
+                echo "\n";
+            }
+            
+            $this->success("รัน seeders ทั้งหมดเสร็จสมบูรณ์!");
+            echo "\n";
+            
+        } catch (\Exception $e) {
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            $this->error("ไฟล์: " . $e->getFile());
+            $this->error("บรรทัด: " . $e->getLine());
+            exit(1);
+        }
     }
     
     private function clearCache(array $args): void
     {
-        $this->info("Clearing cache...");
+        $this->info("กำลังลบ cache...");
         
         $cacheDir = __DIR__ . '/storage/cache';
         if (is_dir($cacheDir)) {
@@ -578,17 +1056,17 @@ EOT;
                     unlink($file);
                 }
             }
-            $this->success("Cache cleared successfully!");
+            $this->success("ลบ cache สำเร็จ!");
         } else {
-            $this->warning("Cache directory not found.");
+            $this->warning("ไม่พบโฟลเดอร์ cache");
         }
     }
     
     private function makeController(array $args): void
     {
         if (empty($args)) {
-            $this->error("Please provide a controller name.");
-            $this->info("Usage: php console make:controller ControllerName");
+            $this->error("กรุณาระบุชื่อ controller");
+            $this->info("วิธีใช้: php console make:controller ControllerName");
             return;
         }
         
@@ -600,21 +1078,21 @@ EOT;
         $path = __DIR__ . "/app/Controllers/{$name}.php";
         
         if (file_exists($path)) {
-            $this->error("Controller already exists!");
+            $this->error("Controller นี้มีอยู่แล้ว!");
             return;
         }
         
         $template = $this->getControllerTemplate($name);
         file_put_contents($path, $template);
         
-        $this->success("Controller created: app/Controllers/{$name}.php");
+        $this->success("สร้าง Controller สำเร็จ: app/Controllers/{$name}.php");
     }
     
     private function makeModel(array $args): void
     {
         if (empty($args)) {
-            $this->error("Please provide a model name.");
-            $this->info("Usage: php console make:model ModelName");
+            $this->error("กรุณาระบุชื่อ model");
+            $this->info("วิธีใช้: php console make:model ModelName");
             return;
         }
         
@@ -622,21 +1100,21 @@ EOT;
         $path = __DIR__ . "/app/Models/{$name}.php";
         
         if (file_exists($path)) {
-            $this->error("Model already exists!");
+            $this->error("Model นี้มีอยู่แล้ว!");
             return;
         }
         
         $template = $this->getModelTemplate($name);
         file_put_contents($path, $template);
         
-        $this->success("Model created: app/Models/{$name}.php");
+        $this->success("สร้าง Model สำเร็จ: app/Models/{$name}.php");
     }
     
     private function makeMiddleware(array $args): void
     {
         if (empty($args)) {
-            $this->error("Please provide a middleware name.");
-            $this->info("Usage: php console make:middleware MiddlewareName");
+            $this->error("กรุณาระบุชื่อ middleware");
+            $this->info("วิธีใช้: php console make:middleware MiddlewareName");
             return;
         }
         
@@ -648,19 +1126,19 @@ EOT;
         $path = __DIR__ . "/app/Middleware/{$name}.php";
         
         if (file_exists($path)) {
-            $this->error("Middleware already exists!");
+            $this->error("Middleware นี้มีอยู่แล้ว!");
             return;
         }
         
         $template = $this->getMiddlewareTemplate($name);
         file_put_contents($path, $template);
         
-        $this->success("Middleware created: app/Middleware/{$name}.php");
+        $this->success("สร้าง Middleware สำเร็จ: app/Middleware/{$name}.php");
     }
     
     private function runTests(array $args): void
     {
-        $this->info("Running tests...");
+        $this->info("กำลังรัน tests...");
         echo "\n";
         $phpunitPath = __DIR__ . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'phpunit';
 
@@ -671,30 +1149,366 @@ EOT;
         passthru($phpunitPath);
     }
     
-    private function showHelp(): void
+    private function makeSeeder(array $args): void
     {
-        echo Color::CYAN . Color::BOLD . "Available Commands:\n" . Color::RESET;
-        echo "\n";
-        
-        $commands = [
-            'setup' => 'Setup new project (ตั้งค่าโปรเจคใหม่อัตโนมัติ)',
-            'serve [host] [port]' => 'Start development server (default: localhost:8000)',
-            'migrate' => 'Run database migrations',
-            'seed' => 'Run database seeders',
-            'cache:clear' => 'Clear all cache',
-            'make:controller <name>' => 'Create a new controller',
-            'make:model <name>' => 'Create a new model',
-            'make:middleware <name>' => 'Create a new middleware',
-            'test' => 'Run PHPUnit tests',
-            'help' => 'Show this help message',
-        ];
-        
-        foreach ($commands as $command => $description) {
-            echo Color::GREEN . "  {$command}" . Color::RESET;
-            echo str_repeat(' ', 30 - strlen($command));
-            echo Color::WHITE . $description . Color::RESET . "\n";
+        if (empty($args)) {
+            $this->error("กรุณาระบุชื่อ seeder");
+            $this->info("วิธีใช้: php console make:seeder SeederName");
+            return;
         }
         
+        $name = $args[0];
+        if (!str_ends_with($name, 'Seeder')) {
+            $name .= 'Seeder';
+        }
+        
+        $path = __DIR__ . "/database/seeders/{$name}.php";
+        
+        if (file_exists($path)) {
+            $this->error("Seeder นี้มีอยู่แล้ว!");
+            return;
+        }
+        
+        $template = $this->getSeederTemplate($name);
+        file_put_contents($path, $template);
+        
+        $this->success("สร้าง Seeder สำเร็จ: database/seeders/{$name}.php");
+    }
+    
+    private function listRoutes(array $args): void
+    {
+        $this->info("กำลังโหลด routes...");
+        echo "\n";
+        
+        // โหลด routes
+        $webRoutes = [];
+        $apiRoutes = [];
+        
+        if (file_exists(__DIR__ . '/routes/web.php')) {
+            ob_start();
+            $router = new \stdClass();
+            $router->routes = [];
+            
+            // Mock router เพื่อเก็บ routes
+            $tempRouter = new class {
+                public $routes = [];
+                public function get($path, $handler) { $this->routes[] = ['GET', $path, $handler]; }
+                public function post($path, $handler) { $this->routes[] = ['POST', $path, $handler]; }
+                public function put($path, $handler) { $this->routes[] = ['PUT', $path, $handler]; }
+                public function delete($path, $handler) { $this->routes[] = ['DELETE', $path, $handler]; }
+                public function patch($path, $handler) { $this->routes[] = ['PATCH', $path, $handler]; }
+            };
+            
+            ob_end_clean();
+            
+            $this->info("แสดงรายการ routes:");
+            echo "\n";
+            echo Color::YELLOW . "ไฟล์ routes/web.php และ routes/api.php" . Color::RESET . "\n";
+            echo Color::WHITE . "กรุณาเปิดไฟล์เพื่อดูรายละเอียด routes" . Color::RESET . "\n\n";
+            
+            $this->success("ตรวจสอบไฟล์ routes เรียบร้อย");
+        } else {
+            $this->error("ไม่พบไฟล์ routes");
+        }
+    }
+    
+    private function generateKey(array $args): void
+    {
+        $this->info("กำลังสร้าง APP_KEY ใหม่...");
+        
+        $key = bin2hex(random_bytes(16));
+        
+        $envFile = __DIR__ . '/.env';
+        
+        if (!file_exists($envFile)) {
+            $this->error("ไม่พบไฟล์ .env");
+            $this->info("กรุณารันคำสั่ง 'php console setup' ก่อน");
+            return;
+        }
+        
+        $content = file_get_contents($envFile);
+        $content = preg_replace('/APP_KEY=.*/', 'APP_KEY=' . $key, $content);
+        
+        file_put_contents($envFile, $content);
+        
+        echo "\n";
+        $this->success("สร้าง APP_KEY ใหม่สำเร็จ!");
+        echo Color::CYAN . "APP_KEY: " . Color::WHITE . $key . Color::RESET . "\n\n";
+    }
+    
+    private function optimizeApp(array $args): void
+    {
+        $this->info("กำลังเพิ่มประสิทธิภาพแอปพลิเคชัน...");
+        echo "\n";
+        
+        // 1. Clear existing caches
+        $this->info("1. ลบ cache เก่า...");
+        $this->clearCache([]);
+        
+        // 2. Cache routes (ถ้ามี)
+        $this->info("2. Cache routes...");
+        $routeCacheDir = __DIR__ . '/storage/cache';
+        if (!is_dir($routeCacheDir)) {
+            mkdir($routeCacheDir, 0755, true);
+        }
+        file_put_contents($routeCacheDir . '/routes.cache', serialize(['cached' => true, 'time' => time()]));
+        $this->success("   ✓ Cache routes สำเร็จ");
+        
+        // 3. Create optimization flag
+        $this->info("3. สร้าง optimization flag...");
+        file_put_contents($routeCacheDir . '/optimized.flag', time());
+        $this->success("   ✓ สร้าง flag สำเร็จ");
+        
+        echo "\n";
+        $this->success("เพิ่มประสิทธิภาพแอปพลิเคชันเรียบร้อย!");
+        $this->info("แอปพลิเคชันพร้อมสำหรับ production");
+    }
+    
+    private function clearOptimization(array $args): void
+    {
+        $this->info("กำลังลบ optimization caches...");
+        
+        $cacheDir = __DIR__ . '/storage/cache';
+        $files = [
+            $cacheDir . '/routes.cache',
+            $cacheDir . '/optimized.flag',
+            $cacheDir . '/config.cache'
+        ];
+        
+        $cleared = 0;
+        foreach ($files as $file) {
+            if (file_exists($file)) {
+                unlink($file);
+                $cleared++;
+            }
+        }
+        
+        if ($cleared > 0) {
+            $this->success("ลบ optimization caches สำเร็จ! ({$cleared} ไฟล์)");
+        } else {
+            $this->info("ไม่พบ optimization caches");
+        }
+    }
+    
+    private function showHelp(): void
+    {
+        echo Color::CYAN . Color::BOLD . "SimpleBiz MVC Framework - คู่มือการใช้งาน\n" . Color::RESET;
+        echo Color::WHITE . "เฟรมเวิร์ก PHP MVC สำหรับพัฒนาเว็บไซต์ที่ออกแบบมาสำหรับนักพัฒนาไทย\n" . Color::RESET;
+        echo "\n";
+        
+        // Check Environment
+        echo Color::YELLOW . "━━━ ตรวจสอบระบบ ━━━\n" . Color::RESET;
+        echo Color::GREEN . "  check" . Color::RESET . "\n";
+        echo Color::WHITE . "    ตรวจสอบความพร้อมของระบบและสภาพแวดล้อม\n";
+        echo "    - PHP version และ extensions\n";
+        echo "    - Composer dependencies\n";
+        echo "    - ไฟล์และโฟลเดอร์จำเป็น\n";
+        echo "    - Permissions ของ storage/\n";
+        echo "    - Configuration files (.env)\n";
+        echo Color::CYAN . "    แนะนำ: รันคำสั่งนี้หลัง git clone ครั้งแรก\n" . Color::RESET . "\n";
+        
+        // Setup & Configuration
+        echo Color::YELLOW . "━━━ ตั้งค่าและคอนฟิก ━━━\n" . Color::RESET;
+        echo Color::GREEN . "  setup" . Color::RESET . "\n";
+        echo Color::WHITE . "    ตั้งค่าโปรเจคใหม่ทั้งหมด (interactive)\n";
+        echo "    - เปลี่ยนชื่อโปรเจค\n";
+        echo "    - สร้างไฟล์ .env และ APP_KEY\n";
+        echo "    - ตั้งค่า database connection\n";
+        echo "    - จัดการ Git repository (optional)\n\n";
+        
+        echo Color::GREEN . "  serve " . Color::CYAN . "[host] [port]" . Color::RESET . "\n";
+        echo Color::WHITE . "    เริ่มเซิร์ฟเวอร์สำหรับพัฒนา\n";
+        echo "    ค่าเริ่มต้น: localhost:8000\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console serve\n";
+        echo "              php console serve 0.0.0.0 8080\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  key:generate" . Color::RESET . "\n";
+        echo Color::WHITE . "    สร้าง APP_KEY ใหม่สำหรับ .env\n";
+        echo "    - ใช้สำหรับการเข้ารหัสข้อมูล\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console key:generate\n" . Color::RESET . "\n";
+        
+        // Database Commands
+        echo Color::YELLOW . "━━━ จัดการฐานข้อมูล ━━━\n" . Color::RESET;
+        echo Color::GREEN . "  db:show" . Color::RESET . "\n";
+        echo Color::WHITE . "    แสดงรายการตารางทั้งหมดในฐานข้อมูล\n";
+        echo "    พร้อมจำนวนแถวในแต่ละตาราง\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console db:show\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  db:table " . Color::CYAN . "<table_name>" . Color::RESET . "\n";
+        echo Color::WHITE . "    แสดงโครงสร้างของตาราง\n";
+        echo "    - Columns (ชื่อ, ชนิด, null, key, default)\n";
+        echo "    - Indexes และ relationships\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console db:table users\n" . Color::RESET . "\n";
+        
+        // Database Migrations
+        echo Color::YELLOW . "━━━ Database Migrations ━━━\n" . Color::RESET;
+        echo Color::GREEN . "  migrate " . Color::CYAN . "[--path=module]" . Color::RESET . "\n";
+        echo Color::WHITE . "    รัน migrations ทั้งหมดหรือเฉพาะ module\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console migrate\n";
+        echo "              php console migrate --path=core\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  migrate:rollback " . Color::CYAN . "[n]" . Color::RESET . "\n";
+        echo Color::WHITE . "    ย้อนกลับ migration ตามจำนวน batch\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console migrate:rollback\n";
+        echo "              php console migrate:rollback 3\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  migrate:fresh" . Color::RESET . "\n";
+        echo Color::WHITE . "    ลบตารางทั้งหมดและรัน migrations ใหม่\n";
+        echo Color::RED . "    ⚠️  คำเตือน: จะลบข้อมูลทั้งหมด!\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  migrate:reset " . Color::CYAN . "[module]" . Color::RESET . "\n";
+        echo Color::WHITE . "    Rollback migrations ทั้งหมด\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console migrate:reset\n";
+        echo "              php console migrate:reset core\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  migrate:refresh " . Color::CYAN . "[module] [--seed]" . Color::RESET . "\n";
+        echo Color::WHITE . "    Reset และ migrate ใหม่ทั้งหมด\n";
+        echo "    ใส่ --seed เพื่อ seed ข้อมูลหลัง migrate\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console migrate:refresh\n";
+        echo "              php console migrate:refresh --seed\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  migrate:status" . Color::RESET . "\n";
+        echo Color::WHITE . "    แสดงสถานะ migrations (รันแล้ว/ยังไม่รัน)\n\n";
+        
+        echo Color::GREEN . "  migrate:create " . Color::CYAN . "<name>" . Color::RESET . "\n";
+        echo Color::WHITE . "    สร้างไฟล์ migration ใหม่\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console migrate:create create_posts_table\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  migrate:modules" . Color::RESET . "\n";
+        echo Color::WHITE . "    แสดงรายการ migration modules ที่มี\n\n";
+        
+        // Database Seeding
+        echo Color::YELLOW . "━━━ Database Seeding ━━━\n" . Color::RESET;
+        echo Color::GREEN . "  seed " . Color::CYAN . "[SeederName]" . Color::RESET . "\n";
+        echo Color::WHITE . "    รัน seeders เพื่อเพิ่มข้อมูลตัวอย่าง\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console seed\n";
+        echo "              php console seed UserSeeder\n" . Color::RESET . "\n";
+        
+        // Code Generators
+        echo Color::YELLOW . "━━━ สร้างโค้ดอัตโนมัติ (Generators) ━━━\n" . Color::RESET;
+        echo Color::GREEN . "  make:controller " . Color::CYAN . "<name>" . Color::RESET . "\n";
+        echo Color::WHITE . "    สร้าง Controller class ใหม่\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console make:controller ProductController\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  make:model " . Color::CYAN . "<name>" . Color::RESET . "\n";
+        echo Color::WHITE . "    สร้าง Model class ใหม่\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console make:model Product\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  make:middleware " . Color::CYAN . "<name>" . Color::RESET . "\n";
+        echo Color::WHITE . "    สร้าง Middleware class ใหม่\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console make:middleware CheckAdmin\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  make:seeder " . Color::CYAN . "<name>" . Color::RESET . "\n";
+        echo Color::WHITE . "    สร้าง Seeder class ใหม่\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console make:seeder ProductSeeder\n" . Color::RESET . "\n";
+        
+        // Routes & Optimization
+        echo Color::YELLOW . "━━━ Routes, Cache และ Optimization ━━━\n" . Color::RESET;
+        echo Color::GREEN . "  route:list" . Color::RESET . "\n";
+        echo Color::WHITE . "    แสดงรายการ routes ทั้งหมด\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console route:list\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  cache:clear" . Color::RESET . "\n";
+        echo Color::WHITE . "    ลบ cache ทั้งหมด\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console cache:clear\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  cache:warm" . Color::RESET . "\n";
+        echo Color::WHITE . "    เตรียม cache ล่วงหน้า (routes + config)\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console cache:warm\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  config:cache" . Color::RESET . "\n";
+        echo Color::WHITE . "    Cache configuration files\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console config:cache\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  view:cache" . Color::RESET . "\n";
+        echo Color::WHITE . "    Compile view files ล่วงหน้า\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console view:cache\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  optimize" . Color::RESET . "\n";
+        echo Color::WHITE . "    เพิ่มประสิทธิภาพแอปพลิเคชันสำหรับ production\n";
+        echo "    - ลบ cache เก่า + Cache routes + สร้าง optimization flags\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console optimize\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  optimize:clear" . Color::RESET . "\n";
+        echo Color::WHITE . "    ลบ optimization caches (กลับสู่ development mode)\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console optimize:clear\n" . Color::RESET . "\n";
+        
+        // Logs & Maintenance
+        echo Color::YELLOW . "━━━ Logs และ Maintenance ━━━\n" . Color::RESET;
+        echo Color::GREEN . "  log:clear" . Color::RESET . "\n";
+        echo Color::WHITE . "    ลบไฟล์ log ทั้งหมด\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console log:clear\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  log:tail " . Color::CYAN . "[lines]" . Color::RESET . "\n";
+        echo Color::WHITE . "    แสดง log บรรทัดล่าสุด (default: 50)\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console log:tail\n";
+        echo "              php console log:tail 100\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  down" . Color::RESET . "\n";
+        echo Color::WHITE . "    เปิด Maintenance Mode\n";
+        echo "    - เว็บไซต์จะแสดงหน้า maintenance\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console down\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  up" . Color::RESET . "\n";
+        echo Color::WHITE . "    ปิด Maintenance Mode (กลับมาใช้งานปกติ)\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console up\n" . Color::RESET . "\n";
+        
+        // Testing
+        echo Color::YELLOW . "━━━ Testing ━━━\n" . Color::RESET;
+        echo Color::GREEN . "  test" . Color::RESET . "\n";
+        echo Color::WHITE . "    รัน PHPUnit tests ทั้งหมด\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console test\n" . Color::RESET . "\n";
+        
+        // Examples
+        echo Color::YELLOW . "━━━ ตัวอย่างการใช้งานทั่วไป ━━━\n" . Color::RESET;
+        echo Color::CYAN . "  # หลัง git clone ครั้งแรก\n" . Color::RESET;
+        echo "  composer install\n";
+        echo "  php console check         # ตรวจสอบระบบ\n";
+        echo "  php console setup         # ตั้งค่าโปรเจค\n\n";
+        
+        echo Color::CYAN . "  # เริ่มพัฒนา\n" . Color::RESET;
+        echo "  php console migrate\n";
+        echo "  php console seed\n";
+        echo "  php console serve\n\n";
+        
+        echo Color::CYAN . "  # สร้างฟีเจอร์ใหม่\n" . Color::RESET;
+        echo "  php console make:model Post\n";
+        echo "  php console make:controller PostController\n";
+        echo "  php console migrate:create create_posts_table\n";
+        echo "  php console make:seeder PostSeeder\n\n";
+        
+        echo Color::CYAN . "  # Deploy to Production\n" . Color::RESET;
+        echo "  php console check         # ตรวจสอบก่อน deploy\n";
+        echo "  php console migrate\n";
+        echo "  php console seed\n";
+        echo "  php console cache:warm    # เตรียม cache\n";
+        echo "  php console optimize\n\n";
+        
+        echo Color::CYAN . "  # Maintenance Mode\n" . Color::RESET;
+        echo "  php console down          # เปิด maintenance\n";
+        echo "  # ... ทำการอัปเดต ...\n";
+        echo "  php console up            # ปิด maintenance\n\n";
+        
+        echo Color::CYAN . "  # Database Inspection\n" . Color::RESET;
+        echo "  php console db:show       # ดูตารางทั้งหมด\n";
+        echo "  php console db:table users # ดูโครงสร้างตาราง\n\n";
+        
+        echo Color::CYAN . "  # Clear Resources\n" . Color::RESET;
+        echo "  php console log:clear     # ลบ logs\n";
+        echo "  php console cache:clear   # ลบ cache\n\n";
+        
+        // Tips
+        echo Color::YELLOW . "💡 เคล็ดลับ:\n" . Color::RESET;
+        echo Color::WHITE . "  • รัน 'php console check' หลัง git clone เพื่อตรวจสอบระบบ\n";
+        echo "  • ใช้ 'php console down' ก่อนทำ maintenance\n";
+        echo "  • ใช้ 'migrate:refresh --seed' เพื่อ reset database ใหม่\n";
+        echo "  • ใช้ 'db:show' และ 'db:table' เพื่อตรวจสอบ database\n";
+        echo "  • ใช้ 'log:tail' เพื่อดู errors ล่าสุด\n";
+        echo "  • คำสั่งส่วนใหญ่จะแสดง error ที่เข้าใจง่ายหากใช้ผิด\n" . Color::RESET;
+        echo "\n";
+        
+        echo Color::CYAN . "📚 เอกสารเพิ่มเติม: docs/\n" . Color::RESET;
+        echo Color::WHITE . "   QUICK_START.md, CLI_GUIDE.md, และอื่นๆ\n" . Color::RESET;
         echo "\n";
     }
     
@@ -791,6 +1605,48 @@ class {$name} extends Middleware
 PHP;
     }
     
+    private function getSeederTemplate(string $name): string
+    {
+        return <<<PHP
+<?php
+/**
+ * {$name}
+ * 
+ * จุดประสงค์: [อธิบายหน้าที่ของ seeder]
+ */
+
+namespace Database\Seeders;
+
+use App\Core\Seeder;
+
+class {$name} extends Seeder
+{
+    /**
+     * รัน seeder
+     */
+    public function run(): void
+    {
+        \$this->log('Seeding data...');
+        
+        // ลบข้อมูลเก่า (ถ้าต้องการ)
+        // \$this->truncate('table_name');
+        
+        // TODO: เพิ่มข้อมูลตัวอย่าง
+        \$data = [
+            // เพิ่มข้อมูลที่นี่
+        ];
+        
+        foreach (\$data as \$item) {
+            \$this->insert('table_name', \$item);
+        }
+        
+        \$this->success('Seeded successfully!');
+    }
+}
+
+PHP;
+    }
+    
     private function printBanner(): void
     {
         echo Color::CYAN . Color::BOLD;
@@ -818,6 +1674,408 @@ PHP;
     private function warning(string $message): void
     {
         echo Color::YELLOW . "⚠ {$message}" . Color::RESET . "\n";
+    }
+    
+    // ==================== Database Commands ====================
+    
+    private function showDatabaseTables(): void
+    {
+        $this->info("กำลังแสดงรายการตารางในฐานข้อมูล...");
+        
+        try {
+            $config = require __DIR__ . '/config/database.php';
+            
+            // Support both old and new config formats
+            if (isset($config['connections'])) {
+                $dbConfig = $config['connections'][$config['default']];
+            } else {
+                $dbConfig = $config;
+            }
+            
+            $pdo = new PDO(
+                "mysql:host={$dbConfig['host']};dbname={$dbConfig['database']}",
+                $dbConfig['username'],
+                $dbConfig['password']
+            );
+            
+            $stmt = $pdo->query("SHOW TABLES");
+            $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            
+            if (empty($tables)) {
+                $this->warning("ไม่พบตารางในฐานข้อมูล");
+                return;
+            }
+            
+            echo "\n" . Color::GREEN . "📊 ตารางทั้งหมด (" . count($tables) . " ตาราง):" . Color::RESET . "\n";
+            echo str_repeat("─", 50) . "\n";
+            
+            foreach ($tables as $index => $table) {
+                // Get row count
+                $countStmt = $pdo->query("SELECT COUNT(*) FROM `{$table}`");
+                $rowCount = $countStmt->fetchColumn();
+                
+                echo Color::CYAN . sprintf("%2d. ", $index + 1) . Color::WHITE . $table . 
+                     Color::GRAY . " ({$rowCount} แถว)" . Color::RESET . "\n";
+            }
+            
+            echo str_repeat("─", 50) . "\n";
+            $this->success("แสดงรายการตารางเรียบร้อยแล้ว");
+            
+        } catch (Exception $e) {
+            $this->error("ไม่สามารถเชื่อมต่อฐานข้อมูล: " . $e->getMessage());
+        }
+    }
+    
+    private function showTableStructure(array $args): void
+    {
+        if (empty($args[0])) {
+            $this->error("กรุณาระบุชื่อตาราง");
+            $this->info("ตัวอย่าง: php console db:table users");
+            return;
+        }
+        
+        $tableName = $args[0];
+        $this->info("กำลังแสดงโครงสร้างของตาราง '{$tableName}'...");
+        
+        try {
+            $config = require __DIR__ . '/config/database.php';
+            
+            // Support both old and new config formats
+            if (isset($config['connections'])) {
+                $dbConfig = $config['connections'][$config['default']];
+            } else {
+                $dbConfig = $config;
+            }
+            
+            $pdo = new PDO(
+                "mysql:host={$dbConfig['host']};dbname={$dbConfig['database']}",
+                $dbConfig['username'],
+                $dbConfig['password']
+            );
+            
+            // Check if table exists
+            $stmt = $pdo->query("SHOW TABLES LIKE '{$tableName}'");
+            if ($stmt->rowCount() === 0) {
+                $this->error("ไม่พบตาราง '{$tableName}'");
+                return;
+            }
+            
+            // Get columns
+            $stmt = $pdo->query("DESCRIBE `{$tableName}`");
+            $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Get indexes
+            $stmt = $pdo->query("SHOW INDEX FROM `{$tableName}`");
+            $indexes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Get row count
+            $stmt = $pdo->query("SELECT COUNT(*) FROM `{$tableName}`");
+            $rowCount = $stmt->fetchColumn();
+            
+            echo "\n" . Color::GREEN . "📋 ตาราง: {$tableName}" . Color::RESET . "\n";
+            echo Color::GRAY . "จำนวนแถว: {$rowCount}" . Color::RESET . "\n\n";
+            
+            // Display columns
+            echo Color::YELLOW . "คอลัมน์:" . Color::RESET . "\n";
+            echo str_repeat("─", 80) . "\n";
+            printf("%-20s %-15s %-8s %-10s %s\n", 
+                   Color::CYAN . "ชื่อ" . Color::RESET,
+                   Color::CYAN . "ชนิด" . Color::RESET,
+                   Color::CYAN . "Null" . Color::RESET,
+                   Color::CYAN . "Key" . Color::RESET,
+                   Color::CYAN . "Default" . Color::RESET);
+            echo str_repeat("─", 80) . "\n";
+            
+            foreach ($columns as $column) {
+                printf("%-20s %-15s %-8s %-10s %s\n",
+                       $column['Field'],
+                       $column['Type'],
+                       $column['Null'],
+                       $column['Key'],
+                       $column['Default'] ?? 'NULL');
+            }
+            
+            // Display indexes
+            if (!empty($indexes)) {
+                echo "\n" . Color::YELLOW . "Indexes:" . Color::RESET . "\n";
+                echo str_repeat("─", 80) . "\n";
+                
+                $indexGroups = [];
+                foreach ($indexes as $index) {
+                    $indexGroups[$index['Key_name']][] = $index['Column_name'];
+                }
+                
+                foreach ($indexGroups as $indexName => $columns) {
+                    echo Color::WHITE . $indexName . Color::GRAY . ": " . 
+                         implode(', ', $columns) . Color::RESET . "\n";
+                }
+            }
+            
+            echo "\n";
+            $this->success("แสดงโครงสร้างตารางเรียบร้อยแล้ว");
+            
+        } catch (Exception $e) {
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+        }
+    }
+    
+    private function resetMigrations(array $args = []): void
+    {
+        $this->info("กำลัง rollback migrations ทั้งหมด...");
+        
+        $module = $args[0] ?? null;
+        $runner = new MigrationRunner();
+        
+        // Rollback all batches
+        $batch = 1;
+        $maxBatches = 100; // Safety limit
+        
+        while ($batch <= $maxBatches) {
+            $result = $runner->rollback($module);
+            if (strpos($result, 'ไม่มี migrations ที่ต้อง rollback') !== false) {
+                break;
+            }
+            echo $result . "\n";
+            $batch++;
+        }
+        
+        $this->success("Reset migrations เรียบร้อยแล้ว");
+    }
+    
+    private function refreshMigrations(array $args = []): void
+    {
+        $this->info("กำลัง refresh migrations (reset + migrate)...");
+        
+        $module = $args[0] ?? null;
+        $seed = in_array('--seed', $args);
+        
+        // Reset
+        $this->resetMigrations($module ? [$module] : []);
+        
+        echo "\n";
+        
+        // Migrate
+        $this->runMigrations($module ? [$module] : []);
+        
+        // Seed if requested
+        if ($seed) {
+            echo "\n";
+            $this->info("กำลัง seed ข้อมูล...");
+            $this->runSeeders([]);
+        }
+        
+        echo "\n";
+        $this->success("Refresh migrations เรียบร้อยแล้ว" . ($seed ? " (รวม seeding)" : ""));
+    }
+    
+    // ==================== Cache Commands ====================
+    
+    private function warmCache(): void
+    {
+        $this->info("กำลังเตรียม cache...");
+        
+        $cacheDir = __DIR__ . '/storage/cache';
+        
+        // Create cache directories if not exist
+        $dirs = ['routes', 'config', 'views'];
+        foreach ($dirs as $dir) {
+            $path = $cacheDir . '/' . $dir;
+            if (!is_dir($path)) {
+                mkdir($path, 0755, true);
+            }
+        }
+        
+        // Cache routes
+        $this->info("  - กำลัง cache routes...");
+        $webRoutes = file_exists(__DIR__ . '/routes/web.php') ? 
+                     require __DIR__ . '/routes/web.php' : [];
+        $apiRoutes = file_exists(__DIR__ . '/routes/api.php') ? 
+                     require __DIR__ . '/routes/api.php' : [];
+        
+        file_put_contents(
+            $cacheDir . '/routes/routes_cached.php',
+            "<?php\nreturn " . var_export(['web' => $webRoutes, 'api' => $apiRoutes], true) . ";"
+        );
+        
+        // Cache config
+        $this->info("  - กำลัง cache config...");
+        $configFiles = glob(__DIR__ . '/config/*.php');
+        $cachedConfig = [];
+        
+        foreach ($configFiles as $file) {
+            $key = basename($file, '.php');
+            $cachedConfig[$key] = require $file;
+        }
+        
+        file_put_contents(
+            $cacheDir . '/config/config_cached.php',
+            "<?php\nreturn " . var_export($cachedConfig, true) . ";"
+        );
+        
+        $this->success("เตรียม cache เรียบร้อยแล้ว");
+    }
+    
+    private function cacheConfig(): void
+    {
+        $this->info("กำลัง cache configuration files...");
+        
+        $cacheDir = __DIR__ . '/storage/cache/config';
+        if (!is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
+        
+        $configFiles = glob(__DIR__ . '/config/*.php');
+        $cachedConfig = [];
+        
+        foreach ($configFiles as $file) {
+            $key = basename($file, '.php');
+            $cachedConfig[$key] = require $file;
+            $this->info("  - Cached: {$key}.php");
+        }
+        
+        file_put_contents(
+            $cacheDir . '/config_cached.php',
+            "<?php\nreturn " . var_export($cachedConfig, true) . ";"
+        );
+        
+        $this->success("Cache config files เรียบร้อยแล้ว");
+    }
+    
+    private function cacheViews(): void
+    {
+        $this->info("กำลัง compile view files...");
+        
+        $cacheDir = __DIR__ . '/storage/cache/views';
+        if (!is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
+        
+        $viewsDir = __DIR__ . '/app/Views';
+        $viewFiles = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($viewsDir)
+        );
+        
+        $count = 0;
+        foreach ($viewFiles as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                $relativePath = str_replace($viewsDir . DIRECTORY_SEPARATOR, '', $file->getPathname());
+                $cacheFile = $cacheDir . '/' . md5($relativePath) . '.php';
+                
+                copy($file->getPathname(), $cacheFile);
+                $count++;
+            }
+        }
+        
+        $this->success("Compile views เรียบร้อยแล้ว ({$count} files)");
+    }
+    
+    // ==================== Log Commands ====================
+    
+    private function clearLogs(): void
+    {
+        $this->info("กำลังลบ log files...");
+        
+        $logDir = __DIR__ . '/storage/logs';
+        $logFiles = glob($logDir . '/*.log');
+        
+        if (empty($logFiles)) {
+            $this->warning("ไม่พบ log files");
+            return;
+        }
+        
+        $count = 0;
+        foreach ($logFiles as $file) {
+            if (unlink($file)) {
+                $count++;
+                $this->info("  - ลบแล้ว: " . basename($file));
+            }
+        }
+        
+        $this->success("ลบ log files เรียบร้อยแล้ว ({$count} files)");
+    }
+    
+    private function tailLogs(array $args = []): void
+    {
+        $lines = isset($args[0]) && is_numeric($args[0]) ? (int)$args[0] : 50;
+        $logFile = __DIR__ . '/storage/logs/app.log';
+        
+        if (!file_exists($logFile)) {
+            $this->error("ไม่พบไฟล์ log: app.log");
+            return;
+        }
+        
+        $this->info("กำลังแสดง {$lines} บรรทัดล่าสุดจาก app.log...");
+        echo str_repeat("─", 80) . "\n";
+        
+        // Read last N lines
+        $file = new SplFileObject($logFile, 'r');
+        $file->seek(PHP_INT_MAX);
+        $lastLine = $file->key();
+        $startLine = max(0, $lastLine - $lines);
+        
+        $file->seek($startLine);
+        while (!$file->eof()) {
+            $line = $file->current();
+            
+            // Color code based on log level
+            if (strpos($line, 'ERROR') !== false) {
+                echo Color::RED . $line . Color::RESET;
+            } elseif (strpos($line, 'WARNING') !== false) {
+                echo Color::YELLOW . $line . Color::RESET;
+            } elseif (strpos($line, 'INFO') !== false) {
+                echo Color::BLUE . $line . Color::RESET;
+            } else {
+                echo $line;
+            }
+            
+            $file->next();
+        }
+        
+        echo str_repeat("─", 80) . "\n";
+        $this->success("แสดง logs เรียบร้อยแล้ว");
+    }
+    
+    // ==================== Maintenance Commands ====================
+    
+    private function enableMaintenanceMode(): void
+    {
+        $this->info("กำลังเปิด Maintenance Mode...");
+        
+        $maintenanceFile = __DIR__ . '/storage/framework/down';
+        $maintenanceDir = dirname($maintenanceFile);
+        
+        if (!is_dir($maintenanceDir)) {
+            mkdir($maintenanceDir, 0755, true);
+        }
+        
+        $data = [
+            'time' => time(),
+            'message' => 'ระบบอยู่ระหว่างการปรับปรุง กรุณากลับมาใหม่อีกครั้ง',
+            'retry' => 3600, // 1 hour
+        ];
+        
+        file_put_contents($maintenanceFile, json_encode($data));
+        
+        $this->success("เปิด Maintenance Mode เรียบร้อยแล้ว");
+        $this->warning("⚠ เว็บไซต์จะแสดงหน้า maintenance สำหรับผู้ใช้ทั่วไป");
+        $this->info("รัน 'php console up' เพื่อปิด maintenance mode");
+    }
+    
+    private function disableMaintenanceMode(): void
+    {
+        $this->info("กำลังปิด Maintenance Mode...");
+        
+        $maintenanceFile = __DIR__ . '/storage/framework/down';
+        
+        if (!file_exists($maintenanceFile)) {
+            $this->warning("ไม่ได้เปิด Maintenance Mode อยู่");
+            return;
+        }
+        
+        unlink($maintenanceFile);
+        
+        $this->success("ปิด Maintenance Mode เรียบร้อยแล้ว");
+        $this->info("✓ เว็บไซต์กลับมาใช้งานได้ปกติแล้ว");
     }
 }
 

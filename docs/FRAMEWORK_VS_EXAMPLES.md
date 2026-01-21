@@ -121,8 +121,8 @@ tests/
 ### 9. **CLI Tools** - 💻 Command Line Tools
 ```
 ├── console           ✅ CLI Command Runner
-├── migrate.php       ✅ Migration Tool
-└── seed.php          ✅ Seeder Tool
+├── migrate.php       ✅ Migration Tool (ใช้ผ่าน console แนะนำ)
+└── seed.php          ✅ Seeder Tool (ใช้ผ่าน console แนะนำ)
 ```
 **สถานะ:** ⛔ **ห้ามลบ** - เครื่องมือสำคัญ
 

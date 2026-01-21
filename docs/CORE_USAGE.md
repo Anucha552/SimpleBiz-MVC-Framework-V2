@@ -1874,17 +1874,14 @@ class CreateUsersTable extends Migration
 # รัน migrations ทั้งหมด
 php console migrate
 
-# หรือใช้ migrate.php โดยตรง
-php migrate.php up
-
 # Rollback
-php migrate.php down
+php console migrate:rollback
 
 # Fresh migration (ลบทุกอย่างและรันใหม่)
-php migrate.php fresh
+php console migrate:fresh
 
 # ดูสถานะ
-php migrate.php status
+php console migrate:status
 ```
 
 ---
@@ -1929,9 +1926,6 @@ class UserSeeder extends Seeder
 ```bash
 # รัน seeders ทั้งหมด
 php console seed
-
-# หรือใช้ seed.php โดยตรง
-php seed.php
 ```
 
 ---

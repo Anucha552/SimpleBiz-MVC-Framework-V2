@@ -25,7 +25,7 @@
 ### 1. ตรวจสอบสถานะ Migration
 
 ```bash
-php migrate.php status
+php console migrate:status
 ```
 
 แสดงรายการ migrations ที่รันแล้ว และที่รอการรัน
@@ -33,9 +33,7 @@ php migrate.php status
 ### 2. รัน Migrations ทั้งหมด
 
 ```bash
-php migrate.php up
-# หรือ
-php migrate.php migrate
+php console migrate
 ```
 
 รัน migrations ที่ยังไม่ได้รัน (pending migrations)
@@ -44,16 +42,16 @@ php migrate.php migrate
 
 ```bash
 # Rollback batch ล่าสุด
-php migrate.php down
+php console migrate:rollback
 
 # Rollback 2 batch ล่าสุด
-php migrate.php rollback 2
+php console migrate:rollback 2
 ```
 
 ### 4. Fresh Migration (ลบทุกอย่างและรันใหม่)
 
 ```bash
-php migrate.php fresh
+php console migrate:fresh
 ```
 
 ⚠️ **คำเตือน**: คำสั่งนี้จะลบข้อมูลทั้งหมดในฐานข้อมูล
@@ -61,7 +59,7 @@ php migrate.php fresh
 ### 5. สร้าง Migration ใหม่
 
 ```bash
-php migrate.php create CreateUsersTable
+php console migrate:create CreateUsersTable
 ```
 
 สร้างไฟล์ Migration แบบ template พร้อม timestamp
@@ -69,7 +67,7 @@ php migrate.php create CreateUsersTable
 ### 6. ดูรายการ Module ทั้งหมด
 
 ```bash
-php migrate.php modules
+php console migrate:modules
 ```
 
 แสดงรายการ module และจำนวน migration ในแต่ละ module
@@ -78,16 +76,16 @@ php migrate.php modules
 
 ```bash
 # รันเฉพาะ module core
-php migrate.php up --path=core
+php console migrate --path=core
 
 # รันเฉพาะ module ecommerce
-php migrate.php up --path=ecommerce
+php console migrate --path=ecommerce
 
 # รันเฉพาะ module content
-php migrate.php up --path=content
+php console migrate --path=content
 
 # รันเฉพาะ module system
-php migrate.php up --path=system
+php console migrate --path=system
 ```
 
 ---
@@ -352,7 +350,7 @@ DROP TABLE IF EXISTS users
 mysqldump -u root -p database_name > backup.sql
 
 # แล้วค่อย rollback
-php migrate.php down
+php console migrate:rollback
 ```
 
 ---
@@ -363,18 +361,18 @@ php migrate.php down
 
 ```bash
 # 1. สร้าง migration ใหม่
-php migrate.php create CreatePostsTable
+php console migrate:create CreatePostsTable
 
 # 2. เขียน up() และ down() methods
 
 # 3. รัน migration
-php migrate.php up
+php console migrate
 
 # 4. ทดสอบ rollback
-php migrate.php down
+php console migrate:rollback
 
 # 5. รันอีกครั้งเพื่อยืนยัน
-php migrate.php up
+php console migrate
 ```
 
 ### Production Deployment
@@ -387,13 +385,13 @@ git pull origin main
 mysqldump -u root -p database > backup_$(date +%Y%m%d).sql
 
 # 3. รัน migrations
-php migrate.php up
+php console migrate
 
 # 4. ตรวจสอบ
-php migrate.php status
+php console migrate:status
 
 # 5. ถ้ามีปัญหา rollback
-php migrate.php down
+php console migrate:rollback
 ```
 
 ---
@@ -465,16 +463,16 @@ DELETE FROM migrations WHERE migration = 'filename.php';
 
 ```bash
 # รันทั้งหมด
-php migrate.php up
+php console migrate
 
 # รันเฉพาะ module core
-php migrate.php up --path=core
+php console migrate --path=core
 
 # รันเฉพาะ module ecommerce
-php migrate.php up --path=ecommerce
+php console migrate --path=ecommerce
 
 # ดู module ทั้งหมด
-php migrate.php modules
+php console migrate:modules
 ```
 
 ---
@@ -483,25 +481,28 @@ php migrate.php modules
 
 ```bash
 # ดูสถานะ
-php migrate.php status
+php console migrate:status
 
 # รัน migrations
-php migrate.php up
+php console migrate
 
 # Rollback 1 batch
-php migrate.php down
+php console migrate:rollback
 
 # Rollback 3 batches
-php migrate.php rollback 3
+php console migrate:rollback 3
 
 # Reset และรันใหม่
-php migrate.php fresh
+php console migrate:fresh
 
 # สร้าง migration ใหม่
-php migrate.php create AddColumnsToUsers
+php console migrate:create AddColumnsToUsers
+
+# ดู modules
+php console migrate:modules
 
 # ดูคำสั่งทั้งหมด
-php migrate.php help
+php console help
 ```
 
 ---

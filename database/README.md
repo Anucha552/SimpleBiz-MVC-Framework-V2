@@ -17,7 +17,7 @@ database/migrations/
 ### 1. ดูรายการ Modules
 
 ```bash
-php migrate.php modules
+php console migrate:modules
 ```
 
 แสดงผล:
@@ -34,7 +34,7 @@ Available Modules
 ### 2. รัน Migrations ทั้งหมด
 
 ```bash
-php migrate.php up
+php console migrate
 ```
 
 รันทุก module พร้อมกัน
@@ -43,32 +43,32 @@ php migrate.php up
 
 ```bash
 # รันเฉพาะ core module
-php migrate.php up --path=core
+php console migrate --path=core
 
 # รันเฉพาะ ecommerce module
-php migrate.php up --path=ecommerce
+php console migrate --path=ecommerce
 
 # รันเฉพาะ content module
-php migrate.php up --path=content
+php console migrate --path=content
 
 # รันเฉพาะ system module
-php migrate.php up --path=system
+php console migrate --path=system
 ```
 
 ### 4. ตรวจสอบสถานะ
 
 ```bash
-php migrate.php status
+php console migrate:status
 ```
 
 ### 5. Rollback
 
 ```bash
 # Rollback 1 batch
-php migrate.php down
+php console migrate:rollback
 
 # Rollback 3 batches
-php migrate.php rollback 3
+php console migrate:rollback 3
 ```
 
 ## รายละเอียด Modules
@@ -125,29 +125,29 @@ php migrate.php rollback 3
 
 ```bash
 # 1. รัน core ก่อน (users, roles)
-php migrate.php up --path=core
+php console migrate --path=core
 
 # 2. รัน ecommerce (ขึ้นกับ core)
-php migrate.php up --path=ecommerce
+php console migrate --path=ecommerce
 
 # 3. รัน content (ไม่ขึ้นกับ module อื่น)
-php migrate.php up --path=content
+php console migrate --path=content
 
 # 4. รัน system (ขึ้นกับ core)
-php migrate.php up --path=system
+php console migrate --path=system
 ```
 
 ### Production Deployment
 
 ```bash
 # รันทั้งหมดพร้อมกัน
-php migrate.php up
+php console migrate
 
 # หรือแยกทีละ module เพื่อควบคุมได้ดีกว่า
-php migrate.php up --path=core
-php migrate.php up --path=ecommerce
-php migrate.php up --path=content
-php migrate.php up --path=system
+php console migrate --path=core
+php console migrate --path=ecommerce
+php console migrate --path=content
+php console migrate --path=system
 ```
 
 ### Development ฟีเจอร์ใหม่
@@ -159,11 +159,11 @@ php migrate.php up --path=system
 mkdir database/migrations/blog
 
 # 2. สร้าง migration
-php migrate.php create create_posts_table
+php console migrate:create create_posts_table
 # ย้ายไฟล์ไปที่ database/migrations/blog/
 
 # 3. รันเฉพาะ blog module
-php migrate.php up --path=blog
+php console migrate --path=blog
 ```
 
 ## การเพิ่ม Module ใหม่
@@ -177,12 +177,12 @@ php migrate.php up --path=blog
 
 3. **รัน migration**
    ```bash
-   php migrate.php up --path=blog
+   php console migrate --path=blog
    ```
 
 4. **ตรวจสอบ**
    ```bash
-   php migrate.php modules
+   php console migrate:modules
    ```
 
 ## ข้อดีของการแยก Module
@@ -209,18 +209,18 @@ core (ไม่ขึ้นกับใคร)
 
 ```bash
 # Rollback ทั้งหมด
-php migrate.php down
+php console migrate:rollback
 
 # Rollback เฉพาะ module ไม่ได้ (จะ rollback ตาม batch)
 # แนะนำให้ใช้ fresh แทน
-php migrate.php fresh
-php migrate.php up --path=core
-php migrate.php up --path=ecommerce
+php console migrate:fresh
+php console migrate --path=core
+php console migrate --path=ecommerce
 ```
 
 ## Tips
 
-💡 ใช้ `php migrate.php modules` เพื่อดูว่ามี module อะไรบ้าง  
+💡 ใช้ `php console migrate:modules` เพื่อดูว่ามี module อะไรบ้าง  
 💡 ใช้ `--path` เมื่อต้องการรันเฉพาะ module  
 💡 ไม่ระบุ `--path` จะรันทุก module  
 💡 การเพิ่ม module ใหม่ไม่ต้องแก้ไขโค้ด - แค่สร้าง folder  
