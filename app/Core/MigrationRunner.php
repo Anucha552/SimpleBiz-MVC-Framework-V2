@@ -89,7 +89,23 @@ class MigrationRunner
                 $ran[] = $migrationName;
             } catch (\Exception $e) {
                 echo "✗ Failed\n";
-                echo "Error: " . $e->getMessage() . "\n";
+                echo "\n";
+                echo "┌─ Error Details ─────────────────────────────────────┐\n";
+                echo "│ Migration: $migrationName\n";
+                echo "│ Error: " . $e->getMessage() . "\n";
+                echo "│ File: " . $e->getFile() . "\n";
+                echo "│ Line: " . $e->getLine() . "\n";
+                echo "└──────────────────────────────────────────────────────┘\n";
+                echo "\n";
+                
+                // Log error
+                $this->logger->error('Migration failed', [
+                    'migration' => $migrationName,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+                
                 break;
             }
         }
@@ -133,10 +149,23 @@ class MigrationRunner
                         $rolledBack[] = $migration['migration'];
                     } else {
                         echo "✗ File not found\n";
+                        echo "⚠ Migration file is missing: {$migration['migration']}.php\n";
+                        
+                        // Log warning
+                        $this->logger->warning('Migration file not found for rollback', [
+                            'migration' => $migration['migration'],
+                        ]);
                     }
                 } catch (\Exception $e) {
                     echo "✗ Failed\n";
                     echo "Error: " . $e->getMessage() . "\n";
+                    echo "File: " . $e->getFile() . " (Line: " . $e->getLine() . ")\n";
+                    
+                    // Log error
+                    $this->logger->error('Rollback failed', [
+                        'migration' => $migration['migration'],
+                        'error' => $e->getMessage(),
+                    ]);
                 }
             }
         }
@@ -293,7 +322,11 @@ class MigrationRunner
             }
         }
         
-        sort($files);
+        // เรียงลำดับตามชื่อไฟล์ (basename) ไม่ใช่ full path
+        usort($files, function($a, $b) {
+            return strcmp(basename($a), basename($b));
+        });
+        
         return $files ?: [];
     }
     
@@ -399,8 +432,22 @@ class MigrationRunner
      */
     private function findMigrationFile(string $name): ?string
     {
+        // ค้นหาไฟล์ใน path หลัก
         $file = $this->migrationsPath . '/' . $name . '.php';
-        return file_exists($file) ? $file : null;
+        if (file_exists($file)) {
+            return $file;
+        }
+        
+        // ค้นหาใน subdirectories
+        $directories = glob($this->migrationsPath . '/*', GLOB_ONLYDIR);
+        foreach ($directories as $dir) {
+            $file = $dir . '/' . $name . '.php';
+            if (file_exists($file)) {
+                return $file;
+            }
+        }
+        
+        return null;
     }
     
     /**

@@ -41,22 +41,64 @@ abstract class Seeder
             return;
         }
 
-        // สมมติว่าทุก row มีคอลัมน์เดียวกัน
-        $columns = array_keys($data[0]);
-        $placeholders = '(' . implode(', ', array_fill(0, count($columns), '?')) . ')';
-        
-        $sql = "INSERT INTO {$table} (" . implode(', ', $columns) . ") VALUES ";
-        $values = [];
-        
-        foreach ($data as $row) {
-            $sql .= $placeholders . ', ';
-            $values = array_merge($values, array_values($row));
+        try {
+            // สมมติว่าทุก row มีคอลัมน์เดียวกัน
+            $columns = array_keys($data[0]);
+            $placeholders = '(' . implode(', ', array_fill(0, count($columns), '?')) . ')';
+            
+            $sql = "INSERT INTO {$table} (" . implode(', ', $columns) . ") VALUES ";
+            $values = [];
+            
+            foreach ($data as $row) {
+                $sql .= $placeholders . ', ';
+                $values = array_merge($values, array_values($row));
+            }
+            
+            $sql = rtrim($sql, ', ');
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($values);
+        } catch (\PDOException $e) {
+            echo "\n";
+            echo "┌─ Seeder Error ──────────────────────────────────────┐\n";
+            $this->error('เกิดข้อผิดพลาด: ' . $e->getMessage());
+            $this->error('ไฟล์: ' . $e->getFile());
+            $this->error('บรรทัด: ' . $e->getLine());
+            
+            // แสดง SQL error code ถ้ามี
+            if ($e->getCode()) {
+                $this->error('Error Code: ' . $e->getCode());
+            }
+            
+            // แนะนำการแก้ไข
+            if (strpos($e->getMessage(), 'Column not found') !== false) {
+                echo "\n";
+                $this->warning('💡 คำแนะนำ: ตรวจสอบว่าชื่อคอลัมน์ใน Seeder ตรงกับ Migration หรือไม่');
+                $this->info('   - รันคำสั่ง: php console db:table <table_name> เพื่อดูโครงสร้างตาราง');
+            } elseif (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                echo "\n";
+                $this->warning('💡 คำแนะนำ: มีข้อมูลซ้ำในตาราง');
+                $this->info('   - ลองรันคำสั่ง: php console migrate:fresh แล้วรัน seed ใหม่');
+            } elseif (strpos($e->getMessage(), 'foreign key constraint') !== false) {
+                echo "\n";
+                $this->warning('💡 คำแนะนำ: ตรวจสอบความสัมพันธ์ระหว่างตาราง');
+                $this->info('   - ตรวจสอบว่า foreign key มีค่าที่ถูกต้องหรือไม่');
+            }
+            
+            echo "└────────────────────────────────────────────────────┘\n";
+            echo "\n";
+            
+            // Log error
+            (new \App\Core\Logger())->error('Seeder error', [
+                'table' => $table,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'code' => $e->getCode(),
+            ]);
+            
+            exit(1);
         }
-        
-        $sql = rtrim($sql, ', ');
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($values);
     }
 
     /**
@@ -79,5 +121,37 @@ abstract class Seeder
     protected function log(string $message): void
     {
         echo "[" . date('Y-m-d H:i:s') . "] {$message}\n";
+    }
+
+    /**
+     * แสดงข้อความ error
+     */
+    protected function error(string $message): void
+    {
+        echo "\033[31m✗ {$message}\033[0m\n";
+    }
+
+    /**
+     * แสดงข้อความ warning
+     */
+    protected function warning(string $message): void
+    {
+        echo "\033[33m⚠ {$message}\033[0m\n";
+    }
+
+    /**
+     * แสดงข้อความ info
+     */
+    protected function info(string $message): void
+    {
+        echo "\033[36mℹ {$message}\033[0m\n";
+    }
+
+    /**
+     * แสดงข้อความ success
+     */
+    protected function success(string $message): void
+    {
+        echo "\033[32m✓ {$message}\033[0m\n";
     }
 }

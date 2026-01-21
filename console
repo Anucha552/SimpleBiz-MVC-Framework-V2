@@ -92,6 +92,7 @@ class Color {
     const BLUE = "\033[34m";
     const CYAN = "\033[36m";
     const WHITE = "\033[37m";
+    const GRAY = "\033[90m";
     const BOLD = "\033[1m";
 }
 
@@ -886,7 +887,25 @@ EOT;
             $this->success($result['message']);
             
         } catch (\Exception $e) {
+            echo "\n";
+            echo "┌─ Console Error ─────────────────────────────────────┐\n";
             $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            $this->error("ไฟล์: " . $e->getFile());
+            $this->error("บรรทัด: " . $e->getLine());
+            echo "└──────────────────────────────────────────────────────┘\n";
+            echo "\n";
+            
+            // Log error
+            try {
+                (new \App\Core\Logger())->error('Console command error', [
+                    'command' => 'migrate',
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            } catch (\Exception $logError) {
+                // Ignore logging errors
+            }
+            
             exit(1);
         }
     }
@@ -911,7 +930,24 @@ EOT;
             $this->success($result['message']);
             
         } catch (\Exception $e) {
+            echo "\n";
+            echo "┌─ Rollback Error ────────────────────────────────────┐\n";
             $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            $this->error("ไฟล์: " . $e->getFile());
+            $this->error("บรรทัด: " . $e->getLine());
+            echo "└──────────────────────────────────────────────────────┘\n";
+            echo "\n";
+            
+            // Log error
+            try {
+                (new \App\Core\Logger())->error('Rollback error', [
+                    'command' => 'migrate:rollback',
+                    'error' => $e->getMessage(),
+                ]);
+            } catch (\Exception $logError) {
+                // Ignore logging errors
+            }
+            
             exit(1);
         }
     }
@@ -1115,17 +1151,32 @@ PHP;
     {
         $this->info("กำลังลบ cache...");
         
-        $cacheDir = __DIR__ . '/storage/cache';
-        if (is_dir($cacheDir)) {
-            $files = glob($cacheDir . '/*');
-            foreach ($files as $file) {
-                if (is_file($file)) {
-                    unlink($file);
+        try {
+            $cacheDir = __DIR__ . '/storage/cache';
+            if (is_dir($cacheDir)) {
+                $files = glob($cacheDir . '/*');
+                $deleted = 0;
+                foreach ($files as $file) {
+                    if (is_file($file)) {
+                        if (unlink($file)) {
+                            $deleted++;
+                        } else {
+                            $this->warning("ไม่สามารถลบไฟล์: " . basename($file));
+                        }
+                    }
                 }
+                $this->success("ลบ cache สำเร็จ! ({$deleted} ไฟล์)");
+            } else {
+                $this->warning("ไม่พบโฟลเดอร์ cache");
             }
-            $this->success("ลบ cache สำเร็จ!");
-        } else {
-            $this->warning("ไม่พบโฟลเดอร์ cache");
+        } catch (\Exception $e) {
+            echo "\n";
+            echo "┌─ Cache Clear Error ─────────────────────────────────┐\n";
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            $this->error("ไฟล์: " . $e->getFile());
+            $this->error("บรรทัด: " . $e->getLine());
+            echo "└────────────────────────────────────────────────────┘\n";
+            echo "\n";
         }
     }
     
@@ -1149,10 +1200,26 @@ PHP;
             return;
         }
         
-        $template = $this->getControllerTemplate($name);
-        file_put_contents($path, $template);
-        
-        $this->success("สร้าง Controller สำเร็จ: app/Controllers/{$name}.php");
+        try {
+            $dir = dirname($path);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            
+            $template = $this->getControllerTemplate($name);
+            if (file_put_contents($path, $template) === false) {
+                throw new \Exception("ไม่สามารถเขียนไฟล์ได้");
+            }
+            
+            $this->success("สร้าง Controller สำเร็จ: app/Controllers/{$name}.php");
+        } catch (\Exception $e) {
+            echo "\n";
+            echo "┌─ Create Controller Error ───────────────────────────┐\n";
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            $this->warning("💡 คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์");
+            echo "└────────────────────────────────────────────────────┘\n";
+            echo "\n";
+        }
     }
     
     private function makeModel(array $args): void
@@ -1171,10 +1238,26 @@ PHP;
             return;
         }
         
-        $template = $this->getModelTemplate($name);
-        file_put_contents($path, $template);
-        
-        $this->success("สร้าง Model สำเร็จ: app/Models/{$name}.php");
+        try {
+            $dir = dirname($path);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            
+            $template = $this->getModelTemplate($name);
+            if (file_put_contents($path, $template) === false) {
+                throw new \Exception("ไม่สามารถเขียนไฟล์ได้");
+            }
+            
+            $this->success("สร้าง Model สำเร็จ: app/Models/{$name}.php");
+        } catch (\Exception $e) {
+            echo "\n";
+            echo "┌─ Create Model Error ────────────────────────────────┐\n";
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            $this->warning("💡 คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์");
+            echo "└────────────────────────────────────────────────────┘\n";
+            echo "\n";
+        }
     }
     
     private function makeMiddleware(array $args): void
@@ -1197,10 +1280,26 @@ PHP;
             return;
         }
         
-        $template = $this->getMiddlewareTemplate($name);
-        file_put_contents($path, $template);
-        
-        $this->success("สร้าง Middleware สำเร็จ: app/Middleware/{$name}.php");
+        try {
+            $dir = dirname($path);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            
+            $template = $this->getMiddlewareTemplate($name);
+            if (file_put_contents($path, $template) === false) {
+                throw new \Exception("ไม่สามารถเขียนไฟล์ได้");
+            }
+            
+            $this->success("สร้าง Middleware สำเร็จ: app/Middleware/{$name}.php");
+        } catch (\Exception $e) {
+            echo "\n";
+            echo "┌─ Create Middleware Error ───────────────────────────┐\n";
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            $this->warning("💡 คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์");
+            echo "└────────────────────────────────────────────────────┘\n";
+            echo "\n";
+        }
     }
     
     private function runTests(array $args): void
@@ -1283,24 +1382,39 @@ PHP;
     {
         $this->info("กำลังสร้าง APP_KEY ใหม่...");
         
-        $key = bin2hex(random_bytes(16));
-        
-        $envFile = __DIR__ . '/.env';
-        
-        if (!file_exists($envFile)) {
-            $this->error("ไม่พบไฟล์ .env");
-            $this->info("กรุณารันคำสั่ง 'php console setup' ก่อน");
-            return;
+        try {
+            $key = bin2hex(random_bytes(16));
+            
+            $envFile = __DIR__ . '/.env';
+            
+            if (!file_exists($envFile)) {
+                $this->error("ไม่พบไฟล์ .env");
+                $this->info("กรุณารันคำสั่ง 'php console setup' ก่อน");
+                return;
+            }
+            
+            $content = file_get_contents($envFile);
+            if ($content === false) {
+                throw new \Exception("ไม่สามารถอ่านไฟล์ .env ได้");
+            }
+            
+            $content = preg_replace('/APP_KEY=.*/', 'APP_KEY=' . $key, $content);
+            
+            if (file_put_contents($envFile, $content) === false) {
+                throw new \Exception("ไม่สามารถเขียนไฟล์ .env ได้");
+            }
+            
+            echo "\n";
+            $this->success("สร้าง APP_KEY ใหม่สำเร็จ!");
+            echo Color::CYAN . "APP_KEY: " . Color::WHITE . $key . Color::RESET . "\n\n";
+        } catch (\Exception $e) {
+            echo "\n";
+            echo "┌─ Generate Key Error ────────────────────────────────┐\n";
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            $this->warning("💡 คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์ .env");
+            echo "└────────────────────────────────────────────────────┘\n";
+            echo "\n";
         }
-        
-        $content = file_get_contents($envFile);
-        $content = preg_replace('/APP_KEY=.*/', 'APP_KEY=' . $key, $content);
-        
-        file_put_contents($envFile, $content);
-        
-        echo "\n";
-        $this->success("สร้าง APP_KEY ใหม่สำเร็จ!");
-        echo Color::CYAN . "APP_KEY: " . Color::WHITE . $key . Color::RESET . "\n\n";
     }
     
     private function optimizeApp(array $args): void
@@ -1707,7 +1821,7 @@ class {$name} extends Seeder
             \$this->insert('table_name', \$item);
         }
         
-        \$this->success('Seeded successfully!');
+        \$this->log('✓ Seeded successfully!');
     }
 }
 
@@ -1822,7 +1936,7 @@ PHP;
     {
         echo Color::CYAN . Color::BOLD;
         echo "\n╔════════════════════════════════════════╗\n";
-        echo "║   SimpleBiz MVC Framework Console   ║\n";
+        echo "║   SimpleBiz MVC Framework Console      ║\n";
         echo "╚════════════════════════════════════════╝\n";
         echo Color::RESET . "\n";
     }
@@ -1909,7 +2023,26 @@ PHP;
             $this->success("แสดงรายการตารางเรียบร้อยแล้ว");
             
         } catch (Exception $e) {
+            echo "\n";
+            echo "┌─ Database Connection Error ─────────────────────────┐\n";
             $this->error("ไม่สามารถเชื่อมต่อฐานข้อมูล: " . $e->getMessage());
+            echo "│\n";
+            $this->warning("💡 คำแนะนำ:");
+            $this->info("   1. ตรวจสอบว่าเปิด MySQL/MariaDB แล้วหรือไม่");
+            $this->info("   2. ตรวจสอบการตั้งค่าใน .env ไฟล์");
+            $this->info("   3. ตรวจสอบว่าสร้าง database แล้วหรือไม่");
+            echo "└──────────────────────────────────────────────────────┘\n";
+            echo "\n";
+            
+            // Log error
+            try {
+                (new \App\Core\Logger())->error('Database connection failed', [
+                    'command' => 'db:show',
+                    'error' => $e->getMessage(),
+                ]);
+            } catch (\Exception $logError) {
+                // Ignore logging errors  
+            }
         }
     }
     
@@ -1962,40 +2095,54 @@ PHP;
             echo "\n" . Color::GREEN . "📋 ตาราง: {$tableName}" . Color::RESET . "\n";
             echo Color::GRAY . "จำนวนแถว: {$rowCount}" . Color::RESET . "\n\n";
             
-            // Display columns
+            // Display columns with proper alignment
             echo Color::YELLOW . "คอลัมน์:" . Color::RESET . "\n";
-            echo str_repeat("─", 80) . "\n";
-            printf("%-20s %-15s %-8s %-10s %s\n", 
-                   Color::CYAN . "ชื่อ" . Color::RESET,
-                   Color::CYAN . "ชนิด" . Color::RESET,
-                   Color::CYAN . "Null" . Color::RESET,
-                   Color::CYAN . "Key" . Color::RESET,
-                   Color::CYAN . "Default" . Color::RESET);
-            echo str_repeat("─", 80) . "\n";
+            echo str_repeat("─", 90) . "\n";
             
+            // Header - use English to avoid multi-byte issues
+            echo str_pad("Column", 25) . str_pad("Type", 25) . str_pad("Null", 8) . str_pad("Key", 8) . "Default\n";
+            echo str_repeat("─", 90) . "\n";
+            
+            // Data rows
             foreach ($columns as $column) {
-                printf("%-20s %-15s %-8s %-10s %s\n",
-                       $column['Field'],
-                       $column['Type'],
-                       $column['Null'],
-                       $column['Key'],
-                       $column['Default'] ?? 'NULL');
+                // Truncate long values
+                $field = strlen($column['Field']) > 24 ? substr($column['Field'], 0, 21) . '...' : $column['Field'];
+                $type = strlen($column['Type']) > 24 ? substr($column['Type'], 0, 21) . '...' : $column['Type'];
+                $default = $column['Default'] ?? 'NULL';
+                $default = strlen($default) > 20 ? substr($default, 0, 17) . '...' : $default;
+                $key = $column['Key'] ?: '-';
+                
+                // Output with str_pad for consistent alignment
+                echo str_pad($field, 25) . str_pad($type, 25) . str_pad($column['Null'], 8) . str_pad($key, 8) . $default . "\n";
             }
+            
+            echo str_repeat("─", 90) . "\n";
             
             // Display indexes
             if (!empty($indexes)) {
                 echo "\n" . Color::YELLOW . "Indexes:" . Color::RESET . "\n";
-                echo str_repeat("─", 80) . "\n";
+                echo str_repeat("─", 90) . "\n";
                 
                 $indexGroups = [];
                 foreach ($indexes as $index) {
                     $indexGroups[$index['Key_name']][] = $index['Column_name'];
                 }
                 
-                foreach ($indexGroups as $indexName => $columns) {
-                    echo Color::WHITE . $indexName . Color::GRAY . ": " . 
-                         implode(', ', $columns) . Color::RESET . "\n";
+                // Header - use str_pad for consistent alignment
+                echo str_pad("Index Name", 40) . "Columns\n";
+                echo str_repeat("─", 90) . "\n";
+                
+                foreach ($indexGroups as $indexName => $cols) {
+                    $colsText = implode(', ', $cols);
+                    
+                    // Truncate if too long
+                    $nameDisplay = strlen($indexName) > 39 ? substr($indexName, 0, 36) . '...' : $indexName;
+                    $colsText = strlen($colsText) > 45 ? substr($colsText, 0, 42) . '...' : $colsText;
+                    
+                    echo str_pad($nameDisplay, 40) . $colsText . "\n";
                 }
+                
+                echo str_repeat("─", 90) . "\n";
             }
             
             echo "\n";
@@ -2119,16 +2266,17 @@ PHP;
             }
         }
         
-        // Cache routes
+        // Cache routes - เก็บเฉพาะข้อมูล metadata ไม่ใช่ require file
         $this->info("  - กำลัง cache routes...");
-        $webRoutes = file_exists(__DIR__ . '/routes/web.php') ? 
-                     require __DIR__ . '/routes/web.php' : [];
-        $apiRoutes = file_exists(__DIR__ . '/routes/api.php') ? 
-                     require __DIR__ . '/routes/api.php' : [];
+        $routeMetadata = [
+            'web' => file_exists(__DIR__ . '/routes/web.php'),
+            'api' => file_exists(__DIR__ . '/routes/api.php'),
+            'cached_at' => time(),
+        ];
         
         file_put_contents(
             $cacheDir . '/routes/routes_cached.php',
-            "<?php\nreturn " . var_export(['web' => $webRoutes, 'api' => $apiRoutes], true) . ";"
+            "<?php\nreturn " . var_export($routeMetadata, true) . ";"
         );
         
         // Cache config
