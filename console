@@ -16,6 +16,7 @@
  * - make:controller   : สร้าง controller ใหม่
  * - make:model        : สร้าง model ใหม่
  * - make:middleware   : สร้าง middleware ใหม่
+ * - make:test         : สร้าง test file ใหม่
  * - test              : รัน tests
  * - help              : แสดงความช่วยเหลือ
  */
@@ -150,11 +151,14 @@ class Console
             'make:model' => 'makeModel',
             'make:middleware' => 'makeMiddleware',
             'make:seeder' => 'makeSeeder',
+            'make:test' => 'makeTest',
             'route:list' => 'listRoutes',
             'key:generate' => 'generateKey',
             'optimize' => 'optimizeApp',
             'optimize:clear' => 'clearOptimization',
             'test' => 'runTests',
+            'test:unit' => 'runUnitTests',
+            'test:feature' => 'runFeatureTests',
             'help' => 'showHelp',
             
             // Command Aliases
@@ -167,6 +171,9 @@ class Console
             'm:c' => 'createMigration',
             's' => 'runServer',
             'c:c' => 'clearCache',
+            't' => 'runTests',
+            't:u' => 'runUnitTests',
+            't:f' => 'runFeatureTests',
         ];
     }
     
@@ -1312,7 +1319,87 @@ PHP;
             $phpunitPath .= '.bat';
         }
 
-        passthru($phpunitPath);
+        // เพิ่ม arguments ถ้ามี
+        $command = $phpunitPath;
+        if (!empty($args)) {
+            $command .= ' ' . implode(' ', $args);
+        }
+
+        passthru($command);
+    }
+    
+    private function runUnitTests(array $args): void
+    {
+        $this->info("กำลังรัน Unit Tests...");
+        echo "\n";
+        
+        // เพิ่ม --testsuite=Unit
+        array_unshift($args, '--testsuite=Unit');
+        $this->runTests($args);
+    }
+    
+    private function runFeatureTests(array $args): void
+    {
+        $this->info("กำลังรัน Feature Tests...");
+        echo "\n";
+        
+        // เพิ่ม --testsuite=Feature
+        array_unshift($args, '--testsuite=Feature');
+        $this->runTests($args);
+    }
+    
+    private function makeTest(array $args): void
+    {
+        if (empty($args)) {
+            $this->error("กรุณาระบุชื่อ test");
+            $this->info("วิธีใช้: php console make:test TestName [--unit|--feature]");
+            $this->info("ตัวอย่าง:");
+            $this->info("  php console make:test StringHelperTest --unit");
+            $this->info("  php console make:test UserRegistrationTest --feature");
+            return;
+        }
+        
+        $name = $args[0];
+        if (!str_ends_with($name, 'Test')) {
+            $name .= 'Test';
+        }
+        
+        // ตรวจสอบว่าเป็น Unit หรือ Feature test
+        $isFeature = in_array('--feature', $args) || in_array('-f', $args);
+        $isUnit = in_array('--unit', $args) || in_array('-u', $args);
+        
+        // ถ้าไม่ระบุ ให้เป็น Unit test
+        if (!$isFeature && !$isUnit) {
+            $isUnit = true;
+        }
+        
+        $type = $isFeature ? 'Feature' : 'Unit';
+        $path = __DIR__ . "/tests/{$type}/{$name}.php";
+        
+        if (file_exists($path)) {
+            $this->error("Test นี้มีอยู่แล้ว: tests/{$type}/{$name}.php");
+            return;
+        }
+        
+        try {
+            $dir = dirname($path);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            
+            $template = $isFeature ? $this->getFeatureTestTemplate($name) : $this->getUnitTestTemplate($name);
+            
+            if (file_put_contents($path, $template) === false) {
+                throw new \Exception("ไม่สามารถเขียนไฟล์ได้");
+            }
+            
+            $this->success("สร้าง {$type} Test สำเร็จ: tests/{$type}/{$name}.php");
+            $this->info("\nรันคำสั่งนี้เพื่อทดสอบ:");
+            $this->info("  php console test tests/{$type}/{$name}.php");
+            $this->info("  php console test --filter {$name}");
+        } catch (\Exception $e) {
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+        }
     }
     
     private function makeSeeder(array $args): void
@@ -1583,6 +1670,11 @@ PHP;
         echo Color::WHITE . "    สร้าง Seeder class ใหม่\n";
         echo Color::CYAN . "    ตัวอย่าง: php console make:seeder ProductSeeder\n" . Color::RESET . "\n";
         
+        echo Color::GREEN . "  make:test " . Color::CYAN . "<name> [--unit|--feature]" . Color::RESET . "\n";
+        echo Color::WHITE . "    สร้าง Test class ใหม่\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console make:test StringHelperTest --unit\n";
+        echo "              php console make:test UserRegistrationTest --feature\n" . Color::RESET . "\n";
+        
         // Routes & Optimization
         echo Color::YELLOW . "━━━ Routes, Cache และ Optimization ━━━\n" . Color::RESET;
         echo Color::GREEN . "  route:list" . Color::RESET . "\n";
@@ -1636,9 +1728,20 @@ PHP;
         
         // Testing
         echo Color::YELLOW . "━━━ Testing ━━━\n" . Color::RESET;
-        echo Color::GREEN . "  test" . Color::RESET . "\n";
+        echo Color::GREEN . "  test " . Color::CYAN . "[options]" . Color::RESET . "\n";
         echo Color::WHITE . "    รัน PHPUnit tests ทั้งหมด\n";
-        echo Color::CYAN . "    ตัวอย่าง: php console test\n" . Color::RESET . "\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console test\n";
+        echo "              php console test --filter TestName\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  test:unit " . Color::CYAN . "[options]" . Color::RESET . "\n";
+        echo Color::WHITE . "    รัน Unit tests อย่างเดียว (เร็ว, ไม่ต้องการ DB)\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console test:unit\n";
+        echo "              php console t:u\n" . Color::RESET . "\n";
+        
+        echo Color::GREEN . "  test:feature " . Color::CYAN . "[options]" . Color::RESET . "\n";
+        echo Color::WHITE . "    รัน Feature tests อย่างเดียว (ทดสอบระบบเต็มรูปแบบ)\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console test:feature\n";
+        echo "              php console t:f\n" . Color::RESET . "\n";
         
         // Examples
         echo Color::YELLOW . "━━━ ตัวอย่างการใช้งานทั่วไป ━━━\n" . Color::RESET;
@@ -2469,6 +2572,165 @@ PHP;
         
         $this->success("ปิด Maintenance Mode เรียบร้อยแล้ว");
         $this->info("✓ เว็บไซต์กลับมาใช้งานได้ปกติแล้ว");
+    }
+    
+    // ==================== Template Methods ====================
+    
+    private function getUnitTestTemplate(string $name): string
+    {
+        $className = str_replace('Test', '', $name);
+        
+        return <<<PHP
+<?php
+/**
+ * Unit Test สำหรับ {$className}
+ * 
+ * จุดประสงค์: ทดสอบฟังก์ชันต่างๆ ใน {$className} class
+ * สร้างเมื่อ: " . date('Y-m-d H:i:s') . "
+ */
+
+namespace Tests\Unit;
+
+use Tests\TestCase;
+
+class {$name} extends TestCase
+{
+    /**
+     * Setup ก่อนการทดสอบแต่ละครั้ง
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // เตรียมข้อมูลที่ต้องใช้
+    }
+
+    /**
+     * @test
+     * ทดสอบว่าระบบทำงานได้ปกติ
+     */
+    public function it_works()
+    {
+        \$this->assertTrue(true);
+    }
+
+    /**
+     * @test
+     * ตัวอย่างการทดสอบ assertion ต่างๆ
+     */
+    public function it_demonstrates_assertions()
+    {
+        // Equality
+        \$this->assertEquals(4, 2 + 2);
+        \$this->assertNotEquals(5, 2 + 2);
+        
+        // Boolean
+        \$this->assertTrue(true);
+        \$this->assertFalse(false);
+        
+        // Null
+        \$this->assertNull(null);
+        \$this->assertNotNull('value');
+        
+        // Array
+        \$this->assertArrayHasKey('key', ['key' => 'value']);
+        \$this->assertCount(3, [1, 2, 3]);
+        
+        // String
+        \$this->assertStringContainsString('world', 'hello world');
+        \$this->assertStringStartsWith('hello', 'hello world');
+        \$this->assertStringEndsWith('world', 'hello world');
+    }
+
+    /**
+     * Cleanup หลังการทดสอบแต่ละครั้ง
+     */
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+        // ทำความสะอาด
+    }
+}
+PHP;
+    }
+    
+    private function getFeatureTestTemplate(string $name): string
+    {
+        $feature = str_replace('Test', '', $name);
+        
+        return <<<PHP
+<?php
+/**
+ * Feature Test สำหรับ {$feature}
+ * 
+ * จุดประสงค์: ทดสอบ flow การทำงานแบบครบวงจร
+ * สร้างเมื่อ: " . date('Y-m-d H:i:s') . "
+ */
+
+namespace Tests\Feature;
+
+use Tests\TestCase;
+
+class {$name} extends TestCase
+{
+    /**
+     * Setup ก่อนการทดสอบแต่ละครั้ง
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // เตรียมข้อมูลที่ต้องใช้
+        // เช่น: สร้างผู้ใช้ทดสอบ, เชื่อมต่อฐานข้อมูล
+    }
+
+    /**
+     * @test
+     * ทดสอบว่าระบบทำงานได้ปกติ
+     */
+    public function it_works()
+    {
+        \$this->assertTrue(true);
+    }
+
+    /**
+     * @test
+     * ตัวอย่าง Feature test ที่ทดสอบ flow การทำงาน
+     */
+    public function user_can_complete_workflow()
+    {
+        // Arrange - เตรียมข้อมูล
+        \$testData = [
+            'username' => 'testuser_' . time(),
+            'email' => 'test_' . time() . '@example.com',
+        ];
+        
+        // Act - ทำการทดสอบ
+        // เช่น: เรียก API, เรียก method ใน Model
+        \$result = true; // เปลี่ยนเป็นการเรียกฟังก์ชันจริง
+        
+        // Assert - ตรวจสอบผลลัพธ์
+        \$this->assertTrue(\$result);
+    }
+
+    /**
+     * @test
+     * ทดสอบกรณีที่เกิด error
+     */
+    public function it_handles_errors_gracefully()
+    {
+        // ทดสอบว่าระบบจัดการ error ได้อย่างเหมาะสม
+        \$this->assertTrue(true);
+    }
+
+    /**
+     * Cleanup หลังการทดสอบแต่ละครั้ง
+     */
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+        // ทำความสะอาด เช่น: ลบข้อมูลทดสอบ
+    }
+}
+PHP;
     }
 }
 

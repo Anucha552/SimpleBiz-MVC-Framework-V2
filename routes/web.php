@@ -25,28 +25,16 @@
 use App\Core\Router;
 use App\Middleware\AuthMiddleware;
 
-// หน้าแรก
-$router->get('/', 'App\Controllers\HomeController@index');
-
-// การยืนยันตัวตน
-$router->get('/register', 'App\Controllers\AuthController@showRegister');
-$router->post('/register', 'App\Controllers\AuthController@register');
-$router->get('/login', 'App\Controllers\AuthController@showLogin');
-$router->post('/login', 'App\Controllers\AuthController@login');
-$router->get('/logout', 'App\Controllers\AuthController@logout');
-
-// สินค้า (สาธารณะ)
-$router->get('/products', 'App\Controllers\Ecommerce\ProductController@index');
-$router->get('/products/{id}', 'App\Controllers\Ecommerce\ProductController@show');
-
-// ตะกร้าสินค้า (ต้องยืนยันตัวตน)
-$router->get('/cart', 'App\Controllers\Ecommerce\CartController@index', [AuthMiddleware::class]);
-$router->post('/cart/add', 'App\Controllers\Ecommerce\CartController@add', [AuthMiddleware::class]);
-$router->post('/cart/update', 'App\Controllers\Ecommerce\CartController@update', [AuthMiddleware::class]);
-$router->post('/cart/remove', 'App\Controllers\Ecommerce\CartController@remove', [AuthMiddleware::class]);
-
-// คำสั่งซื้อ (ต้องยืนยันตัวตน)
-$router->get('/checkout', 'App\Controllers\Ecommerce\OrderController@checkout', [AuthMiddleware::class]);
-$router->post('/order/confirm', 'App\Controllers\Ecommerce\OrderController@confirm', [AuthMiddleware::class]);
-$router->get('/orders', 'App\Controllers\Ecommerce\OrderController@index', [AuthMiddleware::class]);
-$router->get('/orders/{id}', 'App\Controllers\Ecommerce\OrderController@show', [AuthMiddleware::class]);
+// ===================================
+// เส้นทาง Web Routes
+// ===================================
+// 
+// คุณสามารถเพิ่ม routes ใหม่ที่นี่
+// ตัวอย่าง:
+// $router->get('/', 'App\Controllers\HomeController@index');
+// $router->get('/about', 'App\Controllers\PageController@about');
+// $router->get('/contact', 'App\Controllers\PageController@contact');
+//
+// Routes ที่ต้องการ authentication:
+// $router->get('/dashboard', 'App\Controllers\DashboardController@index', [AuthMiddleware::class]);
+//

@@ -32,39 +32,25 @@ use App\Core\Router;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\ApiKeyMiddleware;
 
-// ============================================================
-// API สินค้า
-// ============================================================
-
-// จุดเชื่อมต่อสาธารณะ (ไม่ต้องยืนยันตัวตน)
-$router->get('/api/v1/products', 'App\Controllers\Api\V1\ProductApiController@index');
-$router->get('/api/v1/products/{id}', 'App\Controllers\Api\V1\ProductApiController@show');
-$router->get('/api/v1/products/search', 'App\Controllers\Api\V1\ProductApiController@search');
-
-// ============================================================
-// API ตะกร้าสินค้า (ต้องยืนยันตัวตน)
-// ============================================================
-
-$router->get('/api/v1/cart', 'App\Controllers\Api\V1\CartApiController@index', [AuthMiddleware::class]);
-$router->post('/api/v1/cart/add', 'App\Controllers\Api\V1\CartApiController@add', [AuthMiddleware::class]);
-$router->put('/api/v1/cart/update', 'App\Controllers\Api\V1\CartApiController@update', [AuthMiddleware::class]);
-$router->delete('/api/v1/cart/remove/{product_id}', 'App\Controllers\Api\V1\CartApiController@remove', [AuthMiddleware::class]);
-
-// ============================================================
-// API คำสั่งซื้อ (ต้องยืนยันตัวตน + API Key)
-// ============================================================
-
-// แสดงรายการและดูคำสั่งซื้อ (ยืนยันตัวตนเท่านั้น)
-$router->get('/api/v1/orders', 'App\Controllers\Api\V1\OrderApiController@index', [AuthMiddleware::class]);
-$router->get('/api/v1/orders/{id}', 'App\Controllers\Api\V1\OrderApiController@show', [AuthMiddleware::class]);
-
-// สร้างและแก้ไขคำสั่งซื้อ (ยืนยันตัวตน + API key)
-$router->post('/api/v1/orders/create', 'App\Controllers\Api\V1\OrderApiController@create', [
-    AuthMiddleware::class,
-    ApiKeyMiddleware::class,
-]);
-
-$router->put('/api/v1/orders/{id}/status', 'App\Controllers\Api\V1\OrderApiController@updateStatus', [
-    AuthMiddleware::class,
-    ApiKeyMiddleware::class,
-]);
+// ===================================
+// API Routes
+// ===================================
+// 
+// คุณสามารถเพิ่ม API routes ใหม่ที่นี่
+// ตัวอย่าง:
+//
+// Public API (ไม่ต้อง auth):
+// $router->get('/api/v1/posts', 'App\Controllers\Api\V1\PostApiController@index');
+// $router->get('/api/v1/posts/{id}', 'App\Controllers\Api\V1\PostApiController@show');
+//
+// Protected API (ต้อง auth):
+// $router->post('/api/v1/posts', 'App\Controllers\Api\V1\PostApiController@create', [AuthMiddleware::class]);
+// $router->put('/api/v1/posts/{id}', 'App\Controllers\Api\V1\PostApiController@update', [AuthMiddleware::class]);
+// $router->delete('/api/v1/posts/{id}', 'App\Controllers\Api\V1\PostApiController@delete', [AuthMiddleware::class]);
+//
+// API with API Key:
+// $router->post('/api/v1/sensitive', 'App\Controllers\Api\V1\DataController@create', [
+//     AuthMiddleware::class,
+//     ApiKeyMiddleware::class,
+// ]);
+//
