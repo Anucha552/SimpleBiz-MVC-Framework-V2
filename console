@@ -457,6 +457,22 @@ class Console
             $this->error("กรุณาระบุชื่อโปรเจค!");
             return;
         }
+
+        // ถามว่าจะเปลี่ยนชื่อโฟลเดอร์โปรเจคด้วยไหม (ทำตอนท้ายสุดของ setup)
+        $shouldRenameFolder = false;
+        $currentFolderPath = realpath(__DIR__) ?: __DIR__;
+        $currentFolderName = basename($currentFolderPath);
+
+        // อนุญาตเฉพาะชื่อที่ปลอดภัยสำหรับโฟลเดอร์ (กัน / \ : * ? " < > | และช่องว่าง)
+        $isSafeFolderName = (bool) preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/', $projectName);
+
+        if ($isSafeFolderName && $currentFolderName !== $projectName) {
+            echo Color::YELLOW . "ต้องการเปลี่ยนชื่อโฟลเดอร์จาก '{$currentFolderName}' เป็น '{$projectName}' หรือไม่? (y/n) [n]: " . Color::RESET;
+            $renameAnswer = strtolower(trim(fgets(STDIN)));
+            $shouldRenameFolder = in_array($renameAnswer, ['y', 'yes', 'ใช่'], true);
+        } elseif (!$isSafeFolderName) {
+            $this->warning("ชื่อโปรเจคมีอักขระที่ไม่เหมาะกับชื่อโฟลเดอร์ จึงจะไม่เปลี่ยนชื่อโฟลเดอร์อัตโนมัติ");
+        }
         
         // 2. ถามคำอธิบายโปรเจค
         echo Color::CYAN . "คำอธิบายโปรเจค: " . Color::RESET;
@@ -601,6 +617,32 @@ class Console
         echo Color::WHITE . "  3. รัน Seeders (optional): " . Color::CYAN . "php console seed\n" . Color::RESET;
         echo Color::WHITE . "  4. เริ่มเซิร์ฟเวอร์: " . Color::CYAN . "php console serve\n" . Color::RESET;
         echo "\n";
+
+        // 17. เปลี่ยนชื่อโฟลเดอร์โปรเจค (ถ้าผู้ใช้เลือก)
+        // ต้องทำท้ายสุดเท่านั้น เพราะโค้ดส่วนใหญ่ใช้ __DIR__ ในการอ้าง path
+        if ($shouldRenameFolder) {
+            $parentDir = dirname($currentFolderPath);
+            $newFolderPath = $parentDir . DIRECTORY_SEPARATOR . $projectName;
+
+            echo "\n";
+            $this->info("กำลังเปลี่ยนชื่อโฟลเดอร์โปรเจค...");
+
+            if (file_exists($newFolderPath)) {
+                $this->warning("มีโฟลเดอร์ชื่อ '{$projectName}' อยู่แล้วใน {$parentDir} (ข้ามการเปลี่ยนชื่อ)");
+                return;
+            }
+
+            // Windows อาจล็อคไฟล์บางอย่าง ทำให้ rename ไม่สำเร็จ
+            if (@rename($currentFolderPath, $newFolderPath)) {
+                $this->success("เปลี่ยนชื่อโฟลเดอร์สำเร็จ: {$newFolderPath}");
+                $this->info("ขั้นตอนถัดไป: cd \"{$newFolderPath}\" แล้วรันคำสั่งต่อไปตามต้องการ");
+            } else {
+                $error = error_get_last();
+                $detail = $error['message'] ?? 'unknown error';
+                $this->warning("ไม่สามารถเปลี่ยนชื่อโฟลเดอร์อัตโนมัติได้ ({$detail})");
+                $this->info("คุณสามารถเปลี่ยนชื่อโฟลเดอร์ด้วยตัวเองได้ภายหลัง: '{$currentFolderName}' -> '{$projectName}'");
+            }
+        }
     }
     
     private function updateComposerJson(string $vendor, string $project, string $description): void
@@ -1161,18 +1203,32 @@ PHP;
         try {
             $cacheDir = __DIR__ . '/storage/cache';
             if (is_dir($cacheDir)) {
-                $files = glob($cacheDir . '/*');
-                $deleted = 0;
-                foreach ($files as $file) {
-                    if (is_file($file)) {
-                        if (unlink($file)) {
-                            $deleted++;
+                $items = glob($cacheDir . '/*', GLOB_NOSORT);
+                $deletedFiles = 0;
+                $deletedDirs = 0;
+
+                foreach ($items as $item) {
+                    // Preserve placeholder
+                    if (basename($item) === '.gitkeep') {
+                        continue;
+                    }
+
+                    if (is_dir($item)) {
+                        $this->removeDirectory($item);
+                        $deletedDirs++;
+                        continue;
+                    }
+
+                    if (is_file($item)) {
+                        if (unlink($item)) {
+                            $deletedFiles++;
                         } else {
-                            $this->warning("ไม่สามารถลบไฟล์: " . basename($file));
+                            $this->warning("ไม่สามารถลบไฟล์: " . basename($item));
                         }
                     }
                 }
-                $this->success("ลบ cache สำเร็จ! ({$deleted} ไฟล์)");
+
+                $this->success("ลบ cache สำเร็จ! ({$deletedFiles} ไฟล์, {$deletedDirs} โฟลเดอร์)");
             } else {
                 $this->warning("ไม่พบโฟลเดอร์ cache");
             }
@@ -1432,37 +1488,65 @@ PHP;
     {
         $this->info("กำลังโหลด routes...");
         echo "\n";
-        
-        // โหลด routes
-        $webRoutes = [];
-        $apiRoutes = [];
-        
-        if (file_exists(__DIR__ . '/routes/web.php')) {
-            ob_start();
-            $router = new \stdClass();
-            $router->routes = [];
-            
-            // Mock router เพื่อเก็บ routes
-            $tempRouter = new class {
-                public $routes = [];
-                public function get($path, $handler) { $this->routes[] = ['GET', $path, $handler]; }
-                public function post($path, $handler) { $this->routes[] = ['POST', $path, $handler]; }
-                public function put($path, $handler) { $this->routes[] = ['PUT', $path, $handler]; }
-                public function delete($path, $handler) { $this->routes[] = ['DELETE', $path, $handler]; }
-                public function patch($path, $handler) { $this->routes[] = ['PATCH', $path, $handler]; }
-            };
-            
-            ob_end_clean();
-            
-            $this->info("แสดงรายการ routes:");
-            echo "\n";
-            echo Color::YELLOW . "ไฟล์ routes/web.php และ routes/api.php" . Color::RESET . "\n";
-            echo Color::WHITE . "กรุณาเปิดไฟล์เพื่อดูรายละเอียด routes" . Color::RESET . "\n\n";
-            
-            $this->success("ตรวจสอบไฟล์ routes เรียบร้อย");
-        } else {
-            $this->error("ไม่พบไฟล์ routes");
+
+        $collector = new class {
+            public array $routes = [];
+            public function get(string $path, string $handler, array $middleware = []): void { $this->routes[] = ['GET', $path, $handler, $middleware]; }
+            public function post(string $path, string $handler, array $middleware = []): void { $this->routes[] = ['POST', $path, $handler, $middleware]; }
+            public function put(string $path, string $handler, array $middleware = []): void { $this->routes[] = ['PUT', $path, $handler, $middleware]; }
+            public function delete(string $path, string $handler, array $middleware = []): void { $this->routes[] = ['DELETE', $path, $handler, $middleware]; }
+            public function patch(string $path, string $handler, array $middleware = []): void { $this->routes[] = ['PATCH', $path, $handler, $middleware]; }
+        };
+
+        // routes files expect a variable named $router
+        $router = $collector;
+
+        $loadedAny = false;
+        foreach (['web' => __DIR__ . '/routes/web.php', 'api' => __DIR__ . '/routes/api.php'] as $type => $file) {
+            if (!file_exists($file)) {
+                continue;
+            }
+
+            $loadedAny = true;
+            try {
+                require $file;
+            } catch (\Throwable $e) {
+                $this->error("โหลด routes/{$type}.php ไม่สำเร็จ: " . $e->getMessage());
+                return;
+            }
         }
+
+        if (!$loadedAny) {
+            $this->error("ไม่พบไฟล์ routes/web.php หรือ routes/api.php");
+            return;
+        }
+
+        if (empty($collector->routes)) {
+            $this->warning("ไม่พบการลงทะเบียน routes ในไฟล์ routes/");
+            return;
+        }
+
+        $this->info("แสดงรายการ routes:");
+        echo "\n";
+
+        echo str_pad('METHOD', 8) . str_pad('PATH', 35) . str_pad('HANDLER', 45) . "MIDDLEWARE\n";
+        echo str_repeat('─', 110) . "\n";
+
+        foreach ($collector->routes as $route) {
+            [$method, $path, $handler, $middleware] = $route;
+            $middlewareText = '-';
+            if (!empty($middleware)) {
+                $middlewareText = implode(', ', array_map(fn($m) => is_string($m) ? $m : gettype($m), $middleware));
+            }
+
+            $methodOut = str_pad($method, 8);
+            $pathOut = str_pad(strlen($path) > 34 ? substr($path, 0, 31) . '...' : $path, 35);
+            $handlerOut = str_pad(strlen($handler) > 44 ? substr($handler, 0, 41) . '...' : $handler, 45);
+            echo $methodOut . $pathOut . $handlerOut . $middlewareText . "\n";
+        }
+
+        echo str_repeat('─', 110) . "\n";
+        $this->success("รวมทั้งหมด " . count($collector->routes) . " routes");
     }
     
     private function generateKey(array $args): void
@@ -1535,27 +1619,9 @@ PHP;
     private function clearOptimization(array $args): void
     {
         $this->info("กำลังลบ optimization caches...");
-        
-        $cacheDir = __DIR__ . '/storage/cache';
-        $files = [
-            $cacheDir . '/routes.cache',
-            $cacheDir . '/optimized.flag',
-            $cacheDir . '/config.cache'
-        ];
-        
-        $cleared = 0;
-        foreach ($files as $file) {
-            if (file_exists($file)) {
-                unlink($file);
-                $cleared++;
-            }
-        }
-        
-        if ($cleared > 0) {
-            $this->success("ลบ optimization caches สำเร็จ! ({$cleared} ไฟล์)");
-        } else {
-            $this->info("ไม่พบ optimization caches");
-        }
+        // Optimization caches live under storage/cache, reuse cache:clear behavior.
+        $this->clearCache([]);
+        $this->success("ลบ optimization caches เรียบร้อยแล้ว");
     }
     
     private function showHelp(): void
@@ -1624,12 +1690,12 @@ PHP;
         echo Color::WHITE . "    ลบตารางทั้งหมดและรัน migrations ใหม่\n";
         echo Color::RED . "    [WARNING] จะลบข้อมูลทั้งหมด!\n" . Color::RESET . "\n";
         
-        echo Color::GREEN . "  migrate:reset " . Color::CYAN . "[module]" . Color::RESET . "\n";
+        echo Color::GREEN . "  migrate:reset" . Color::RESET . "\n";
         echo Color::WHITE . "    Rollback migrations ทั้งหมด\n";
         echo Color::CYAN . "    ตัวอย่าง: php console migrate:reset\n";
-        echo "              php console migrate:reset core\n" . Color::RESET . "\n";
+        echo "              php console migrate:reset --force\n" . Color::RESET . "\n";
         
-        echo Color::GREEN . "  migrate:refresh " . Color::CYAN . "[module] [--seed]" . Color::RESET . "\n";
+        echo Color::GREEN . "  migrate:refresh " . Color::CYAN . "[--seed]" . Color::RESET . "\n";
         echo Color::WHITE . "    Reset และ migrate ใหม่ทั้งหมด\n";
         echo "    ใส่ --seed เพื่อ seed ข้อมูลหลัง migrate\n";
         echo Color::CYAN . "    ตัวอย่าง: php console migrate:refresh\n";
@@ -2276,30 +2342,30 @@ PHP;
         
         $this->info("กำลัง rollback migrations ทั้งหมด...");
         
-        // Remove --force from args before passing to runner
-        $module = null;
-        foreach ($args as $arg) {
-            if ($arg !== '--force' && $arg !== '-f') {
-                $module = $arg;
+        $runner = new \App\Core\MigrationRunner();
+
+        // Rollback all batches by repeatedly rolling back 1 batch until no more remain.
+        $maxLoops = 200; // Safety limit
+        $loops = 0;
+        $totalRolledBack = 0;
+
+        while ($loops < $maxLoops) {
+            $loops++;
+            $result = $runner->rollback(1);
+            $rolledBack = $result['rolled_back'] ?? [];
+            $count = is_array($rolledBack) ? count($rolledBack) : 0;
+            $totalRolledBack += $count;
+
+            if ($count === 0) {
                 break;
             }
         }
-        $runner = new MigrationRunner();
-        
-        // Rollback all batches
-        $batch = 1;
-        $maxBatches = 100; // Safety limit
-        
-        while ($batch <= $maxBatches) {
-            $result = $runner->rollback($module);
-            if (strpos($result, 'ไม่มี migrations ที่ต้อง rollback') !== false) {
-                break;
-            }
-            echo $result . "\n";
-            $batch++;
+
+        if ($loops >= $maxLoops) {
+            $this->warning("หยุดการ rollback เนื่องจากถึงขีดจำกัดความปลอดภัย ({$maxLoops} รอบ)");
         }
         
-        $this->success("Reset migrations เรียบร้อยแล้ว");
+        $this->success("Reset migrations เรียบร้อยแล้ว (rollback {$totalRolledBack} migrations)");
     }
     
     private function refreshMigrations(array $args = []): void
@@ -2323,23 +2389,16 @@ PHP;
         $this->info("กำลัง refresh migrations (reset + migrate)...");
         
         // Parse args
-        $module = null;
         $seed = in_array('--seed', $args);
-        
-        foreach ($args as $arg) {
-            if ($arg !== '--seed' && $arg !== '--force' && $arg !== '-f') {
-                $module = $arg;
-                break;
-            }
-        }
-        
+        $force = $this->hasForceFlag($args);
+
         // Reset
-        $this->resetMigrations($module ? [$module] : []);
+        $this->resetMigrations($force ? ['--force'] : []);
         
         echo "\n";
         
         // Migrate
-        $this->runMigrations($module ? [$module] : []);
+        $this->runMigrations([]);
         
         // Seed if requested
         if ($seed) {
@@ -2537,7 +2596,8 @@ PHP;
     {
         $this->info("กำลังเปิด Maintenance Mode...");
         
-        $maintenanceFile = __DIR__ . '/storage/framework/down';
+        // Align with App\Middleware\MaintenanceMiddleware which uses storage/maintenance.json
+        $maintenanceFile = __DIR__ . '/storage/maintenance.json';
         $maintenanceDir = dirname($maintenanceFile);
         
         if (!is_dir($maintenanceDir)) {
@@ -2545,12 +2605,12 @@ PHP;
         }
         
         $data = [
-            'time' => time(),
-            'message' => 'ระบบอยู่ระหว่างการปรับปรุง กรุณากลับมาใหม่อีกครั้ง',
-            'retry' => 3600, // 1 hour
+            'message' => 'ขออภัย เว็บไซต์อยู่ระหว่างการปรับปรุง',
+            'retry_after' => null,
+            'enabled_at' => date('Y-m-d H:i:s'),
         ];
         
-        file_put_contents($maintenanceFile, json_encode($data));
+        file_put_contents($maintenanceFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         
         $this->success("เปิด Maintenance Mode เรียบร้อยแล้ว");
         $this->warning("[!] เว็บไซต์จะแสดงหน้า maintenance สำหรับผู้ใช้ทั่วไป");
@@ -2561,7 +2621,7 @@ PHP;
     {
         $this->info("กำลังปิด Maintenance Mode...");
         
-        $maintenanceFile = __DIR__ . '/storage/framework/down';
+        $maintenanceFile = __DIR__ . '/storage/maintenance.json';
         
         if (!file_exists($maintenanceFile)) {
             $this->warning("ไม่ได้เปิด Maintenance Mode อยู่");
