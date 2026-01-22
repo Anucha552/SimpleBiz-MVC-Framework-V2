@@ -41,6 +41,7 @@ class ErrorHandler
         $errors = [
             404 => 'ไม่พบข้อมูลที่ต้องการ',
             403 => 'ไม่มีสิทธิ์เข้าถึง',
+            405 => 'เมธอดไม่ถูกต้องสำหรับเส้นทางนี้',
             500 => 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์',
             503 => 'ปิดปรับปรุงระบบชั่วคราว',
         ];
@@ -85,6 +86,14 @@ class ErrorHandler
     public static function forbidden(string $message = ''): void
     {
         self::show(403, $message);
+    }
+
+    /**
+     * จัดการ 405 Method Not Allowed
+     */
+    public static function methodNotAllowed(string $message = ''): void
+    {
+        self::show(405, $message);
     }
 
     /**

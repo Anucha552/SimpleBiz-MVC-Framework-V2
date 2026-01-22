@@ -23,8 +23,11 @@
  * - การแสดงข้อผิดพลาดถูกปิดในสภาพแวดล้อมจริง
  */
 
-// เริ่ม session
-session_start();
+// เริ่ม session ให้ใช้งานได้แม้ก่อนโหลด autoloader
+// (ใช้สำหรับหน้า setup/errors ก่อน require vendor/autoload.php)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // ตรวจสอบว่า Composer dependencies ถูกติดตั้งแล้วหรือไม่
 $autoloadPath = __DIR__ . '/../vendor/autoload.php';
@@ -169,6 +172,9 @@ if (!file_exists($autoloadPath)) {
 
 // โหลด Composer autoloader
 require_once $autoloadPath;
+
+// เริ่ม session ด้วยค่าเริ่มต้นที่ปลอดภัย (หลังจากโหลด autoloader แล้ว)
+App\Core\Session::start();
 
 // ตรวจสอบไฟล์ .env
 $envPath = __DIR__ . '/../.env';
@@ -349,6 +355,60 @@ if ($config['env'] === 'production') {
 // ตั้งค่า timezone
 date_default_timezone_set($config['timezone']);
 
+// ===== Global error/exception handlers =====
+$logger = new App\Core\Logger();
+
+set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
+    // Respect error_reporting; ignore suppressed errors
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+
+    throw new \ErrorException($message, 0, $severity, $file, $line);
+});
+
+set_exception_handler(static function (\Throwable $e) use ($config, $logger): void {
+    $logger->error('application.exception', [
+        'type' => get_class($e),
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+    ]);
+
+    $message = '';
+    if (($config['env'] ?? 'development') !== 'production') {
+        $message = $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine();
+    }
+
+    App\Core\ErrorHandler::serverError($message);
+});
+
+register_shutdown_function(static function () use ($config, $logger): void {
+    $error = error_get_last();
+    if (!$error) {
+        return;
+    }
+
+    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
+    if (!in_array($error['type'] ?? 0, $fatalTypes, true)) {
+        return;
+    }
+
+    $logger->error('application.fatal', [
+        'type' => $error['type'] ?? null,
+        'message' => $error['message'] ?? '',
+        'file' => $error['file'] ?? '',
+        'line' => $error['line'] ?? 0,
+    ]);
+
+    $message = '';
+    if (($config['env'] ?? 'development') !== 'production') {
+        $message = ($error['message'] ?? '') . ' in ' . ($error['file'] ?? '') . ':' . ($error['line'] ?? 0);
+    }
+
+    App\Core\ErrorHandler::serverError($message);
+});
+
 // สร้าง router instance
 $router = new App\Core\Router();
 
@@ -356,44 +416,5 @@ $router = new App\Core\Router();
 require __DIR__ . '/../routes/web.php';
 require __DIR__ . '/../routes/api.php';
 
-// จัดการข้อผิดพลาดอย่างเหมาะสม
-try {
-    // ส่งคำขอ
-    $router->dispatch();
-} catch (\Exception $e) {
-    // บันทึกข้อผิดพลาด
-    $logger = new App\Core\Logger();
-    $logger->error('application.exception', [
-        'message' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-    ]);
-
-    // แสดงข้อผิดพลาดตามสภาพแวดล้อม
-    if ($config['env'] === 'production') {
-        // สภาพแวดล้อมจริง: แสดงข้อความทั่วไป
-        http_response_code(500);
-        
-        // ตรวจสอบว่าเป็นคำขอ API หรือไม่
-        $uri = $_SERVER['REQUEST_URI'] ?? '';
-        if (strpos($uri, '/api/') === 0) {
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => false,
-                'message' => 'An error occurred. Please try again later.',
-            ]);
-        } else {
-            echo "<h1>500 - Internal Server Error</h1>";
-            echo "<p>Something went wrong. Please try again later.</p>";
-        }
-    } else {
-        // สภาพแวดล้อมพัฒนา: แสดงข้อผิดพลาดโดยละเอียด
-        http_response_code(500);
-        echo "<h1>Application Error</h1>";
-        echo "<p><strong>Message:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
-        echo "<p><strong>File:</strong> " . htmlspecialchars($e->getFile()) . "</p>";
-        echo "<p><strong>Line:</strong> " . $e->getLine() . "</p>";
-        echo "<h2>Stack Trace:</h2>";
-        echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
-    }
-}
+// ส่งคำขอ (ข้อผิดพลาดจะถูกจัดการโดย global handlers)
+$router->dispatch();

@@ -35,17 +35,8 @@ class Controller
      */
     protected function view(string $view, array $data = []): void
     {
-        // แยกอาร์เรย์ข้อมูลเป็นตัวแปร
-        extract($data);
-
-        // สร้างเส้นทางไฟล์วิว
-        $viewFile = __DIR__ . '/../Views/' . $view . '.php';
-
-        if (!file_exists($viewFile)) {
-            throw new \Exception("View file not found: {$view}");
-        }
-
-        require $viewFile;
+        // ใช้ View engine เพื่อรองรับ layouts/sections
+        (new View($view, $data))->show();
     }
 
     /**
@@ -99,6 +90,40 @@ class Controller
 
         echo json_encode($response);
         exit;
+    }
+
+    /**
+     * สร้าง Response แบบ JSON (ไม่ exit) เพื่อใช้กับ Router ที่รองรับ return Response
+     *
+     * @param mixed $data
+     */
+    protected function responseJson(bool $success, $data = null, string $message = '', array $errors = [], int $statusCode = 200): Response
+    {
+        $response = [
+            'success' => $success,
+        ];
+
+        if ($data !== null) {
+            $response['data'] = $data;
+        }
+
+        if (!empty($message)) {
+            $response['message'] = $message;
+        }
+
+        if (!empty($errors)) {
+            $response['errors'] = $errors;
+        }
+
+        return Response::json($response, $statusCode, JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * สร้าง Response redirect (ไม่ exit)
+     */
+    protected function responseRedirect(string $url, int $statusCode = 302): Response
+    {
+        return Response::redirect($url, $statusCode);
     }
 
     /**

@@ -106,7 +106,6 @@
                     <?= htmlspecialchars($_SESSION['flash_message']) ?>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-                </div>
                 <?php 
                     unset($_SESSION['flash_message']); 
                     unset($_SESSION['flash_type']);

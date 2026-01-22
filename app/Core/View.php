@@ -46,7 +46,7 @@ class View
      */
     public function __construct(string $view, array $data = [])
     {
-        $this->view = $view;
+        $this->view = self::normalizeTemplateName($view);
         $this->data = $data;
     }
 
@@ -58,8 +58,37 @@ class View
      */
     public function layout(string $layout): self
     {
-        $this->layout = $layout;
+        // รองรับรูปแบบ: 'main', 'layouts/main', 'layouts\\main', 'main.php'
+        $normalized = str_replace('\\', '/', trim($layout));
+        $normalized = preg_replace('#^layouts/#', '', $normalized);
+        $normalized = preg_replace('#\\.php$#', '', $normalized);
+
+        $this->layout = self::normalizeTemplateName($normalized);
         return $this;
+    }
+
+    /**
+     * Alias สำหรับ section() เพื่อให้เข้ากันได้กับเทมเพลตเดิม
+     */
+    public function start(string $name): void
+    {
+        $this->section($name);
+    }
+
+    /**
+     * Alias สำหรับ endSection() เพื่อให้เข้ากันได้กับเทมเพลตเดิม
+     */
+    public function end(): void
+    {
+        $this->endSection();
+    }
+
+    /**
+     * Alias สำหรับ yieldSection() เพื่อให้เข้ากันได้กับเทมเพลตเดิม
+     */
+    public function yield(string $name, string $default = ''): string
+    {
+        return $this->yieldSection($name, $default);
     }
 
     /**
@@ -111,8 +140,8 @@ class View
      */
     public function render(): string
     {
-        // แยกข้อมูลเป็นตัวแปร
-        extract($this->data);
+        // แยกข้อมูลเป็นตัวแปร (ไม่ทับตัวแปรภายใน)
+        extract($this->data, EXTR_SKIP);
 
         // แสดงผลเนื้อหาวิว
         ob_start();
@@ -143,6 +172,42 @@ class View
 
         require $layoutFile;
         return ob_get_clean();
+    }
+
+    /**
+     * Normalize/validate view/layout names to avoid path traversal.
+     *
+     * Allowed examples:
+     * - welcome
+     * - products/index
+     * - admin/users/list
+     */
+    private static function normalizeTemplateName(string $name): string
+    {
+        $name = str_replace('\\', '/', trim($name));
+        $name = preg_replace('#\\.php$#', '', $name);
+        $name = trim($name, '/');
+
+        if ($name === '') {
+            throw new \InvalidArgumentException('Template name cannot be empty');
+        }
+
+        // Deny absolute paths (unix or windows drive)
+        if (str_starts_with($name, '/') || preg_match('#^[A-Za-z]:/#', $name) === 1) {
+            throw new \InvalidArgumentException('Invalid template path');
+        }
+
+        // Deny traversal and odd segments
+        if (str_contains($name, '..') || str_contains($name, './') || str_contains($name, '/.')) {
+            throw new \InvalidArgumentException('Invalid template path');
+        }
+
+        // Allow only safe characters
+        if (preg_match('#^[A-Za-z0-9_\-/]+$#', $name) !== 1) {
+            throw new \InvalidArgumentException('Invalid template name');
+        }
+
+        return $name;
     }
 
     /**

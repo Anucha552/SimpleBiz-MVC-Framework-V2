@@ -112,6 +112,9 @@ class Router
         $method = $_SERVER['REQUEST_METHOD'];
         $uri = $this->getUri();
 
+        // สร้าง Request object สำหรับ inject เข้า middleware/controller (ไม่บังคับ)
+        $request = new Request();
+
         // จัดการเมธอด PUT/DELETE จากพารามิเตอร์ _method ของฟอร์ม
         if ($method === 'POST' && isset($_POST['_method'])) {
             $method = strtoupper($_POST['_method']);
@@ -121,6 +124,14 @@ class Router
         $route = $this->matchRoute($method, $uri);
 
         if (!$route) {
+            // ถ้า path มีอยู่แต่ method ไม่ตรง ให้ตอบ 405
+            $allowedMethods = $this->getAllowedMethodsForUri($uri);
+            if (!empty($allowedMethods)) {
+                header('Allow: ' . implode(', ', $allowedMethods));
+                ErrorHandler::methodNotAllowed('Method Not Allowed');
+                return;
+            }
+
             $this->notFound();
             return;
         }
@@ -128,7 +139,18 @@ class Router
         // เรียกใช้ลูกโซ่ middleware
         foreach ($route['middleware'] as $middlewareClass) {
             $middleware = new $middlewareClass();
-            $result = $middleware->handle();
+
+            // รองรับ middleware ทั้งแบบเดิม handle() และแบบใหม่ handle(Request $request)
+            $ref = new \ReflectionMethod($middleware, 'handle');
+            $result = $ref->getNumberOfParameters() >= 1
+                ? $middleware->handle($request)
+                : $middleware->handle();
+
+            // ถ้า middleware คืนค่า Response ให้ส่งและหยุด
+            if ($result instanceof Response) {
+                $result->send();
+                return;
+            }
             
             // ถ้า middleware คืนค่า false ให้หยุดการทำงาน
             if ($result === false) {
@@ -150,8 +172,29 @@ class Router
             throw new \Exception("Method {$methodName} not found in {$controllerClass}");
         }
 
+        // รองรับ controller method ที่รับ Request เป็นพารามิเตอร์ตัวแรก
+        $params = $route['params'];
+        $controllerMethod = new \ReflectionMethod($controller, $methodName);
+        $parameters = $controllerMethod->getParameters();
+        if (isset($parameters[0])) {
+            $type = $parameters[0]->getType();
+            if ($type instanceof \ReflectionNamedType && !$type->isBuiltin() && $type->getName() === Request::class) {
+                array_unshift($params, $request);
+            }
+        }
+
         // เรียกเมธอดของตัวควบคุมพร้อมพารามิเตอร์
-        call_user_func_array([$controller, $methodName], $route['params']);
+        $result = call_user_func_array([$controller, $methodName], $params);
+
+        // รองรับ controller ที่ return Response หรือ string (ไม่บังคับ)
+        if ($result instanceof Response) {
+            $result->send();
+            return;
+        }
+
+        if (is_string($result) && $result !== '') {
+            echo $result;
+        }
     }
 
     /**
@@ -189,6 +232,31 @@ class Router
         }
 
         return null;
+    }
+
+    /**
+     * หาเมธอดทั้งหมดที่รองรับสำหรับ URI เดียวกัน (เพื่อใช้ตอบ 405)
+     *
+     * @param string $uri
+     * @return array
+     */
+    private function getAllowedMethodsForUri(string $uri): array
+    {
+        $allowed = [];
+
+        foreach ($this->routes as $httpMethod => $methodRoutes) {
+            foreach ($methodRoutes as $pattern => $route) {
+                $regex = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[^/]+)', $pattern);
+                $regex = '#^' . $regex . '$#';
+
+                if (preg_match($regex, $uri)) {
+                    $allowed[] = $httpMethod;
+                    break;
+                }
+            }
+        }
+
+        return $allowed;
     }
 
     /**
