@@ -34,16 +34,6 @@ class CreateUsersTable extends Migration
         ";
 
         $this->execute($sql);
-
-        // Insert sample data
-        $sampleData = "
-        INSERT INTO users (username, email, password, first_name, last_name, phone, status) VALUES
-        ('admin', 'admin@example.com', '$2y$10\$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'User', '0812345678', 'active'),
-        ('john', 'john@example.com', '$2y$10\$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John', 'Doe', '0823456789', 'active'),
-        ('jane', 'jane@example.com', '$2y$10\$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Jane', 'Smith', '0834567890', 'active')
-        ";
-
-        $this->execute($sampleData);
     }
 
     /**

@@ -31,12 +31,12 @@ namespace App\Middleware;
 
 use App\Core\Middleware;
 use App\Core\Logger;
-use App\Models\User;
+use App\Core\Database;
+use PDO;
 
 class RoleMiddleware extends Middleware
 {
     private Logger $logger;
-    private User $userModel;
     
     /**
      * บทบาทที่อนุญาต
@@ -66,7 +66,6 @@ class RoleMiddleware extends Middleware
         }
 
         $this->logger = new Logger();
-        $this->userModel = new User();
 
         // ตั้งค่าบทบาทที่อนุญาต
         if (is_string($roles)) {
@@ -101,7 +100,7 @@ class RoleMiddleware extends Middleware
 
         // ดึงข้อมูลผู้ใช้
         $userId = $this->getUserId();
-        $user = $this->userModel->findById($userId);
+        $user = $this->getUserById($userId);
 
         if (!$user) {
             $this->logger->error('role.user_not_found', [
@@ -199,6 +198,23 @@ class RoleMiddleware extends Middleware
     }
 
     /**
+     * ดึงข้อมูลผู้ใช้จาก database
+     * 
+     * @param int $userId
+     * @return array|null
+     */
+    private function getUserById(int $userId): ?array
+    {
+        $db = Database::getInstance()->getConnection();
+        $sql = "SELECT * FROM users WHERE id = :id LIMIT 1";
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['id' => $userId]);
+        
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $user ?: null;
+    }
+
+    /**
      * เพิ่มบทบาทที่อนุญาต
      * 
      * @param string|array $roles
@@ -238,8 +254,11 @@ class RoleMiddleware extends Middleware
             return false;
         }
 
-        $userModel = new User();
-        $user = $userModel->findById($_SESSION['user_id']);
+        $db = Database::getInstance()->getConnection();
+        $sql = "SELECT role FROM users WHERE id = :id LIMIT 1";
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['id' => $_SESSION['user_id']]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user) {
             return false;

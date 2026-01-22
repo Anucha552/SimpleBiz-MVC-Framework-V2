@@ -83,7 +83,7 @@ $count = Model::count();
 
 ### User Model
 
-**Location:** `app/Models/User.php`
+**Location:** `examples/models/User.php` (Example - copy to `app/Models/` to use)
 
 Represents users in the system with authentication and authorization capabilities.
 
@@ -213,7 +213,7 @@ $activities = $user->activityLogs();
 
 ### Role Model
 
-**Location:** `app/Models/Role.php`
+**Location:** `examples/models/Role.php` (Example - copy to `app/Models/` to use)
 
 Manages user roles for role-based access control (RBAC).
 
@@ -288,7 +288,7 @@ class Role extends Model
 
 ### Permission Model
 
-**Location:** `app/Models/Permission.php`
+**Location:** `examples/models/Permission.php` (Example - copy to `app/Models/` to use)
 
 Manages permissions for fine-grained access control.
 
@@ -1075,7 +1075,7 @@ $images = Media::where('mime_type LIKE ?', ['image/%'])->get();
 
 ### Setting Model
 
-**Location:** `app/Models/Setting.php`
+**Location:** `examples/models/Setting.php` (Example - copy to `app/Models/` to use)
 
 Stores application settings.
 
@@ -1153,7 +1153,7 @@ class Setting extends Model
 
 ### ApiKey Model
 
-**Location:** `app/Models/ApiKey.php`
+**Location:** `examples/models/ApiKey.php` (Example - copy to `app/Models/` to use)
 
 Manages API keys for authentication.
 
@@ -1199,7 +1199,7 @@ if ($key && (!$key->expires_at || strtotime($key->expires_at) > time())) {
 
 ### ActivityLog Model
 
-**Location:** `app/Models/ActivityLog.php`
+**Location:** `examples/models/ActivityLog.php` (Example - copy to `app/Models/` to use)
 
 Tracks user activities and system events.
 
@@ -1248,7 +1248,7 @@ $recent = ActivityLog::orderBy('created_at', 'DESC')
 
 ### Notification Model
 
-**Location:** `app/Models/Notification.php`
+**Location:** `examples/models/Notification.php` (Example - copy to `app/Models/` to use)
 
 Manages user notifications.
 

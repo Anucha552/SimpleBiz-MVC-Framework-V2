@@ -31,8 +31,6 @@
 
 namespace App\Core;
 
-use App\Models\User;
-
 class Auth
 {
     /**
@@ -56,9 +54,9 @@ class Auth
     private const REMEMBER_DURATION = 60 * 60 * 24 * 30;
 
     /**
-     * User instance ที่ล็อกอินอยู่
+     * User data ที่ล็อกอินอยู่
      */
-    private static ?User $user = null;
+    private static ?array $user = null;
 
     /**
      * พยายามเข้าสู่ระบบ
@@ -190,11 +188,11 @@ class Auth
     /**
      * รับข้อมูลผู้ใช้ที่ล็อกอินอยู่
      * 
-     * @return User|null
+     * @return array|null User data as associative array
      */
-    public static function user(): ?User
+    public static function user(): ?array
     {
-        if (self::$user) {
+        if (self::$user !== null) {
             return self::$user;
         }
 
@@ -220,9 +218,8 @@ class Auth
     public static function id(): ?int
     {
         $user = self::user();
-        if ($user && is_object($user)) {
-            /** @var object{id: int} $user */
-            return $user->id;
+        if ($user && is_array($user)) {
+            return $user['id'] ?? null;
         }
         return null;
     }
@@ -249,11 +246,11 @@ class Auth
     /**
      * เข้าสู่ระบบแบบชั่วคราว (สำหรับการทดสอบ)
      * 
-     * @param array|User $user
+     * @param array $user User data as associative array
      */
-    public static function loginTemporary($user): void
+    public static function loginTemporary(array $user): void
     {
-        self::$user = is_array($user) ? self::arrayToUser($user) : $user;
+        self::$user = $user;
     }
 
     // ========== Password Methods ==========
@@ -279,6 +276,18 @@ class Auth
     public static function verifyPassword(string $password, string $hash): bool
     {
         return password_verify($password, $hash);
+    }
+
+    /**
+     * ตรวจสอบ password (alias ของ verifyPassword)
+     * 
+     * @param string $password
+     * @param string $hash
+     * @return bool
+     */
+    public static function verify(string $password, string $hash): bool
+    {
+        return self::verifyPassword($password, $hash);
     }
 
     /**
@@ -412,9 +421,9 @@ class Auth
      * รับข้อมูลผู้ใช้จาก ID
      * 
      * @param int $userId
-     * @return User|null
+     * @return array|null User data as associative array
      */
-    private static function getUserById(int $userId): ?User
+    private static function getUserById(int $userId): ?array
     {
         $db = Database::getInstance()->getConnection();
         $sql = "SELECT * FROM users WHERE id = :id LIMIT 1";
@@ -423,28 +432,7 @@ class Auth
 
         $userData = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-        if (!$userData) {
-            return null;
-        }
-
-        return self::arrayToUser($userData);
-    }
-
-    /**
-     * แปลง array เป็น User object
-     * 
-     * @param array $data
-     * @return User
-     */
-    private static function arrayToUser(array $data): User
-    {
-        // สร้าง User object
-        // คุณอาจต้องปรับตามโครงสร้างคลาส User ของคุณ
-        $user = new User();
-        foreach ($data as $key => $value) {
-            $user->$key = $value;
-        }
-        return $user;
+        return $userData ?: null;
     }
 
     /**

@@ -65,7 +65,7 @@
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container">
                 <a class="navbar-brand" href="/">
-                    <i class="bi bi-shop"></i> SimpleBiz E-Commerce
+                    <i class="bi bi-code-slash"></i> SimpleBiz MVC Framework
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -76,15 +76,15 @@
                             <a class="nav-link" href="/"><i class="bi bi-house"></i> หน้าแรก</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/products"><i class="bi bi-box"></i> สินค้า</a>
+                            <a class="nav-link" href="/docs" target="_blank"><i class="bi bi-book"></i> เอกสาร</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/cart"><i class="bi bi-cart"></i> ตะกร้า</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/orders"><i class="bi bi-receipt"></i> คำสั่งซื้อ</a>
+                            <a class="nav-link" href="https://github.com" target="_blank"><i class="bi bi-github"></i> GitHub</a>
                         </li>
                         <?php if (isset($_SESSION['user_id'])): ?>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/logout"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</a>
                             </li>

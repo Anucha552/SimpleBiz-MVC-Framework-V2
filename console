@@ -24,7 +24,7 @@
 // ตรวจสอบว่าติดตั้ง Composer dependencies แล้วหรือยัง
 if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
     echo "\033[31m"; // สีแดง
-    echo "❌ Error: ไม่พบไฟล์ vendor/autoload.php\n\n";
+    echo "[ERROR] ไม่พบไฟล์ vendor/autoload.php\n\n";
     echo "\033[33m"; // สีเหลือง
     echo "กรุณารันคำสั่งนี้ก่อน:\n";
     echo "\033[36m"; // สีฟ้า
@@ -218,7 +218,7 @@ class Console
     
     private function checkEnvironment(array $args): void
     {
-        echo Color::CYAN . Color::BOLD . "\n🔍 SimpleBiz Framework - ตรวจสอบสภาพแวดล้อม\n" . Color::RESET;
+        echo Color::CYAN . Color::BOLD . "\n[CHECK] SimpleBiz Framework - ตรวจสอบสภาพแวดล้อม\n" . Color::RESET;
         echo Color::WHITE . "กำลังตรวจสอบความพร้อมของระบบ...\n" . Color::RESET;
         echo "\n";
         
@@ -413,27 +413,27 @@ class Console
         // สรุปผล
         echo "\n" . Color::CYAN . "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" . Color::RESET;
         echo Color::BOLD . "สรุปผลการตรวจสอบ:\n" . Color::RESET;
-        echo Color::GREEN . "  ✓ ผ่าน: $passed รายการ\n" . Color::RESET;
+        echo Color::GREEN . "  [OK] ผ่าน: $passed รายการ\n" . Color::RESET;
         if ($warnings > 0) {
-            echo Color::YELLOW . "  ⚠ คำเตือน: $warnings รายการ\n" . Color::RESET;
+            echo Color::YELLOW . "  [!] คำเตือน: $warnings รายการ\n" . Color::RESET;
         }
         if ($failed > 0) {
-            echo Color::RED . "  ✗ ล้มเหลว: $failed รายการ\n" . Color::RESET;
+            echo Color::RED . "  [X] ล้มเหลว: $failed รายการ\n" . Color::RESET;
         }
         echo "\n";
         
         if ($failed > 0) {
-            echo Color::RED . "❌ ระบบยังไม่พร้อมใช้งาน\n" . Color::RESET;
+            echo Color::RED . "[ERROR] ระบบยังไม่พร้อมใช้งาน\n" . Color::RESET;
             echo Color::WHITE . "กรุณาแก้ไขปัญหาที่พบก่อนเริ่มใช้งาน\n" . Color::RESET;
             exit(1);
         } elseif ($warnings > 0) {
-            echo Color::YELLOW . "⚠️  ระบบพร้อมใช้งาน แต่มีข้อแนะนำบางอย่าง\n" . Color::RESET;
+            echo Color::YELLOW . "[WARNING] ระบบพร้อมใช้งาน แต่มีข้อแนะนำบางอย่าง\n" . Color::RESET;
             echo Color::WHITE . "แนะนำให้แก้ไขตามคำเตือนเพื่อประสิทธิภาพสูงสุด\n" . Color::RESET;
         } else {
-            echo Color::GREEN . "✅ ระบบพร้อมใช้งานทั้งหมด!\n" . Color::RESET;
+            echo Color::GREEN . "[READY] ระบบพร้อมใช้งานทั้งหมด!\n" . Color::RESET;
         }
         
-        echo "\n" . Color::CYAN . "📚 ขั้นตอนถัดไป:\n" . Color::RESET;
+        echo "\n" . Color::CYAN . "[NEXT] ขั้นตอนถัดไป:\n" . Color::RESET;
         if (!file_exists(__DIR__ . '/.env')) {
             echo "  1. php console setup\n";
         }
@@ -446,7 +446,7 @@ class Console
     
     private function setupProject(array $args): void
     {
-        $this->info("🚀 SimpleBiz Framework Project Setup");
+        $this->info("[SETUP] SimpleBiz Framework Project Setup");
         echo "\n";
         
         // 1. ถามชื่อโปรเจค
@@ -621,7 +621,7 @@ class Console
         
         file_put_contents($composerFile, json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
         
-        $this->success("  ✓ อัปเดต composer.json แล้ว");
+        $this->success("  [OK] อัปเดต composer.json แล้ว");
     }
     
     private function createEnvFile(string $appName, string $dbName, string $dbUser, string $dbPassword): void
@@ -644,7 +644,7 @@ class Console
         
         file_put_contents($envFile, $content);
         
-        $this->success("  ✓ สร้างไฟล์ .env แล้ว");
+        $this->success("  [OK] สร้างไฟล์ .env แล้ว");
     }
     
     private function generateAppKey(): string
@@ -666,7 +666,7 @@ class Console
         
         file_put_contents($envFile, $content);
         
-        $this->success("  ✓ สร้าง APP_KEY แล้ว");
+        $this->success("  [OK] สร้าง APP_KEY แล้ว");
     }
     
     private function updateReadme(string $projectName, string $appName, string $description): void
@@ -674,7 +674,7 @@ class Console
         $readmeFile = __DIR__ . '/README.md';
         
         if (!file_exists($readmeFile)) {
-            $this->warning("  ⚠ ไม่พบไฟล์ README.md");
+            $this->warning("  [!] ไม่พบไฟล์ README.md");
             return;
         }
         
@@ -690,7 +690,7 @@ class Console
         
         file_put_contents($readmeFile, $content);
         
-        $this->success("  ✓ อัปเดต README.md แล้ว");
+        $this->success("  [OK] อัปเดต README.md แล้ว");
     }
     
     private function ensureGitignore(): void
@@ -701,9 +701,9 @@ class Console
             // สร้างไฟล์ใหม่
             $content = $this->getDefaultGitignore();
             file_put_contents($gitignoreFile, $content);
-            $this->success("  ✓ สร้างไฟล์ .gitignore แล้ว");
+            $this->success("  [OK] สร้างไฟล์ .gitignore แล้ว");
         } else {
-            $this->success("  ✓ .gitignore มีอยู่แล้ว");
+            $this->success("  [OK] .gitignore มีอยู่แล้ว");
         }
     }
     
@@ -763,7 +763,7 @@ EOT;
     {
         // ตรวจสอบว่ามี .git directory อยู่หรือไม่
         if (!is_dir(__DIR__ . '/.git')) {
-            $this->warning("  ⚠ ไม่พบ Git repository, ข้ามขั้นตอนนี้");
+            $this->warning("  [!] ไม่พบ Git repository, ข้ามขั้นตอนนี้");
             return;
         }
         
@@ -774,9 +774,9 @@ EOT;
         exec("git remote add origin {$newUrl} 2>&1", $output, $returnCode);
         
         if ($returnCode === 0) {
-            $this->success("  ✓ เปลี่ยน Git remote เป็น {$newUrl} แล้ว");
+            $this->success("  [OK] เปลี่ยน Git remote เป็น {$newUrl} แล้ว");
         } else {
-            $this->error("  ✗ ไม่สามารถเปลี่ยน Git remote ได้");
+            $this->error("  [X] ไม่สามารถเปลี่ยน Git remote ได้");
         }
     }
     
@@ -785,14 +785,14 @@ EOT;
         // ลบ .git directory เดิม
         if (is_dir(__DIR__ . '/.git')) {
             $this->removeDirectory(__DIR__ . '/.git');
-            $this->success("  ✓ ลบ Git repository เดิมแล้ว");
+            $this->success("  [OK] ลบ Git repository เดิมแล้ว");
         }
         
         // เริ่มต้น Git ใหม่
         exec("git init 2>&1", $output, $returnCode);
         
         if ($returnCode !== 0) {
-            $this->error("  ✗ ไม่สามารถเริ่มต้น Git ได้");
+            $this->error("  [X] ไม่สามารถเริ่มต้น Git ได้");
             return;
         }
         
@@ -802,7 +802,7 @@ EOT;
         // สร้าง branch main
         exec("git branch -M main 2>&1");
         
-        $this->success("  ✓ เริ่มต้น Git repository ใหม่แล้ว");
+        $this->success("  [OK] เริ่มต้น Git repository ใหม่แล้ว");
     }
     
     private function commitAndPush(string $projectName): void
@@ -811,7 +811,7 @@ EOT;
         exec("git add . 2>&1", $output, $returnCode);
         
         if ($returnCode !== 0) {
-            $this->error("  ✗ ไม่สามารถ add ไฟล์ได้");
+            $this->error("  [X] ไม่สามารถ add ไฟล์ได้");
             return;
         }
         
@@ -820,20 +820,20 @@ EOT;
         exec('git commit -m "' . $commitMessage . '" 2>&1', $output, $returnCode);
         
         if ($returnCode !== 0) {
-            $this->warning("  ⚠ ไม่มีการเปลี่ยนแปลงให้ commit หรือเกิดข้อผิดพลาด");
+            $this->warning("  [!] ไม่มีการเปลี่ยนแปลงให้ commit หรือเกิดข้อผิดพลาด");
             return;
         }
         
-        $this->success("  ✓ Commit สำเร็จ");
+        $this->success("  [OK] Commit สำเร็จ");
         
         // Push
         echo Color::CYAN . "  กำลัง push ไปยัง GitHub..." . Color::RESET . "\n";
         passthru("git push -u origin main 2>&1", $returnCode);
         
         if ($returnCode === 0) {
-            $this->success("  ✓ Push สำเร็จ!");
+            $this->success("  [OK] Push สำเร็จ!");
         } else {
-            $this->warning("  ⚠ Push ไม่สำเร็จ (อาจต้อง authenticate หรือสร้าง repository บน GitHub ก่อน)");
+            $this->warning("  [!] Push ไม่สำเร็จ (อาจต้อง authenticate หรือสร้าง repository บน GitHub ก่อน)");
             $this->info("    คุณสามารถ push เองภายหลังด้วย: git push -u origin main");
         }
     }
@@ -969,7 +969,7 @@ EOT;
             
             $runner = new \App\Core\MigrationRunner();
             
-            echo Color::RED . "⚠️  คำเตือน: จะลบข้อมูลทั้งหมดในฐานข้อมูล!" . Color::RESET . "\n\n";
+            echo Color::RED . "[WARNING] จะลบข้อมูลทั้งหมดในฐานข้อมูล!" . Color::RESET . "\n\n";
             
             // Require confirmation unless --force flag
             if (!$this->hasForceFlag($args)) {
@@ -1007,7 +1007,7 @@ EOT;
                 $this->warning("ไม่พบ migrations");
             } else {
                 foreach ($status as $migration) {
-                    $ran = $migration['ran'] ? Color::GREEN . '✓' . Color::RESET : Color::RED . '✗' . Color::RESET;
+                    $ran = $migration['ran'] ? Color::GREEN . '[OK]' . Color::RESET : Color::RED . '[X]' . Color::RESET;
                     $batch = $migration['batch'] ? Color::YELLOW . " (batch {$migration['batch']})" . Color::RESET : '';
                     echo "$ran {$migration['migration']}$batch\n";
                 }
@@ -1223,7 +1223,7 @@ PHP;
             echo "\n";
             echo "┌─ Create Controller Error ───────────────────────────┐\n";
             $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
-            $this->warning("💡 คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์");
+            $this->warning("[TIP] คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์");
             echo "└────────────────────────────────────────────────────┘\n";
             echo "\n";
         }
@@ -1261,7 +1261,7 @@ PHP;
             echo "\n";
             echo "┌─ Create Model Error ────────────────────────────────┐\n";
             $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
-            $this->warning("💡 คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์");
+            $this->warning("[TIP] คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์");
             echo "└────────────────────────────────────────────────────┘\n";
             echo "\n";
         }
@@ -1303,7 +1303,7 @@ PHP;
             echo "\n";
             echo "┌─ Create Middleware Error ───────────────────────────┐\n";
             $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
-            $this->warning("💡 คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์");
+            $this->warning("[TIP] คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์");
             echo "└────────────────────────────────────────────────────┘\n";
             echo "\n";
         }
@@ -1498,7 +1498,7 @@ PHP;
             echo "\n";
             echo "┌─ Generate Key Error ────────────────────────────────┐\n";
             $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
-            $this->warning("💡 คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์ .env");
+            $this->warning("[TIP] คำแนะนำ: ตรวจสอบสิทธิ์การเขียนไฟล์ .env");
             echo "└────────────────────────────────────────────────────┘\n";
             echo "\n";
         }
@@ -1520,12 +1520,12 @@ PHP;
             mkdir($routeCacheDir, 0755, true);
         }
         file_put_contents($routeCacheDir . '/routes.cache', serialize(['cached' => true, 'time' => time()]));
-        $this->success("   ✓ Cache routes สำเร็จ");
+        $this->success("   [OK] Cache routes สำเร็จ");
         
         // 3. Create optimization flag
         $this->info("3. สร้าง optimization flag...");
         file_put_contents($routeCacheDir . '/optimized.flag', time());
-        $this->success("   ✓ สร้าง flag สำเร็จ");
+        $this->success("   [OK] สร้าง flag สำเร็จ");
         
         echo "\n";
         $this->success("เพิ่มประสิทธิภาพแอปพลิเคชันเรียบร้อย!");
@@ -1622,7 +1622,7 @@ PHP;
         
         echo Color::GREEN . "  migrate:fresh" . Color::RESET . "\n";
         echo Color::WHITE . "    ลบตารางทั้งหมดและรัน migrations ใหม่\n";
-        echo Color::RED . "    ⚠️  คำเตือน: จะลบข้อมูลทั้งหมด!\n" . Color::RESET . "\n";
+        echo Color::RED . "    [WARNING] จะลบข้อมูลทั้งหมด!\n" . Color::RESET . "\n";
         
         echo Color::GREEN . "  migrate:reset " . Color::CYAN . "[module]" . Color::RESET . "\n";
         echo Color::WHITE . "    Rollback migrations ทั้งหมด\n";
@@ -1782,7 +1782,7 @@ PHP;
         echo "  php console cache:clear   # ลบ cache\n\n";
         
         // Tips
-        echo Color::YELLOW . "💡 เคล็ดลับ:\n" . Color::RESET;
+        echo Color::YELLOW . "[TIPS] เคล็ดลับ:\n" . Color::RESET;
         echo Color::WHITE . "  • รัน 'php console check' หลัง git clone เพื่อตรวจสอบระบบ\n";
         echo "  • ใช้ 'php console down' ก่อนทำ maintenance\n";
         echo "  • ใช้ 'migrate:refresh --seed' เพื่อ reset database ใหม่\n";
@@ -1791,7 +1791,7 @@ PHP;
         echo "  • คำสั่งส่วนใหญ่จะแสดง error ที่เข้าใจง่ายหากใช้ผิด\n" . Color::RESET;
         echo "\n";
         
-        echo Color::CYAN . "📚 เอกสารเพิ่มเติม: docs/\n" . Color::RESET;
+        echo Color::CYAN . "[DOCS] เอกสารเพิ่มเติม: docs/\n" . Color::RESET;
         echo Color::WHITE . "   QUICK_START.md, CLI_GUIDE.md, และอื่นๆ\n" . Color::RESET;
         echo "\n";
     }
@@ -1942,7 +1942,7 @@ PHP;
     private function confirm(string $message, bool $default = false): bool
     {
         $defaultText = $default ? 'Y/n' : 'y/N';
-        echo Color::YELLOW . "⚠️  {$message} [{$defaultText}]: " . Color::RESET;
+        echo Color::YELLOW . "[?] {$message} [{$defaultText}]: " . Color::RESET;
         
         $input = strtolower(trim(fgets(STDIN)));
         
@@ -1994,7 +1994,7 @@ PHP;
             $this->error("ไม่สามารถเชื่อมต่อฐานข้อมูล");
             echo Color::RED . "Error: " . $e->getMessage() . Color::RESET . "\n\n";
             
-            echo Color::YELLOW . "💡 วิธีแก้ไข:" . Color::RESET . "\n";
+            echo Color::YELLOW . "[TIP] วิธีแก้ไข:" . Color::RESET . "\n";
             echo "  1. ตรวจสอบว่า MySQL server ทำงานอยู่\n";
             echo "  2. ตรวจสอบค่า DB_* ในไฟล์ .env\n";
             echo "  3. สร้าง database: CREATE DATABASE database_name;\n";
@@ -2050,7 +2050,7 @@ PHP;
      */
     private function success(string $message): void
     {
-        echo Color::GREEN . "✓ {$message}" . Color::RESET . "\n";
+        echo Color::GREEN . "[OK] {$message}" . Color::RESET . "\n";
     }
     
     /**
@@ -2059,7 +2059,7 @@ PHP;
      */
     private function error(string $message): void
     {
-        echo Color::RED . "✗ {$message}" . Color::RESET . "\n";
+        echo Color::RED . "[X] {$message}" . Color::RESET . "\n";
     }
     
     /**
@@ -2068,7 +2068,7 @@ PHP;
      */
     private function info(string $message): void
     {
-        echo Color::BLUE . "ℹ {$message}" . Color::RESET . "\n";
+        echo Color::BLUE . "[i] {$message}" . Color::RESET . "\n";
     }
     
     /**
@@ -2077,7 +2077,7 @@ PHP;
      */
     private function warning(string $message): void
     {
-        echo Color::YELLOW . "⚠ {$message}" . Color::RESET . "\n";
+        echo Color::YELLOW . "[!] {$message}" . Color::RESET . "\n";
     }
     
     // ==================== Database Commands ====================
@@ -2110,7 +2110,7 @@ PHP;
                 return;
             }
             
-            echo "\n" . Color::GREEN . "📊 ตารางทั้งหมด (" . count($tables) . " ตาราง):" . Color::RESET . "\n";
+            echo "\n" . Color::GREEN . "[DATABASE] ตารางทั้งหมด (" . count($tables) . " ตาราง):" . Color::RESET . "\n";
             echo str_repeat("─", 50) . "\n";
             
             foreach ($tables as $index => $table) {
@@ -2130,7 +2130,7 @@ PHP;
             echo "┌─ Database Connection Error ─────────────────────────┐\n";
             $this->error("ไม่สามารถเชื่อมต่อฐานข้อมูล: " . $e->getMessage());
             echo "│\n";
-            $this->warning("💡 คำแนะนำ:");
+            $this->warning("[TIP] คำแนะนำ:");
             $this->info("   1. ตรวจสอบว่าเปิด MySQL/MariaDB แล้วหรือไม่");
             $this->info("   2. ตรวจสอบการตั้งค่าใน .env ไฟล์");
             $this->info("   3. ตรวจสอบว่าสร้าง database แล้วหรือไม่");
@@ -2195,7 +2195,7 @@ PHP;
             $stmt = $pdo->query("SELECT COUNT(*) FROM `{$tableName}`");
             $rowCount = $stmt->fetchColumn();
             
-            echo "\n" . Color::GREEN . "📋 ตาราง: {$tableName}" . Color::RESET . "\n";
+            echo "\n" . Color::GREEN . "[TABLE] {$tableName}" . Color::RESET . "\n";
             echo Color::GRAY . "จำนวนแถว: {$rowCount}" . Color::RESET . "\n\n";
             
             // Display columns with proper alignment
@@ -2263,7 +2263,7 @@ PHP;
             exit(1);
         }
         
-        echo Color::RED . "⚠️  คำเตือน: จะ rollback migrations ทั้งหมด!" . Color::RESET . "\n\n";
+        echo Color::RED . "[WARNING] จะ rollback migrations ทั้งหมด!" . Color::RESET . "\n\n";
         
         // Require confirmation unless --force flag
         if (!$this->hasForceFlag($args)) {
@@ -2309,7 +2309,7 @@ PHP;
             exit(1);
         }
         
-        echo Color::RED . "⚠️  คำเตือน: จะ reset และ migrate ใหม่ทั้งหมด!" . Color::RESET . "\n\n";
+        echo Color::RED . "[WARNING] จะ reset และ migrate ใหม่ทั้งหมด!" . Color::RESET . "\n\n";
         
         // Require confirmation unless --force flag
         if (!$this->hasForceFlag($args)) {
@@ -2466,7 +2466,7 @@ PHP;
             return;
         }
         
-        echo Color::YELLOW . "⚠️  จะลบ log files ทั้งหมด (" . count($logFiles) . " files)" . Color::RESET . "\n\n";
+        echo Color::YELLOW . "[WARNING] จะลบ log files ทั้งหมด (" . count($logFiles) . " files)" . Color::RESET . "\n\n";
         
         // Require confirmation unless --force flag
         if (!$this->hasForceFlag($args)) {
@@ -2553,7 +2553,7 @@ PHP;
         file_put_contents($maintenanceFile, json_encode($data));
         
         $this->success("เปิด Maintenance Mode เรียบร้อยแล้ว");
-        $this->warning("⚠ เว็บไซต์จะแสดงหน้า maintenance สำหรับผู้ใช้ทั่วไป");
+        $this->warning("[!] เว็บไซต์จะแสดงหน้า maintenance สำหรับผู้ใช้ทั่วไป");
         $this->info("รัน 'php console up' เพื่อปิด maintenance mode");
     }
     
@@ -2571,7 +2571,7 @@ PHP;
         unlink($maintenanceFile);
         
         $this->success("ปิด Maintenance Mode เรียบร้อยแล้ว");
-        $this->info("✓ เว็บไซต์กลับมาใช้งานได้ปกติแล้ว");
+        $this->info("[OK] เว็บไซต์กลับมาใช้งานได้ปกติแล้ว");
     }
     
     // ==================== Template Methods ====================
