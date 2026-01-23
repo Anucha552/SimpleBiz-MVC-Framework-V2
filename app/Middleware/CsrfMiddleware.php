@@ -30,6 +30,8 @@ namespace App\Middleware;
 
 use App\Core\Middleware;
 use App\Core\Logger;
+use App\Core\Response;
+use App\Core\Session;
 
 class CsrfMiddleware extends Middleware
 {
@@ -39,10 +41,7 @@ class CsrfMiddleware extends Middleware
 
     public function __construct()
     {
-        // เริ่มเซสชันถ้ายังไม่ได้เริ่ม
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        Session::start();
 
         $this->logger = new Logger();
 
@@ -53,9 +52,9 @@ class CsrfMiddleware extends Middleware
     /**
      * จัดการการตรวจสอบ CSRF token
      * 
-     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
+        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-    public function handle(): bool
+        public function handle(?\App\Core\Request $request = null): bool|Response
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
@@ -84,8 +83,9 @@ class CsrfMiddleware extends Middleware
                 'method' => $method,
             ]);
 
-            $this->jsonError('CSRF token missing', 403);
-            return false;
+            Session::flash('error', 'CSRF token missing');
+            $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+            return Response::redirect($referer);
         }
 
         // ตรวจสอบ token
@@ -95,8 +95,9 @@ class CsrfMiddleware extends Middleware
                 'method' => $method,
             ]);
 
-            $this->jsonError('Invalid CSRF token', 403);
-            return false;
+            Session::flash('error', 'Invalid CSRF token');
+            $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+            return Response::redirect($referer);
         }
 
         // Token ถูกต้อง
@@ -108,8 +109,24 @@ class CsrfMiddleware extends Middleware
      */
     private function ensureTokenExists(): void
     {
-        if (!isset($_SESSION['csrf_token']) || !isset($_SESSION['csrf_token_time'])) {
-            $this->regenerateToken();
+        // Backward-compat: if legacy csrf_token exists, mirror into Session token.
+        if (isset($_SESSION['csrf_token']) && !Session::getCsrfToken()) {
+            $_SESSION['_csrf_token'] = $_SESSION['csrf_token'];
+        }
+
+        // Ensure Session token exists.
+        if (!Session::getCsrfToken()) {
+            Session::generateCsrfToken();
+        }
+
+        // Mirror Session token to legacy key so old templates still work.
+        if (!isset($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = Session::getCsrfToken();
+            $_SESSION['csrf_token_time'] = time();
+        }
+
+        if (!isset($_SESSION['csrf_token_time'])) {
+            $_SESSION['csrf_token_time'] = time();
         }
     }
 
@@ -118,7 +135,9 @@ class CsrfMiddleware extends Middleware
      */
     private function regenerateToken(): void
     {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(self::TOKEN_LENGTH));
+        // Generate via Session token, then mirror to legacy.
+        $token = Session::generateCsrfToken();
+        $_SESSION['csrf_token'] = $token;
         $_SESSION['csrf_token_time'] = time();
     }
 
@@ -143,14 +162,23 @@ class CsrfMiddleware extends Middleware
      */
     private function getSubmittedToken(): ?string
     {
-        // ตรวจสอบจาก POST data
+        // ตรวจสอบจาก POST data (new + legacy)
+        if (isset($_POST['_csrf_token'])) {
+            return (string) $_POST['_csrf_token'];
+        }
         if (isset($_POST['csrf_token'])) {
-            return $_POST['csrf_token'];
+            return (string) $_POST['csrf_token'];
         }
 
         // ตรวจสอบจาก header (สำหรับ AJAX requests)
         if (isset($_SERVER['HTTP_X_CSRF_TOKEN'])) {
-            return $_SERVER['HTTP_X_CSRF_TOKEN'];
+            return (string) $_SERVER['HTTP_X_CSRF_TOKEN'];
+        }
+        if (isset($_SERVER['HTTP_X_CSRF-TOKEN'])) {
+            return (string) $_SERVER['HTTP_X_CSRF-TOKEN'];
+        }
+        if (isset($_SERVER['HTTP_X_XSRF_TOKEN'])) {
+            return (string) $_SERVER['HTTP_X_XSRF_TOKEN'];
         }
 
         return null;
@@ -164,12 +192,17 @@ class CsrfMiddleware extends Middleware
      */
     private function validateToken(string $token): bool
     {
-        if (!isset($_SESSION['csrf_token'])) {
-            return false;
+        $sessionToken = Session::getCsrfToken();
+        if (is_string($sessionToken) && $sessionToken !== '' && hash_equals($sessionToken, $token)) {
+            return true;
         }
 
-        // ใช้ hash_equals เพื่อป้องกัน timing attacks
-        return hash_equals($_SESSION['csrf_token'], $token);
+        // Legacy fallback
+        if (isset($_SESSION['csrf_token']) && is_string($_SESSION['csrf_token'])) {
+            return hash_equals($_SESSION['csrf_token'], $token);
+        }
+
+        return false;
     }
 
     /**
@@ -179,16 +212,12 @@ class CsrfMiddleware extends Middleware
      */
     public static function getToken(): string
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        if (!isset($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(self::TOKEN_LENGTH));
-            $_SESSION['csrf_token_time'] = time();
-        }
-
-        return $_SESSION['csrf_token'];
+        Session::start();
+        $token = Session::getCsrfToken() ?? Session::generateCsrfToken();
+        // Mirror to legacy
+        $_SESSION['csrf_token'] = $token;
+        $_SESSION['csrf_token_time'] = $_SESSION['csrf_token_time'] ?? time();
+        return $token;
     }
 
     /**

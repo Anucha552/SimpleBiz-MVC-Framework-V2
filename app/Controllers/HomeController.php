@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\ErrorHandler;
+use App\Core\Response;
 
 /**
  * HomeController
@@ -98,10 +100,14 @@ class HomeController extends Controller
         // ตรวจสอบว่าอยู่ใน development mode หรือไม่
         $config = require __DIR__ . '/../../config/app.php';
         
-        if ($config['env'] !== 'production') {
-            phpinfo();
-        } else {
-            die('PHP Info is disabled in production mode.');
+        if (($config['env'] ?? 'production') === 'production') {
+            return ErrorHandler::response(403, 'PHP Info is disabled in production mode.');
         }
+
+        ob_start();
+        phpinfo();
+        $html = ob_get_clean();
+
+        return Response::html($html ?: '');
     }
 }

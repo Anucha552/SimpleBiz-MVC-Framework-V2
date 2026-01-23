@@ -35,6 +35,10 @@ use App\Middleware\ApiKeyMiddleware;
 // ===================================
 // API Routes
 // ===================================
+
+// System/Health endpoints (public)
+$router->get('/api/health', 'App\\Controllers\\Api\\V1\\SystemController@health');
+$router->get('/api/v1/ping', 'App\\Controllers\\Api\\V1\\SystemController@ping');
 // 
 // คุณสามารถเพิ่ม API routes ใหม่ที่นี่
 // ตัวอย่าง:

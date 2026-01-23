@@ -60,6 +60,7 @@
     <?= $this->yieldSection('head', '') ?>
 </head>
 <body>
+    <?php \App\Core\Session::start(); ?>
     <!-- Bootstrap Navbar -->
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark">
@@ -81,16 +82,25 @@
                         <li class="nav-item">
                             <a class="nav-link" href="https://github.com" target="_blank"><i class="bi bi-github"></i> GitHub</a>
                         </li>
-                        <?php if (isset($_SESSION['user_id'])): ?>
+                        <?php $userId = \App\Core\Session::get('user_id'); ?>
+                        <?php if ($userId !== null): ?>
                             <li class="nav-item">
                                 <a class="nav-link" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/logout"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</a>
+                                <form method="post" action="/logout" class="d-inline">
+                                    <?= \App\Core\Session::csrfField() ?>
+                                    <button type="submit" class="nav-link btn btn-link p-0" style="text-decoration:none;">
+                                        <i class="bi bi-box-arrow-right"></i> ออกจากระบบ
+                                    </button>
+                                </form>
                             </li>
                         <?php else: ?>
                             <li class="nav-item">
                                 <a class="nav-link" href="/login"><i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบ</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/register"><i class="bi bi-person-plus"></i> สมัครสมาชิก</a>
                             </li>
                         <?php endif; ?>
                     </ul>
@@ -101,16 +111,26 @@
 
     <main>
         <div class="container">
-            <?php if (isset($_SESSION['flash_message'])): ?>
-                <div class="alert alert-<?= $_SESSION['flash_type'] ?? 'info' ?> alert-dismissible fade show" role="alert">
-                    <?= htmlspecialchars($_SESSION['flash_message']) ?>
+            <?php
+                $flashMap = [
+                    'success' => 'success',
+                    'info' => 'info',
+                    'warning' => 'warning',
+                    'error' => 'danger',
+                ];
+
+                foreach ($flashMap as $key => $bootstrapType):
+                    if (\App\Core\Session::hasFlash($key)):
+                        $message = (string) \App\Core\Session::getFlash($key);
+            ?>
+                <div class="alert alert-<?= $bootstrapType ?> alert-dismissible fade show" role="alert">
+                    <?= htmlspecialchars($message) ?>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-                <?php 
-                    unset($_SESSION['flash_message']); 
-                    unset($_SESSION['flash_type']);
-                ?>
-            <?php endif; ?>
+            <?php
+                    endif;
+                endforeach;
+            ?>
             
             <div class="content-wrapper">
                 <?= $this->yieldSection('content') ?>

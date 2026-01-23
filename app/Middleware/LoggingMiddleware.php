@@ -80,7 +80,7 @@ class LoggingMiddleware extends Middleware
      * 
      * @return bool True เพื่อดำเนินการต่อ
      */
-    public function handle(): bool
+    public function handle(?\App\Core\Request $request = null): bool|\App\Core\Response
     {
         // ตรวจสอบว่าควรบันทึกหรือไม่
         if ($this->shouldSkipLogging()) {

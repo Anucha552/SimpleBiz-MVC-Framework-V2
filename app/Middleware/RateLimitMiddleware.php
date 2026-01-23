@@ -30,6 +30,7 @@ namespace App\Middleware;
 use App\Core\Middleware;
 use App\Core\Logger;
 use App\Core\Cache;
+use App\Core\Response;
 
 class RateLimitMiddleware extends Middleware
 {
@@ -74,9 +75,9 @@ class RateLimitMiddleware extends Middleware
     /**
      * จัดการการจำกัดอัตรา
      * 
-     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
+        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-    public function handle(): bool
+        public function handle(?\App\Core\Request $request = null): bool|Response
     {
         // รับ identifier ที่ไม่ซ้ำสำหรับผู้ใช้ (IP address)
         $identifier = $this->getIdentifier();
@@ -107,17 +108,16 @@ class RateLimitMiddleware extends Middleware
             ]);
 
             // ส่ง headers ที่เกี่ยวข้อง
-            $this->setRateLimitHeaders($currentCount, $resetTime);
+            $this->setRateLimitHeaders($request, $currentCount, $resetTime);
 
-            $this->jsonError('Rate limit exceeded. Try again later.', 429);
-            return false;
+            return $this->jsonError('Rate limit exceeded. Try again later.', 429);
         }
 
         // บันทึกข้อมูลที่อัปเดต
         $this->saveRateLimitData($identifier, $currentCount, $resetTime);
 
         // ส่ง headers ให้ client ทราบสถานะ
-        $this->setRateLimitHeaders($currentCount, $resetTime);
+        $this->setRateLimitHeaders($request, $currentCount, $resetTime);
 
         return true;
     }
@@ -209,10 +209,14 @@ class RateLimitMiddleware extends Middleware
      * @param int $currentCount
      * @param int $resetTime
      */
-    private function setRateLimitHeaders(int $currentCount, int $resetTime): void
+    private function setRateLimitHeaders(?\App\Core\Request $request, int $currentCount, int $resetTime): void
     {
-        header("X-RateLimit-Limit: {$this->maxRequests}");
-        header("X-RateLimit-Remaining: " . max(0, $this->maxRequests - $currentCount));
-        header("X-RateLimit-Reset: {$resetTime}");
+        if ($request === null) {
+            return;
+        }
+
+        $request->setResponseHeader('X-RateLimit-Limit', (string) $this->maxRequests);
+        $request->setResponseHeader('X-RateLimit-Remaining', (string) max(0, $this->maxRequests - $currentCount));
+        $request->setResponseHeader('X-RateLimit-Reset', (string) $resetTime);
     }
 }

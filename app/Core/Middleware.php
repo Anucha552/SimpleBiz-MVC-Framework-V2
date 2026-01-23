@@ -32,9 +32,9 @@ abstract class Middleware
      * 
      * คลาสลูกต้องสร้างเมธอดนี้
      * 
-     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
+        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-    abstract public function handle(): bool;
+        abstract public function handle(?Request $request = null): bool|Response;
 
     /**
      * ตรวจสอบว่าผู้ใช้ยืนยันตัวตนหรือไม่
@@ -43,7 +43,8 @@ abstract class Middleware
      */
     protected function isAuthenticated(): bool
     {
-        return isset($_SESSION['user_id']);
+        Session::start();
+        return Session::has('user_id');
     }
 
     /**
@@ -53,34 +54,35 @@ abstract class Middleware
      */
     protected function getUserId(): ?int
     {
-        return $_SESSION['user_id'] ?? null;
+        Session::start();
+        $id = Session::get('user_id');
+        if (is_int($id)) {
+            return $id;
+        }
+        if (is_numeric($id)) {
+            return (int) $id;
+        }
+        return null;
     }
 
     /**
-     * ส่งการตอบกลับข้อผิดพลาด JSON และหยุดการทำงาน
+     * สร้างการตอบกลับข้อผิดพลาด JSON (ไม่ส่ง/ไม่ exit)
      * 
      * @param string $message ข้อความข้อผิดพลาด
      * @param int $statusCode รหัสสถานะ HTTP
      */
-    protected function jsonError(string $message, int $statusCode = 401): void
+    protected function jsonError(string $message, int $statusCode = 401): Response
     {
-        http_response_code($statusCode);
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success' => false,
-            'message' => $message,
-        ]);
-        exit;
+        return Response::apiError($message, [], $statusCode);
     }
 
     /**
-     * เปลี่ยนเส้นทางไปยัง URL และหยุดการทำงาน
+     * สร้างการตอบกลับแบบ redirect (ไม่ส่ง/ไม่ exit)
      * 
      * @param string $url URL สำหรับเปลี่ยนเส้นทาง
      */
-    protected function redirect(string $url): void
+    protected function redirect(string $url): Response
     {
-        header("Location: {$url}");
-        exit;
+        return Response::redirect($url);
     }
 }

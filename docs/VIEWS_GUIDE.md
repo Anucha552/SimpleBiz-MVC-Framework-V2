@@ -159,18 +159,33 @@ $view = new View('products/index', [
 
 ### Session Data
 ```php
-<?php if (isset($_SESSION['user_id'])): ?>
-    <p>สวัสดี, <?= htmlspecialchars($_SESSION['username']) ?></p>
+<?php
+use App\Core\Session;
+
+Session::start();
+?>
+
+<?php if (Session::has('user_id')): ?>
+    <p>สวัสดี, <?= htmlspecialchars((string) Session::get('username', '')) ?></p>
 <?php endif; ?>
 ```
 
 ### Flash Messages
 ```php
-<?php if (isset($_SESSION['flash_message'])): ?>
-    <div class="alert">
-        <?= htmlspecialchars($_SESSION['flash_message']) ?>
+<?php
+use App\Helpers\FormHelper;
+?>
+
+<?php if (FormHelper::hasFlash('success')): ?>
+    <div class="alert alert-success">
+        <?= htmlspecialchars((string) FormHelper::flash('success')) ?>
     </div>
-    <?php unset($_SESSION['flash_message']); ?>
+<?php endif; ?>
+
+<?php if (FormHelper::hasFlash('error')): ?>
+    <div class="alert alert-error">
+        <?= htmlspecialchars((string) FormHelper::flash('error')) ?>
+    </div>
 <?php endif; ?>
 ```
 
@@ -287,9 +302,39 @@ public function showLogin(): void
     </div>
 <?php endif; ?>
 
+<?php
+use App\Helpers\FormHelper;
+?>
+
+<?php if (FormHelper::hasFlash('success')): ?>
+    <div class="alert alert-success">
+        <?= htmlspecialchars((string) FormHelper::flash('success')) ?>
+    </div>
+<?php endif; ?>
+
 <form method="POST" action="/login">
-    <input type="email" name="email" required>
+    <?= FormHelper::csrfField() ?>
+
+    <label>
+        อีเมล
+        <input
+            type="email"
+            name="email"
+            value="<?= FormHelper::old('email') ?>"
+            class="<?= FormHelper::invalidClass('email') ?>"
+            required
+        >
+    </label>
+    <?php if (FormHelper::hasError('email')): ?>
+        <div class="invalid-feedback">
+            <?= FormHelper::firstError('email') ?>
+        </div>
+    <?php endif; ?>
+
+    <label>
+        รหัสผ่าน
     <input type="password" name="password" required>
+    </label>
     <button type="submit">เข้าสู่ระบบ</button>
 </form>
 <?php $this->endSection(); ?>

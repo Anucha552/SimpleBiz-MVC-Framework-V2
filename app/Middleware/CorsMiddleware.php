@@ -30,6 +30,7 @@ namespace App\Middleware;
 
 use App\Core\Middleware;
 use App\Core\Logger;
+use App\Core\Response;
 
 class CorsMiddleware extends Middleware
 {
@@ -110,10 +111,14 @@ class CorsMiddleware extends Middleware
     /**
      * จัดการ CORS headers
      * 
-     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
+        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-    public function handle(): bool
+        public function handle(?\App\Core\Request $request = null): bool|Response
     {
+            if ($request === null) {
+                return true;
+            }
+
         // รับ origin ของคำขอ
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
@@ -134,7 +139,7 @@ class CorsMiddleware extends Middleware
         }
 
         // ตั้งค่า CORS headers
-        $this->setCorsHeaders($origin);
+        $this->setCorsHeaders($request, $origin);
 
         // จัดการ preflight request (OPTIONS)
         $method = $_SERVER['REQUEST_METHOD'] ?? '';
@@ -144,9 +149,8 @@ class CorsMiddleware extends Middleware
                 'route' => $_SERVER['REQUEST_URI'] ?? 'unknown',
             ]);
 
-            // ส่งการตอบกลับ 200 OK สำหรับ preflight
-            http_response_code(200);
-            exit;
+            // ส่งการตอบกลับสำหรับ preflight
+            return Response::noContent();
         }
 
         return true; // ดำเนินการคำขอปกติต่อ
@@ -174,29 +178,29 @@ class CorsMiddleware extends Middleware
      * 
      * @param string $origin
      */
-    private function setCorsHeaders(string $origin): void
+    private function setCorsHeaders(\App\Core\Request $request, string $origin): void
     {
         // Origin ที่อนุญาต
-        header("Access-Control-Allow-Origin: {$origin}");
+        $request->setResponseHeader('Access-Control-Allow-Origin', $origin);
 
         // Methods ที่อนุญาต
-        header('Access-Control-Allow-Methods: ' . implode(', ', $this->allowedMethods));
+        $request->setResponseHeader('Access-Control-Allow-Methods', implode(', ', $this->allowedMethods));
 
         // Headers ที่อนุญาต
-        header('Access-Control-Allow-Headers: ' . implode(', ', $this->allowedHeaders));
+        $request->setResponseHeader('Access-Control-Allow-Headers', implode(', ', $this->allowedHeaders));
 
         // Headers ที่ส่งกลับได้
         if (!empty($this->exposedHeaders)) {
-            header('Access-Control-Expose-Headers: ' . implode(', ', $this->exposedHeaders));
+            $request->setResponseHeader('Access-Control-Expose-Headers', implode(', ', $this->exposedHeaders));
         }
 
         // อนุญาต credentials
         if ($this->allowCredentials) {
-            header('Access-Control-Allow-Credentials: true');
+            $request->setResponseHeader('Access-Control-Allow-Credentials', 'true');
         }
 
         // เวลา cache สำหรับ preflight
-        header("Access-Control-Max-Age: {$this->maxAge}");
+        $request->setResponseHeader('Access-Control-Max-Age', (string) $this->maxAge);
     }
 
     /**

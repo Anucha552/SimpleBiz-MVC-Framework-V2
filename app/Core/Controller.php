@@ -40,14 +40,26 @@ class Controller
     }
 
     /**
+     * สร้าง Response สำหรับ view (เหมาะกับ controller ที่ต้องการ return Response)
+     */
+    protected function responseView(string $view, array $data = [], ?string $layout = null, int $statusCode = 200): Response
+    {
+        $engine = new View($view, $data);
+        if ($layout !== null && $layout !== '') {
+            $engine->layout($layout);
+        }
+
+        return Response::html($engine->render(), $statusCode);
+    }
+
+    /**
      * เปลี่ยนเส้นทางไปยัง URL อื่น
      * 
      * @param string $url URL ที่จะเปลี่ยนเส้นทางไป
      */
-    protected function redirect(string $url): void
+    protected function redirect(string $url, int $statusCode = 302): Response
     {
-        header("Location: {$url}");
-        exit;
+        return Response::redirect($url, $statusCode);
     }
 
     /**
@@ -67,29 +79,9 @@ class Controller
      * @param array $errors อาร์เรย์ข้อผิดพลาด (ไม่บังคับ)
      * @param int $statusCode รหัสสถานะ HTTP
      */
-    protected function json(bool $success, $data = null, string $message = '', array $errors = [], int $statusCode = 200): void
+    protected function json(bool $success, $data = null, string $message = '', array $errors = [], int $statusCode = 200): Response
     {
-        http_response_code($statusCode);
-        header('Content-Type: application/json');
-
-        $response = [
-            'success' => $success,
-        ];
-
-        if ($data !== null) {
-            $response['data'] = $data;
-        }
-
-        if (!empty($message)) {
-            $response['message'] = $message;
-        }
-
-        if (!empty($errors)) {
-            $response['errors'] = $errors;
-        }
-
-        echo json_encode($response);
-        exit;
+        return $this->responseJson($success, $data, $message, $errors, $statusCode);
     }
 
     /**
@@ -99,23 +91,11 @@ class Controller
      */
     protected function responseJson(bool $success, $data = null, string $message = '', array $errors = [], int $statusCode = 200): Response
     {
-        $response = [
-            'success' => $success,
-        ];
-
-        if ($data !== null) {
-            $response['data'] = $data;
+        if ($success) {
+            return Response::apiSuccess($data, $message !== '' ? $message : 'Success', [], $statusCode);
         }
 
-        if (!empty($message)) {
-            $response['message'] = $message;
-        }
-
-        if (!empty($errors)) {
-            $response['errors'] = $errors;
-        }
-
-        return Response::json($response, $statusCode, JSON_UNESCAPED_UNICODE);
+        return Response::apiError($message !== '' ? $message : 'Error', $errors, $statusCode);
     }
 
     /**
@@ -198,7 +178,9 @@ class Controller
      */
     protected function getUserId(): ?int
     {
-        return $_SESSION['user_id'] ?? null;
+        Session::start();
+        $userId = Session::get('user_id');
+        return is_int($userId) ? $userId : null;
     }
 
     /**
@@ -208,6 +190,7 @@ class Controller
      */
     protected function isAuthenticated(): bool
     {
-        return isset($_SESSION['user_id']);
+        Session::start();
+        return Session::has('user_id');
     }
 }

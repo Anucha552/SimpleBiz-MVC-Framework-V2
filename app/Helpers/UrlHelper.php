@@ -13,6 +13,8 @@
 
 namespace App\Helpers;
 
+use App\Core\Response;
+
 class UrlHelper
 {
     /**
@@ -105,24 +107,23 @@ class UrlHelper
      * 
      * @param string $url
      * @param int $statusCode
-     * @return void
+     * @return Response
      */
-    public static function redirect(string $url, int $statusCode = 302): void
+    public static function redirect(string $url, int $statusCode = 302): Response
     {
-        header("Location: {$url}", true, $statusCode);
-        exit;
+        return Response::redirect($url, $statusCode);
     }
 
     /**
      * Redirect กลับไปหน้าก่อนหน้า
      * 
      * @param string|null $default
-     * @return void
+     * @return Response
      */
-    public static function back(?string $default = null): void
+    public static function back(?string $default = null): Response
     {
         $url = self::previous($default ?: '/');
-        self::redirect($url);
+        return self::redirect($url);
     }
 
     /**

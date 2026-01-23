@@ -24,6 +24,8 @@ namespace App\Middleware;
 
 use App\Core\Middleware;
 use App\Core\Logger;
+use App\Core\Response;
+use App\Core\Session;
 
 class GuestMiddleware extends Middleware
 {
@@ -36,10 +38,7 @@ class GuestMiddleware extends Middleware
 
     public function __construct(?string $redirectTo = null)
     {
-        // เริ่มเซสชันถ้ายังไม่ได้เริ่ม
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        Session::start();
 
         $this->logger = new Logger();
 
@@ -58,9 +57,9 @@ class GuestMiddleware extends Middleware
     /**
      * จัดการการตรวจสอบสถานะแขก
      * 
-     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
+        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-    public function handle(): bool
+        public function handle(?\App\Core\Request $request = null): bool|Response
     {
         // ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
         if ($this->isAuthenticated()) {
@@ -77,13 +76,11 @@ class GuestMiddleware extends Middleware
 
             if ($isApiRequest) {
                 // คำขอ API - คืนค่าข้อความ
-                $this->jsonError('Already authenticated', 403);
-            } else {
-                // คำขอ web - เปลี่ยนเส้นทาง
-                $this->redirect($this->redirectTo);
+                return $this->jsonError('Already authenticated', 403);
             }
 
-            return false; // หยุดการประมวลผลคำขอ
+            // คำขอ web - เปลี่ยนเส้นทาง
+            return $this->redirect($this->redirectTo);
         }
 
         // ผู้ใช้ยังไม่เข้าสู่ระบบ - อนุญาตให้เข้าถึง

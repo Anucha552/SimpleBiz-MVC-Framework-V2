@@ -124,16 +124,18 @@ class Logger
         $timestamp = date('Y-m-d H:i:s');
         
         // รับบริบทคำขอ
-        $userId = $_SESSION['user_id'] ?? 'guest';
+        Session::start();
+        $userId = Session::get('user_id', 'guest');
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $route = $_SERVER['REQUEST_URI'] ?? 'unknown';
         $method = $_SERVER['REQUEST_METHOD'] ?? 'unknown';
+        $requestId = $_SERVER['HTTP_X_REQUEST_ID'] ?? 'unknown';
 
         // สร้างข้อความล็อก
         $contextJson = !empty($context) ? json_encode($context) : '{}';
         
         $logMessage = sprintf(
-            "[%s] [%s] %s %s user_id=%s ip=%s method=%s route=%s\n",
+            "[%s] [%s] %s %s user_id=%s ip=%s method=%s route=%s request_id=%s\n",
             $timestamp,
             $level,
             $event,
@@ -141,7 +143,8 @@ class Logger
             $userId,
             $ip,
             $method,
-            $route
+            $route,
+            $requestId
         );
 
         // เขียนลงไฟล์ล็อก

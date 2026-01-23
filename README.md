@@ -45,6 +45,14 @@ SimpleBiz MVC Framework V2 เป็นเฟรมเวิร์ก PHP แบ
 
 ---
 
+## ✅ ใช้เป็น Framework Base (สำหรับรับงาน)
+
+ถ้าคุณตั้งใจใช้โปรเจกต์นี้เป็น “ฐานเริ่มงาน” แนะนำให้อ่านเช็คลิสต์ขั้นต่ำก่อนเริ่มงานจริง:
+- [docs/BASELINE_CHECKLIST.md](docs/BASELINE_CHECKLIST.md)
+
+ถ้าคุณต้องการทำฟีเจอร์แบบ “ส่วนเสริม” แยกจาก core (เช่น Auth/Blog/Admin/Payments):
+- [docs/MODULES_GUIDE.md](docs/MODULES_GUIDE.md)
+
 ## 📋 โครงสร้างโปรเจค
 
 ```

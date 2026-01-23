@@ -107,13 +107,13 @@ class Router
      * 
      * @throws \Exception ถ้าไม่พบเส้นทางหรือตัวควบคุมไม่ถูกต้อง
      */
-    public function dispatch(): void
+    public function dispatch(?Request $request = null): void
     {
         $method = $_SERVER['REQUEST_METHOD'];
         $uri = $this->getUri();
 
-        // สร้าง Request object สำหรับ inject เข้า middleware/controller (ไม่บังคับ)
-        $request = new Request();
+        // ใช้ Request ที่ส่งเข้ามา (จาก front controller) หรือสร้างใหม่
+        $request = $request ?? new Request();
 
         // จัดการเมธอด PUT/DELETE จากพารามิเตอร์ _method ของฟอร์ม
         if ($method === 'POST' && isset($_POST['_method'])) {
@@ -127,8 +127,10 @@ class Router
             // ถ้า path มีอยู่แต่ method ไม่ตรง ให้ตอบ 405
             $allowedMethods = $this->getAllowedMethodsForUri($uri);
             if (!empty($allowedMethods)) {
-                header('Allow: ' . implode(', ', $allowedMethods));
-                ErrorHandler::methodNotAllowed('Method Not Allowed');
+                $response = ErrorHandler::response(405, 'Method Not Allowed')
+                    ->withHeader('Allow', implode(', ', $allowedMethods))
+                    ->withHeaders($request->getResponseHeaders(), false);
+                $response->send();
                 return;
             }
 
@@ -140,15 +142,11 @@ class Router
         foreach ($route['middleware'] as $middlewareClass) {
             $middleware = new $middlewareClass();
 
-            // รองรับ middleware ทั้งแบบเดิม handle() และแบบใหม่ handle(Request $request)
-            $ref = new \ReflectionMethod($middleware, 'handle');
-            $result = $ref->getNumberOfParameters() >= 1
-                ? $middleware->handle($request)
-                : $middleware->handle();
+            $result = $middleware->handle($request);
 
             // ถ้า middleware คืนค่า Response ให้ส่งและหยุด
             if ($result instanceof Response) {
-                $result->send();
+                $result->withHeaders($request->getResponseHeaders(), false)->send();
                 return;
             }
             
@@ -188,12 +186,14 @@ class Router
 
         // รองรับ controller ที่ return Response หรือ string (ไม่บังคับ)
         if ($result instanceof Response) {
-            $result->send();
+            $result->withHeaders($request->getResponseHeaders(), false)->send();
             return;
         }
 
         if (is_string($result) && $result !== '') {
-            echo $result;
+            Response::html($result)
+                ->withHeaders($request->getResponseHeaders(), false)
+                ->send();
         }
     }
 

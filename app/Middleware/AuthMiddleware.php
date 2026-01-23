@@ -24,6 +24,8 @@ namespace App\Middleware;
 
 use App\Core\Middleware;
 use App\Core\Logger;
+use App\Core\Response;
+use App\Core\Session;
 
 class AuthMiddleware extends Middleware
 {
@@ -31,10 +33,7 @@ class AuthMiddleware extends Middleware
 
     public function __construct()
     {
-        // เริ่มเซสชันถ้ายังไม่ได้เริ่ม
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        Session::start();
 
         $this->logger = new Logger();
     }
@@ -42,9 +41,9 @@ class AuthMiddleware extends Middleware
     /**
      * จัดการการตรวจสอบการยืนยันตัวตน
      * 
-     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
+        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-    public function handle(): bool
+        public function handle(?\App\Core\Request $request = null): bool|Response
     {
         // ตรวจสอบว่าผู้ใช้ยืนยันตัวตนแล้วหรือไม่
         if ($this->isAuthenticated()) {
@@ -63,12 +62,19 @@ class AuthMiddleware extends Middleware
 
         if ($isApiRequest) {
             // คำขอ API - คืนค่าข้อผิดพลาด JSON
-            $this->jsonError('Authentication required', 401);
-        } else {
-            // คำขอ web - เปลี่ยนเส้นทางไปหน้าเข้าสู่ระบบ
-            $this->redirect('/login');
+            return $this->jsonError('Authentication required', 401);
         }
 
-        return false; // หยุดการประมวลผลคำขอ
+        // เก็บเส้นทางที่ผู้ใช้ต้องการเข้า (เพื่อ redirect กลับหลัง login)
+        $path = $uri;
+        if (($pos = strpos($path, '?')) !== false) {
+            $path = substr($path, 0, $pos);
+        }
+        if (is_string($path) && $path !== '' && $path !== '/login') {
+            Session::set('auth.intended', $path);
+        }
+
+        // คำขอ web - เปลี่ยนเส้นทางไปหน้าเข้าสู่ระบบ
+        return $this->redirect('/login');
     }
 }

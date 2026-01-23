@@ -33,6 +33,7 @@ namespace App\Middleware;
 
 use App\Core\Middleware;
 use App\Core\Logger;
+use App\Core\Response;
 
 class ApiKeyMiddleware extends Middleware
 {
@@ -67,9 +68,9 @@ class ApiKeyMiddleware extends Middleware
     /**
      * จัดการการตรวจสอบ API key
      * 
-     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
+        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-    public function handle(): bool
+        public function handle(?\App\Core\Request $request = null): bool|Response
     {
         // รับ API key จาก header หรือ query string
         $apiKey = $this->getApiKey();
@@ -79,8 +80,7 @@ class ApiKeyMiddleware extends Middleware
                 'route' => $_SERVER['REQUEST_URI'] ?? 'unknown',
             ]);
 
-            $this->jsonError('API key required', 401);
-            return false;
+            return $this->jsonError('API key required', 401);
         }
 
         // ตรวจสอบ API key
@@ -90,8 +90,7 @@ class ApiKeyMiddleware extends Middleware
                 'key_provided' => substr($apiKey, 0, 10) . '...', // บันทึกเฉพาะส่วนของคีย์
             ]);
 
-            $this->jsonError('Invalid API key', 401);
-            return false;
+            return $this->jsonError('Invalid API key', 401);
         }
 
         // คีย์ถูกต้อง - บันทึกการเข้าถึงที่สำเร็จ

@@ -65,6 +65,19 @@ class Session
         }
 
         if (session_status() === PHP_SESSION_NONE) {
+            // In CLI/testing, PHPUnit may have already written output (progress dots),
+            // which makes session_start() fail. For tests, emulate session storage
+            // using the in-memory $_SESSION array.
+            $isTesting = (getenv('APP_ENV') === 'testing');
+            if (PHP_SAPI === 'cli' || $isTesting) {
+                if (!isset($_SESSION) || !is_array($_SESSION)) {
+                    $_SESSION = [];
+                }
+                self::$started = true;
+                self::ageFlashData();
+                return;
+            }
+
             // ตั้งค่า session เริ่มต้น
             $defaultOptions = [
                 'cookie_httponly' => true,

@@ -32,6 +32,7 @@ namespace App\Middleware;
 use App\Core\Middleware;
 use App\Core\Logger;
 use App\Core\Database;
+use App\Core\Response;
 use PDO;
 
 class RoleMiddleware extends Middleware
@@ -78,9 +79,9 @@ class RoleMiddleware extends Middleware
     /**
      * จัดการการตรวจสอบบทบาท
      * 
-     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
+        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-    public function handle(): bool
+        public function handle(?\App\Core\Request $request = null): bool|Response
     {
         // ถ้าไม่ได้กำหนดบทบาท อนุญาตทุกคน
         if (empty($this->allowedRoles)) {
@@ -94,8 +95,7 @@ class RoleMiddleware extends Middleware
                 'required_roles' => $this->allowedRoles,
             ]);
 
-            $this->handleUnauthorized();
-            return false;
+            return $this->handleUnauthorized();
         }
 
         // ดึงข้อมูลผู้ใช้
@@ -107,8 +107,7 @@ class RoleMiddleware extends Middleware
                 'user_id' => $userId,
             ]);
 
-            $this->handleUnauthorized();
-            return false;
+            return $this->handleUnauthorized();
         }
 
         // ดึงบทบาทของผู้ใช้
@@ -123,8 +122,7 @@ class RoleMiddleware extends Middleware
                 'route' => $_SERVER['REQUEST_URI'] ?? 'unknown',
             ]);
 
-            $this->handleForbidden();
-            return false;
+            return $this->handleForbidden();
         }
 
         // บทบาทถูกต้อง
@@ -168,33 +166,33 @@ class RoleMiddleware extends Middleware
     /**
      * จัดการกรณียังไม่เข้าสู่ระบบ
      */
-    private function handleUnauthorized(): void
+    private function handleUnauthorized(): Response
     {
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         $isApiRequest = strpos($uri, '/api/') === 0;
 
         if ($isApiRequest) {
-            $this->jsonError('Authentication required', 401);
-        } else {
-            // เก็บ URL เดิมเพื่อกลับมาหลังเข้าสู่ระบบ
-            $_SESSION['redirect_after_login'] = $uri;
-            $this->redirect('/login');
+            return $this->jsonError('Authentication required', 401);
         }
+
+        // เก็บ URL เดิมเพื่อกลับมาหลังเข้าสู่ระบบ
+        $_SESSION['redirect_after_login'] = $uri;
+        return $this->redirect('/login');
     }
 
     /**
      * จัดการกรณีไม่มีสิทธิ์
      */
-    private function handleForbidden(): void
+    private function handleForbidden(): Response
     {
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         $isApiRequest = strpos($uri, '/api/') === 0;
 
         if ($isApiRequest) {
-            $this->jsonError('Insufficient permissions', 403);
-        } else {
-            $this->redirect('/403'); // หน้า Forbidden
+            return $this->jsonError('Insufficient permissions', 403);
         }
+
+        return $this->redirect('/403'); // หน้า Forbidden
     }
 
     /**

@@ -31,6 +31,8 @@ namespace App\Middleware;
 
 use App\Core\Middleware;
 use App\Core\Logger;
+use App\Core\Response;
+use App\Core\Session;
 use App\Core\Validator;
 
 class ValidationMiddleware extends Middleware
@@ -63,9 +65,9 @@ class ValidationMiddleware extends Middleware
     /**
      * จัดการการตรวจสอบข้อมูล
      * 
-     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
+        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-    public function handle(): bool
+        public function handle(?\App\Core\Request $request = null): bool|Response
     {
         // ถ้าไม่มีกฎ ดำเนินการต่อ
         if (empty($this->rules)) {
@@ -92,13 +94,11 @@ class ValidationMiddleware extends Middleware
 
             if ($isApiRequest) {
                 // คืนค่า JSON error
-                $this->jsonErrorWithValidation($errors);
-            } else {
-                // เก็บ errors ใน session และเปลี่ยนเส้นทางกลับ
-                $this->handleWebValidationError($errors, $data);
+                return $this->jsonErrorWithValidation($errors);
             }
 
-            return false;
+            // เก็บ errors ใน session และเปลี่ยนเส้นทางกลับ
+            return $this->handleWebValidationError($errors, $data);
         }
 
         // ตรวจสอบผ่าน
@@ -137,16 +137,9 @@ class ValidationMiddleware extends Middleware
      * 
      * @param array $errors
      */
-    private function jsonErrorWithValidation(array $errors): void
+    private function jsonErrorWithValidation(array $errors): Response
     {
-        http_response_code(422); // Unprocessable Entity
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success' => false,
-            'message' => 'Validation failed',
-            'errors' => $errors,
-        ]);
-        exit;
+        return Response::apiError('Validation failed', $errors, 422);
     }
 
     /**
@@ -155,21 +148,16 @@ class ValidationMiddleware extends Middleware
      * @param array $errors
      * @param array $oldInput
      */
-    private function handleWebValidationError(array $errors, array $oldInput): void
+    private function handleWebValidationError(array $errors, array $oldInput): Response
     {
-        // เริ่ม session ถ้ายังไม่ได้เริ่ม
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        // เก็บข้อผิดพลาดและข้อมูลเดิมใน session
-        $_SESSION['validation_errors'] = $errors;
-        $_SESSION['old_input'] = $this->sanitizeOldInput($oldInput);
+        // เก็บข้อผิดพลาดและข้อมูลเดิมใน session แบบ flash
+        Session::start();
+        Session::flash('validation_errors', $errors);
+        Session::flashInput($this->sanitizeOldInput($oldInput));
 
         // เปลี่ยนเส้นทางกลับไปหน้าเดิม
         $referer = $_SERVER['HTTP_REFERER'] ?? '/';
-        header("Location: {$referer}");
-        exit;
+        return Response::redirect($referer);
     }
 
     /**
@@ -233,14 +221,8 @@ class ValidationMiddleware extends Middleware
      */
     public static function getErrors(): array
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        $errors = $_SESSION['validation_errors'] ?? [];
-        unset($_SESSION['validation_errors']);
-
-        return $errors;
+        Session::start();
+        return Session::getFlash('validation_errors', []);
     }
 
     /**
@@ -252,20 +234,8 @@ class ValidationMiddleware extends Middleware
      */
     public static function getOldInput(?string $field = null, $default = null)
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        $oldInput = $_SESSION['old_input'] ?? [];
-
-        if ($field === null) {
-            unset($_SESSION['old_input']);
-            return $oldInput;
-        }
-
-        $value = $oldInput[$field] ?? $default;
-
-        return $value;
+        Session::start();
+        return Session::old($field, $default);
     }
 
     /**
@@ -276,11 +246,7 @@ class ValidationMiddleware extends Middleware
      */
     public static function hasError(string $field): bool
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        $errors = $_SESSION['validation_errors'] ?? [];
+        $errors = self::getErrors();
         return isset($errors[$field]);
     }
 
@@ -292,11 +258,7 @@ class ValidationMiddleware extends Middleware
      */
     public static function getError(string $field): ?string
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        $errors = $_SESSION['validation_errors'] ?? [];
+        $errors = self::getErrors();
         return $errors[$field] ?? null;
     }
 

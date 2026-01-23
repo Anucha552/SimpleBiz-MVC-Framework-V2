@@ -10,6 +10,21 @@ namespace App\Core;
 class ErrorHandler
 {
     /**
+     * Build an error response (HTML for web, JSON for /api/*).
+     */
+    public static function response(int $code, string $message = ''): Response
+    {
+        // ตรวจสอบว่าเป็น API request หรือไม่
+        $isApiRequest = strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') === 0;
+
+        if ($isApiRequest) {
+            return self::buildJsonError($code, $message);
+        }
+
+        return self::buildHtmlError($code, $message);
+    }
+
+    /**
      * แสดงหน้า error
      * 
      * @param int $code รหัส HTTP error
@@ -17,27 +32,14 @@ class ErrorHandler
      */
     public static function show(int $code, string $message = ''): void
     {
-        http_response_code($code);
-        
-        // ตรวจสอบว่าเป็น API request หรือไม่
-        $isApiRequest = strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') === 0;
-        
-        if ($isApiRequest) {
-            self::showJsonError($code, $message);
-        } else {
-            self::showHtmlError($code, $message);
-        }
-        
-        exit;
+        self::response($code, $message)->send();
     }
 
     /**
-     * แสดง error แบบ JSON
+     * สร้าง error แบบ JSON
      */
-    private static function showJsonError(int $code, string $message): void
+    private static function buildJsonError(int $code, string $message): Response
     {
-        header('Content-Type: application/json');
-        
         $errors = [
             404 => 'ไม่พบข้อมูลที่ต้องการ',
             403 => 'ไม่มีสิทธิ์เข้าถึง',
@@ -45,20 +47,16 @@ class ErrorHandler
             500 => 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์',
             503 => 'ปิดปรับปรุงระบบชั่วคราว',
         ];
-        
-        echo json_encode([
-            'success' => false,
-            'error' => [
-                'code' => $code,
-                'message' => $message ?: ($errors[$code] ?? 'เกิดข้อผิดพลาด'),
-            ],
-        ], JSON_UNESCAPED_UNICODE);
+
+        $finalMessage = $message ?: ($errors[$code] ?? 'เกิดข้อผิดพลาด');
+
+        return Response::apiError($finalMessage, [], $code);
     }
 
     /**
-     * แสดง error แบบ HTML
+     * สร้าง error แบบ HTML
      */
-    private static function showHtmlError(int $code, string $message): void
+    private static function buildHtmlError(int $code, string $message): Response
     {
         $viewPath = __DIR__ . "/../Views/errors/{$code}.php";
         
@@ -67,9 +65,13 @@ class ErrorHandler
             $viewPath = __DIR__ . '/../Views/errors/500.php';
             $code = 500;
         }
-        
+
         $error = $message;
+        ob_start();
         require $viewPath;
+        $html = ob_get_clean();
+
+        return Response::html($html ?: '', $code);
     }
 
     /**

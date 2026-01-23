@@ -319,22 +319,26 @@ if (!file_exists($envPath)) {
 
 // โหลดตัวแปรสภาพแวดล้อมจากไฟล์ .env
 if (file_exists($envPath)) {
-    $lines = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        // ข้าม comments
-        if (strpos(trim($line), '#') === 0) {
-            continue;
-        }
-        
-        // แยก KEY=VALUE
-        if (strpos($line, '=') !== false) {
-            list($key, $value) = explode('=', $line, 2);
-            $key = trim($key);
-            $value = trim($value);
-            
-            // ตั้งค่าตัวแปรสภาพแวดล้อม
-            if (!getenv($key)) {
-                putenv("{$key}={$value}");
+    // Prefer vlucas/phpdotenv (รองรับ quotes/spacing ได้ดีกว่า)
+    if (class_exists(\Dotenv\Dotenv::class)) {
+        $dotenv = \Dotenv\Dotenv::createImmutable(dirname(__DIR__));
+        $dotenv->safeLoad();
+    } else {
+        // Fallback loader แบบง่าย
+        $lines = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (strpos(trim($line), '#') === 0) {
+                continue;
+            }
+
+            if (strpos($line, '=') !== false) {
+                [$key, $value] = explode('=', $line, 2);
+                $key = trim($key);
+                $value = trim($value);
+
+                if (!getenv($key)) {
+                    putenv("{$key}={$value}");
+                }
             }
         }
     }
@@ -416,5 +420,41 @@ $router = new App\Core\Router();
 require __DIR__ . '/../routes/web.php';
 require __DIR__ . '/../routes/api.php';
 
+// โหลด modules (ส่วนเสริม)
+(new App\Core\ModuleManager())->registerEnabled($router);
+
+// ===== Global middleware (ก่อน routing) =====
+$request = new App\Core\Request();
+
+$globalMiddleware = [
+    App\Middleware\SecurityHeadersMiddleware::class,
+    App\Middleware\MaintenanceMiddleware::class,
+    App\Middleware\LoggingMiddleware::class,
+];
+
+$uri = $_SERVER['REQUEST_URI'] ?? '';
+$isApiRequest = strpos($uri, '/api/') === 0;
+
+if ($isApiRequest) {
+    // API defaults
+    array_unshift($globalMiddleware, App\Middleware\CorsMiddleware::class);
+    $globalMiddleware[] = App\Middleware\RateLimitMiddleware::class;
+}
+
+foreach ($globalMiddleware as $middlewareClass) {
+    $middleware = new $middlewareClass();
+
+    $result = $middleware->handle($request);
+
+    if ($result instanceof App\Core\Response) {
+        $result->withHeaders($request->getResponseHeaders(), false)->send();
+        exit;
+    }
+
+    if ($result === false) {
+        exit;
+    }
+}
+
 // ส่งคำขอ (ข้อผิดพลาดจะถูกจัดการโดย global handlers)
-$router->dispatch();
+$router->dispatch($request);

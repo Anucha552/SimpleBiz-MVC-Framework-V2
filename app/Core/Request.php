@@ -52,6 +52,18 @@ class Request
     private ?array $json = null;
 
     /**
+     * Response headers ที่ middleware ต้องการแนบไปกับ response สุดท้าย
+     *
+     * @var array<string, string>
+     */
+    private array $responseHeaders = [];
+
+    /**
+     * Correlation ID for this request.
+     */
+    private string $requestId;
+
+    /**
      * สร้างอินสแตนซ์ Request ใหม่
      */
     public function __construct()
@@ -62,10 +74,69 @@ class Request
         $this->files = $_FILES ?? [];
         $this->cookies = $_COOKIE ?? [];
 
+        $this->requestId = $this->initRequestId();
+        // Always expose request id to the client
+        $this->setResponseHeader('X-Request-Id', $this->requestId);
+        // Make it available to legacy code/loggers that read from $_SERVER
+        if (!isset($_SERVER['HTTP_X_REQUEST_ID'])) {
+            $_SERVER['HTTP_X_REQUEST_ID'] = $this->requestId;
+        }
+
         // ตรวจสอบว่ามีข้อมูล JSON หรือไม่
         if ($this->isJson()) {
             $this->json = json_decode(file_get_contents('php://input'), true) ?? [];
         }
+    }
+
+    public function getRequestId(): string
+    {
+        return $this->requestId;
+    }
+
+    private function initRequestId(): string
+    {
+        $candidate = $this->server['HTTP_X_REQUEST_ID'] ?? $this->server['HTTP_X_CORRELATION_ID'] ?? null;
+        if (is_string($candidate)) {
+            $candidate = trim($candidate);
+            // allow common ID formats; avoid logging/control chars
+            if ($candidate !== '' && strlen($candidate) <= 128 && preg_match('/^[A-Za-z0-9._\-]+$/', $candidate) === 1) {
+                return $candidate;
+            }
+        }
+
+        return bin2hex(random_bytes(16));
+    }
+
+    /**
+     * เพิ่ม/อัปเดต header สำหรับ response สุดท้าย
+     */
+    public function setResponseHeader(string $name, string $value): self
+    {
+        $this->responseHeaders[$name] = $value;
+        return $this;
+    }
+
+    /**
+     * เพิ่ม headers หลายตัวสำหรับ response สุดท้าย
+     *
+     * @param array<string, string> $headers
+     */
+    public function addResponseHeaders(array $headers): self
+    {
+        foreach ($headers as $name => $value) {
+            $this->responseHeaders[(string) $name] = (string) $value;
+        }
+        return $this;
+    }
+
+    /**
+     * ดึง response headers ที่ถูกสะสมไว้
+     *
+     * @return array<string, string>
+     */
+    public function getResponseHeaders(): array
+    {
+        return $this->responseHeaders;
     }
 
     /**

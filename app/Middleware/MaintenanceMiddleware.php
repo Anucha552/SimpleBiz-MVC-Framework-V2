@@ -32,6 +32,7 @@ namespace App\Middleware;
 
 use App\Core\Middleware;
 use App\Core\Logger;
+use App\Core\Response;
 
 class MaintenanceMiddleware extends Middleware
 {
@@ -77,9 +78,9 @@ class MaintenanceMiddleware extends Middleware
     /**
      * จัดการโหมดปิดปรุงระบบ
      * 
-     * @return bool True เพื่อดำเนินการต่อ, false เพื่อหยุด
+        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-    public function handle(): bool
+        public function handle(?\App\Core\Request $request = null): bool|Response
     {
         // ตรวจสอบว่าเปิด maintenance mode หรือไม่
         if (!$this->isMaintenanceMode()) {
@@ -98,9 +99,7 @@ class MaintenanceMiddleware extends Middleware
         ]);
 
         // แสดงหน้า maintenance
-        $this->displayMaintenancePage();
-
-        return false; // หยุดการประมวลผล
+        return $this->displayMaintenancePage();
     }
 
     /**
@@ -163,7 +162,7 @@ class MaintenanceMiddleware extends Middleware
     /**
      * แสดงหน้า maintenance
      */
-    private function displayMaintenancePage(): void
+    private function displayMaintenancePage(): Response
     {
         // โหลดข้อมูล maintenance
         $maintenanceData = $this->getMaintenanceData();
@@ -174,24 +173,20 @@ class MaintenanceMiddleware extends Middleware
 
         if ($isApiRequest) {
             // คืนค่า JSON สำหรับ API
-            http_response_code(503);
-            header('Content-Type: application/json');
-            header('Retry-After: 3600'); // ลองใหม่ใน 1 ชั่วโมง
-            
-            echo json_encode([
-                'success' => false,
-                'message' => $maintenanceData['message'],
-                'retry_after' => $maintenanceData['retry_after'] ?? null,
-            ]);
+            $retryAfter = 3600;
+            $meta = [];
+            if (isset($maintenanceData['retry_after'])) {
+                $meta['retry_after'] = $maintenanceData['retry_after'];
+            }
+
+            return Response::apiError($maintenanceData['message'], [], 503, $meta)
+                ->withHeader('Retry-After', (string) $retryAfter);
         } else {
             // แสดงหน้า HTML
-            http_response_code(503);
-            header('Retry-After: 3600');
-            
-            echo $this->getMaintenanceHTML($maintenanceData);
+            $retryAfter = 3600;
+            return Response::html($this->getMaintenanceHTML($maintenanceData), 503)
+                ->withHeader('Retry-After', (string) $retryAfter);
         }
-
-        exit;
     }
 
     /**

@@ -26,6 +26,8 @@
 
 namespace App\Helpers;
 
+use App\Core\Response;
+
 class ResponseHelper
 {
     /**
@@ -36,9 +38,9 @@ class ResponseHelper
      * @param array $meta ข้อมูลเมตา (ไม่บังคับ) เช่น pagination
      * @param int $statusCode รหัสสถานะ HTTP
      */
-    public static function success($data = null, string $message = 'Success', array $meta = [], int $statusCode = 200): void
+    public static function success($data = null, string $message = 'Success', array $meta = [], int $statusCode = 200): Response
     {
-        self::send(true, $data, $message, [], $meta, $statusCode);
+        return Response::apiSuccess($data, $message, $meta, $statusCode);
     }
 
     /**
@@ -48,9 +50,9 @@ class ResponseHelper
      * @param array $errors อาร์เรย์รายละเอียดข้อผิดพลาด
      * @param int $statusCode รหัสสถานะ HTTP
      */
-    public static function error(string $message, array $errors = [], int $statusCode = 400): void
+    public static function error(string $message, array $errors = [], int $statusCode = 400): Response
     {
-        self::send(false, null, $message, $errors, [], $statusCode);
+        return Response::apiError($message, $errors, $statusCode);
     }
 
     /**
@@ -59,18 +61,17 @@ class ResponseHelper
      * @param mixed $data ข้อมูลทรัพยากรที่สร้างขึ้น
      * @param string $message ข้อความสำเร็จ
      */
-    public static function created($data, string $message = 'Resource created'): void
+    public static function created($data, string $message = 'Resource created'): Response
     {
-        self::success($data, $message, [], 201);
+        return self::success($data, $message, [], 201);
     }
 
     /**
      * ส่งการตอบกลับไม่มีเนื้อหา (204)
      */
-    public static function noContent(): void
+    public static function noContent(): Response
     {
-        http_response_code(204);
-        exit;
+        return Response::noContent();
     }
 
     /**
@@ -78,9 +79,9 @@ class ResponseHelper
      * 
      * @param string $message ข้อความข้อผิดพลาด
      */
-    public static function notFound(string $message = 'Resource not found'): void
+    public static function notFound(string $message = 'Resource not found'): Response
     {
-        self::error($message, [], 404);
+        return self::error($message, [], 404);
     }
 
     /**
@@ -88,9 +89,9 @@ class ResponseHelper
      * 
      * @param string $message ข้อความข้อผิดพลาด
      */
-    public static function unauthorized(string $message = 'Authentication required'): void
+    public static function unauthorized(string $message = 'Authentication required'): Response
     {
-        self::error($message, [], 401);
+        return self::error($message, [], 401);
     }
 
     /**
@@ -98,9 +99,9 @@ class ResponseHelper
      * 
      * @param string $message ข้อความข้อผิดพลาด
      */
-    public static function forbidden(string $message = 'Access denied'): void
+    public static function forbidden(string $message = 'Access denied'): Response
     {
-        self::error($message, [], 403);
+        return self::error($message, [], 403);
     }
 
     /**
@@ -109,9 +110,9 @@ class ResponseHelper
      * @param array $errors ข้อผิดพลาดการตรวจสอบ
      * @param string $message ข้อความข้อผิดพลาด
      */
-    public static function validationError(array $errors, string $message = 'Validation failed'): void
+    public static function validationError(array $errors, string $message = 'Validation failed'): Response
     {
-        self::error($message, $errors, 422);
+        return self::error($message, $errors, 422);
     }
 
     /**
@@ -119,9 +120,9 @@ class ResponseHelper
      * 
      * @param string $message ข้อความข้อผิดพลาด
      */
-    public static function serverError(string $message = 'Internal server error'): void
+    public static function serverError(string $message = 'Internal server error'): Response
     {
-        self::error($message, [], 500);
+        return self::error($message, [], 500);
     }
 
     /**
@@ -134,37 +135,7 @@ class ResponseHelper
      * @param array $meta ข้อมูลเมตา
      * @param int $statusCode รหัสสถานะ HTTP
      */
-    private static function send(
-        bool $success,
-        $data,
-        string $message,
-        array $errors,
-        array $meta,
-        int $statusCode
-    ): void {
-        http_response_code($statusCode);
-        header('Content-Type: application/json');
-
-        $response = [
-            'success' => $success,
-            'message' => $message,
-        ];
-
-        if ($data !== null) {
-            $response['data'] = $data;
-        }
-
-        if (!empty($errors)) {
-            $response['errors'] = $errors;
-        }
-
-        if (!empty($meta)) {
-            $response['meta'] = $meta;
-        }
-
-        echo json_encode($response, JSON_PRETTY_PRINT);
-        exit;
-    }
+    // send() ถูกแทนที่ด้วย Response::apiSuccess/apiError เพื่อให้มาตรฐานเดียวกันทั้งระบบ
 
     /**
      * ส่งการตอบกลับแบบแบ่งหน้า
@@ -181,7 +152,7 @@ class ResponseHelper
         int $perPage,
         int $total,
         string $message = 'Data retrieved'
-    ): void {
+    ): Response {
         $totalPages = ceil($total / $perPage);
 
         $meta = [
@@ -194,6 +165,6 @@ class ResponseHelper
             ],
         ];
 
-        self::success($data, $message, $meta);
+        return self::success($data, $message, $meta);
     }
 }
