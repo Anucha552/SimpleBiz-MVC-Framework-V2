@@ -160,12 +160,15 @@ class Router
         [$controllerClass, $methodName] = explode('@', $route['controller']);
         
         // สร้างอินสแตนซ์ตัวควบคุม
+        // ตรวจสอบว่าคลาสตัวควบคุมมีอยู่
         if (!class_exists($controllerClass)) {
             throw new \Exception("Controller {$controllerClass} not found");
         }
-
+        
+        // สร้างอินสแตนซ์ตัวควบคุม
         $controller = new $controllerClass();
 
+        // ตรวจสอบว่าเมธอดมีอยู่ในตัวควบคุม
         if (!method_exists($controller, $methodName)) {
             throw new \Exception("Method {$methodName} not found in {$controllerClass}");
         }
@@ -181,15 +184,16 @@ class Router
             }
         }
 
-        // เรียกเมธอดของตัวควบคุมพร้อมพารามิเตอร์
+        // เรียกเมธอดของตัวควบคุมพร้อมพารามิเตอร์ที่สร้างขึ้นใน Controller
         $result = call_user_func_array([$controller, $methodName], $params);
-
+        
         // รองรับ controller ที่ return Response หรือ string (ไม่บังคับ)
         if ($result instanceof Response) {
             $result->withHeaders($request->getResponseHeaders(), false)->send();
             return;
         }
 
+        // รองรับกรณีที่ controller คืนค่าเป็นสตริง (HTML)
         if (is_string($result) && $result !== '') {
             Response::html($result)
                 ->withHeaders($request->getResponseHeaders(), false)

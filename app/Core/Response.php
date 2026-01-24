@@ -81,6 +81,7 @@ class Response
             'errors' => [],
         ];
 
+        // เพิ่ม meta ถ้ามี
         if (!empty($meta)) {
             $payload['meta'] = $meta;
         }

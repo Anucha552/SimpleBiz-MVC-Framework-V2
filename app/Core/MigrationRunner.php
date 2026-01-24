@@ -70,7 +70,7 @@ class MigrationRunner
         $pending = $this->getPendingMigrations();
         
         if (empty($pending)) {
-            return ['message' => 'Nothing to migrate.', 'ran' => []];
+            return ['message' => 'ไม่มี migrations ที่ต้องรัน', 'ran' => []];
         }
         
         $batch = $this->getNextBatchNumber();

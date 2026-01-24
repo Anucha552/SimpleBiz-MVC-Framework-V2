@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Controllers\Api\V1;
+namespace App\Controllers\Api;
 
 use App\Core\Controller;
 use App\Core\Response;
 
 /**
- * SystemController (API v1)
+ * ApiController (API v1)
  *
  * Endpoints that are safe to expose publicly for monitoring.
  */
-class SystemController extends Controller
+class ApiController extends Controller
 {
     /**
      * GET /api/health
@@ -24,7 +24,7 @@ class SystemController extends Controller
     }
 
     /**
-     * GET /api/v1/ping
+     * GET /api/ping
      */
     public function ping(): Response
     {

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Web;
 
 use App\Core\Controller;
 use App\Core\ErrorHandler;
@@ -11,7 +11,7 @@ use App\Core\Response;
  * 
  * Controller สำหรับจัดการหน้าแรกของแอปพลิเคชัน
  */
-class HomeController extends Controller
+class WebController extends Controller
 {
     /**
      * แสดงหน้าต้อนรับ
@@ -98,7 +98,7 @@ class HomeController extends Controller
     public function phpinfo()
     {
         // ตรวจสอบว่าอยู่ใน development mode หรือไม่
-        $config = require __DIR__ . '/../../config/app.php';
+        $config = require __DIR__ . '/../../../config/app.php';
         
         if (($config['env'] ?? 'production') === 'production') {
             return ErrorHandler::response(403, 'PHP Info is disabled in production mode.');
@@ -108,6 +108,6 @@ class HomeController extends Controller
         phpinfo();
         $html = ob_get_clean();
 
-        return Response::html($html ?: '');
+        return Response::html($html ?: ''); 
     }
 }

@@ -1,60 +1,35 @@
 <?php
 /**
- * เส้นทาง API (เวอร์ชัน 1)
+ * เส้นทาง API 
  * 
- * จุดประสงค์: จุดเชื่อมต่อ RESTful API (การตอบกลับแบบ JSON)
- * เส้นทางหลัก: /api/v1
+ * จุดประสงค์: กำหนดเส้นทางของเว็บแอปพลิเคชัน (การตอบกลับแบบ JSON)
  * 
- * รูปแบบการตอบกลับ:
- * {
- *   "success": true|false,
- *   "data": {...},
- *   "message": "...",
- *   "errors": [...]
- * }
+ * การกำหนดเส้นทาง:
+ * $router->get('/path', $apiBasePath . 'Controller@method', [Middleware::class]);
  * 
- * การยืนยันตัวตน:
- * - จุดเชื่อมต่อส่วนใหญ่ต้องมีการยืนยันตัวตนผู้ใช้ (session)
- * - จุดเชื่อมต่อที่ละเอียดอ่อนต้องมี API key
+* เมธอดที่ใช้ได้:
+ * - get()    - คำขอ GET
+ * - post()   - คำขอ POST
+ * - put()    - คำขอ PUT
+ * - delete() - คำขอ DELETE
  * 
- * Middleware:
- * - AuthMiddleware: ตรวจสอบ session ของผู้ใช้
- * - ApiKeyMiddleware: ตรวจสอบ API key
+ * พารามิเตอร์ของเส้นทาง:
+ * ใช้ {param} สำหรับส่วนที่เปลี่ยนแปลงได้
+ * ตัวอย่าง: /products/{id} จับคู่กับ /products/123
  * 
- * เมธอด HTTP:
- * - GET: ดึงข้อมูล
- * - POST: สร้างทรัพยากรใหม่
- * - PUT: อัปเดตทรัพยากรที่มีอยู่
- * - DELETE: ลบทรัพยากร
  */
 
 use App\Core\Router;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\ApiKeyMiddleware;
 
+// กำหนดตัวแปร Path เริ่มต้นสำหรับ API 
+$apiBasePath = 'App\\Controllers\\Api\\';
+
 // ===================================
-// API Routes
+// เส้นทาง API Routes
 // ===================================
 
-// System/Health endpoints (public)
-$router->get('/api/health', 'App\\Controllers\\Api\\V1\\SystemController@health');
-$router->get('/api/v1/ping', 'App\\Controllers\\Api\\V1\\SystemController@ping');
-// 
-// คุณสามารถเพิ่ม API routes ใหม่ที่นี่
-// ตัวอย่าง:
-//
-// Public API (ไม่ต้อง auth):
-// $router->get('/api/v1/posts', 'App\Controllers\Api\V1\PostApiController@index');
-// $router->get('/api/v1/posts/{id}', 'App\Controllers\Api\V1\PostApiController@show');
-//
-// Protected API (ต้อง auth):
-// $router->post('/api/v1/posts', 'App\Controllers\Api\V1\PostApiController@create', [AuthMiddleware::class]);
-// $router->put('/api/v1/posts/{id}', 'App\Controllers\Api\V1\PostApiController@update', [AuthMiddleware::class]);
-// $router->delete('/api/v1/posts/{id}', 'App\Controllers\Api\V1\PostApiController@delete', [AuthMiddleware::class]);
-//
-// API with API Key:
-// $router->post('/api/v1/sensitive', 'App\Controllers\Api\V1\DataController@create', [
-//     AuthMiddleware::class,
-//     ApiKeyMiddleware::class,
-// ]);
-//
+$router->get('/api/health', $apiBasePath . 'ApiController@health');
+$router->get('/api/ping', $apiBasePath . 'ApiController@ping');
+$router->get('/api/test', $apiBasePath . 'testController@index');
