@@ -28,14 +28,6 @@ $webBasePath = 'App\\Controllers\\Web\\';
 // เส้นทาง Web Routes
 // ===================================
 
-// หน้าแรก - Welcome Page
-
 $router->get('/', $webBasePath . 'WebController@index');
-
-// ตัวอย่างการใช้งาน Assets
 $router->get('/assets-demo', $webBasePath . 'WebController@assetsDemo');
-
-// PHP Info (สำหรับ development เท่านั้น)
 $router->get('/phpinfo', $webBasePath . 'WebController@phpinfo');
-
-$router->get('/test', $webBasePath . 'testController@index');

@@ -4,6 +4,7 @@
 # วางไฟล์นี้ในโฟลเดอร์รากของโปรเจค
 
 <IfModule mod_rewrite.c>
+    # เปิดใช้งาน mod_rewrite
     RewriteEngine On
     RewriteBase /SimpleBiz-MVC-Framework-V2/
     

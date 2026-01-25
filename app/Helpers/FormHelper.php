@@ -9,12 +9,15 @@ class FormHelper
     /**
      * Read a flash message (available on the next request).
      */
+
+    // ฟังก์ชันอ่านข้อความแฟลช (ใช้ได้ในคำขอถัดไป)
     public static function flash(string $key, $default = null)
     {
         Session::start();
         return Session::getFlash($key, $default);
     }
 
+    // ฟังก์ชันตรวจสอบว่ามีข้อความแฟลชหรือไม่
     public static function hasFlash(string $key): bool
     {
         Session::start();

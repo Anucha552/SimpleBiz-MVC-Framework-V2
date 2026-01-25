@@ -81,7 +81,7 @@ class WebController extends Controller
             ]
         ];
         
-        $this->view('welcome', $data);
+       $this->view('welcome', $data);
     }
     
     /**

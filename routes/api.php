@@ -32,4 +32,3 @@ $apiBasePath = 'App\\Controllers\\Api\\';
 
 $router->get('/api/health', $apiBasePath . 'ApiController@health');
 $router->get('/api/ping', $apiBasePath . 'ApiController@ping');
-$router->get('/api/test', $apiBasePath . 'testController@index');

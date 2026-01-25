@@ -40,12 +40,13 @@ if (!file_exists($autoloadPath)) {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" type="image/png" href="assets/img/logo.png">
         <title>Setup Required - SimpleBiz MVC Framework</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #667eea;
                 color: #333;
                 min-height: 100vh;
                 display: flex;
@@ -60,17 +61,6 @@ if (!file_exists($autoloadPath)) {
                 max-width: 600px;
                 width: 100%;
                 padding: 40px;
-            }
-            .icon {
-                width: 80px;
-                height: 80px;
-                margin: 0 auto 20px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 40px;
             }
             h1 {
                 color: #667eea;
@@ -105,21 +95,6 @@ if (!file_exists($autoloadPath)) {
                 margin-top: 10px;
                 font-size: 14px;
             }
-            .docs {
-                background: #d1ecf1;
-                border-left: 4px solid #17a2b8;
-                padding: 20px;
-                border-radius: 4px;
-            }
-            .docs-title {
-                font-weight: bold;
-                color: #0c5460;
-                margin-bottom: 10px;
-            }
-            .docs-links {
-                color: #0c5460;
-                line-height: 2;
-            }
             a {
                 color: #667eea;
                 text-decoration: none;
@@ -132,36 +107,17 @@ if (!file_exists($autoloadPath)) {
     </head>
     <body>
         <div class="container">
-            <div class="icon">⚠️</div>
+            
             <h1>Setup Required</h1>
             
             <div class="error">
                 <div class="error-title">Composer Dependencies ยังไม่ได้ติดตั้ง</div>
                 <div class="error-message">
                     ไม่พบไฟล์ <strong>vendor/autoload.php</strong><br>
-                    กรุณารันคำสั่งใดคำสั่งหนึ่งด้านล่างนี้:
+                    กรุณารันคำสั่งใดคำสั่ง
                 </div>
                 <div class="command">php console setup</div>
                 <div style="color: #856404; font-size: 13px; margin-top: 8px;">
-                    แนะนำ: ตั้งค่าโปรเจกต์ครบถ้วนอัตโนมัติ
-                </div>
-                <div style="color: #856404; margin: 15px 0 8px; font-size: 14px;">หรือ</div>
-                <div class="command">composer install</div>
-                <div style="color: #856404; font-size: 13px; margin-top: 8px;">
-                    ติดตั้งแค่ dependencies
-                </div>
-            </div>
-
-            <div class="docs">
-                <div class="docs-title">📚 อ่านเอกสารเพิ่มเติม</div>
-                <div class="docs-links">
-                    → <a href="https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2/blob/main/docs/QUICK_START.md" target="_blank">
-                        คู่มือเริ่มต้นใช้งาน (Quick Start)
-                    </a><br>
-                    → <a href="https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2/blob/main/docs/SETUP_COMMAND.md" target="_blank">
-                        รายละเอียดคำสั่ง setup
-                    </a>
-                </div>
             </div>
         </div>
     </body>
@@ -187,12 +143,13 @@ if (!file_exists($envPath)) {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" type="image/png" href="assets/img/logo.png">
         <title>Setup Required - SimpleBiz MVC Framework</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #667eea;
                 color: #333;
                 min-height: 100vh;
                 display: flex;
@@ -207,17 +164,6 @@ if (!file_exists($envPath)) {
                 max-width: 600px;
                 width: 100%;
                 padding: 40px;
-            }
-            .icon {
-                width: 80px;
-                height: 80px;
-                margin: 0 auto 20px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 40px;
             }
             h1 {
                 color: #667eea;
@@ -252,21 +198,6 @@ if (!file_exists($envPath)) {
                 margin-top: 10px;
                 font-size: 14px;
             }
-            .docs {
-                background: #d1ecf1;
-                border-left: 4px solid #17a2b8;
-                padding: 20px;
-                border-radius: 4px;
-            }
-            .docs-title {
-                font-weight: bold;
-                color: #0c5460;
-                margin-bottom: 10px;
-            }
-            .docs-links {
-                color: #0c5460;
-                line-height: 2;
-            }
             a {
                 color: #667eea;
                 text-decoration: none;
@@ -279,36 +210,16 @@ if (!file_exists($envPath)) {
     </head>
     <body>
         <div class="container">
-            <div class="icon">⚙️</div>
             <h1>Setup Required</h1>
             
             <div class="error">
                 <div class="error-title">ไม่พบไฟล์ .env</div>
                 <div class="error-message">
                     ไฟล์ <strong>.env</strong> ยังไม่ได้สร้าง<br>
-                    กรุณารันคำสั่งใดคำสั่งหนึ่งด้านล่างนี้:
+                    กรุณารันคำสั่งใดคำสั่ง
                 </div>
                 <div class="command">php console setup</div>
                 <div style="color: #856404; font-size: 13px; margin-top: 8px;">
-                    แนะนำ: ตั้งค่าโปรเจกต์ครบถ้วนอัตโนมัติ (สร้าง .env พร้อม APP_KEY)
-                </div>
-                <div style="color: #856404; margin: 15px 0 8px; font-size: 14px;">หรือ</div>
-                <div class="command">cp .env.example .env</div>
-                <div style="color: #856404; font-size: 13px; margin-top: 8px;">
-                    คัดลอกไฟล์ .env.example (แล้วแก้ไข database และ APP_KEY)
-                </div>
-            </div>
-
-            <div class="docs">
-                <div class="docs-title">📚 อ่านเอกสารเพิ่มเติม</div>
-                <div class="docs-links">
-                    → <a href="https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2/blob/main/docs/QUICK_START.md" target="_blank">
-                        คู่มือเริ่มต้นใช้งาน (Quick Start)
-                    </a><br>
-                    → <a href="https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2/blob/main/docs/ENVIRONMENTS.md" target="_blank">
-                        การตั้งค่า Environment Variables
-                    </a>
-                </div>
             </div>
         </div>
     </body>
@@ -320,7 +231,7 @@ if (!file_exists($envPath)) {
 // โหลดตัวแปรสภาพแวดล้อมจากไฟล์ .env
 if (file_exists($envPath)) {
     // Prefer vlucas/phpdotenv (รองรับ quotes/spacing ได้ดีกว่า)
-    if (class_exists(\Dotenv\Dotenv::class)) {
+    if (class_exists(\Dotenv\Dotenv::class)) { 
         $dotenv = \Dotenv\Dotenv::createImmutable(dirname(__DIR__));
         $dotenv->safeLoad();
     } else {
@@ -363,7 +274,7 @@ date_default_timezone_set($config['timezone']);
 $logger = new App\Core\Logger();
 
 set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
-    // Respect error_reporting; ignore suppressed errors
+    // หากข้อผิดพลาดถูกปิดใช้งานโดยการตั้งค่า error_reporting ปัจจุบัน ให้ข้ามไป
     if (!(error_reporting() & $severity)) {
         return false;
     }
@@ -371,6 +282,7 @@ set_error_handler(static function (int $severity, string $message, string $file,
     throw new \ErrorException($message, 0, $severity, $file, $line);
 });
 
+// จัดการข้อยกเว้นที่ไม่ได้จับ
 set_exception_handler(static function (\Throwable $e) use ($config, $logger): void {
     $logger->error('application.exception', [
         'type' => get_class($e),
@@ -387,17 +299,22 @@ set_exception_handler(static function (\Throwable $e) use ($config, $logger): vo
     App\Core\ErrorHandler::serverError($message);
 });
 
+// จัดการข้อผิดพลาดร้ายแรงก่อนปิดโปรแกรม
 register_shutdown_function(static function () use ($config, $logger): void {
-    $error = error_get_last();
+    $error = error_get_last(); // ดึงข้อผิดพลาดล่าสุดจาก shutdown function
+    
+    // ถ้าไม่มีข้อผิดพลาด ให้คืนค่า
     if (!$error) {
         return;
     }
 
+    // ตรวจสอบว่าข้อผิดพลาดเป็นประเภทร้ายแรงหรือไม่
     $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
     if (!in_array($error['type'] ?? 0, $fatalTypes, true)) {
         return;
     }
 
+    // บันทึกข้อผิดพลาดร้ายแรงในล็อก
     $logger->error('application.fatal', [
         'type' => $error['type'] ?? null,
         'message' => $error['message'] ?? '',
@@ -405,6 +322,7 @@ register_shutdown_function(static function () use ($config, $logger): void {
         'line' => $error['line'] ?? 0,
     ]);
 
+    // แสดงหน้าข้อผิดพลาดทั่วไป
     $message = '';
     if (($config['env'] ?? 'development') !== 'production') {
         $message = ($error['message'] ?? '') . ' in ' . ($error['file'] ?? '') . ':' . ($error['line'] ?? 0);
@@ -426,21 +344,25 @@ require __DIR__ . '/../routes/api.php';
 // ===== Global middleware (ก่อน routing) =====
 $request = new App\Core\Request();
 
+// กำหนด middleware ทั่วไป
 $globalMiddleware = [
-    App\Middleware\SecurityHeadersMiddleware::class,
-    App\Middleware\MaintenanceMiddleware::class,
-    App\Middleware\LoggingMiddleware::class,
+    App\Middleware\SecurityHeadersMiddleware::class, // ตั้งค่า HTTP security headers
+    App\Middleware\MaintenanceMiddleware::class, // ตรวจสอบสถานะการปิดปรับปรุงระบบ
+    App\Middleware\LoggingMiddleware::class, // บันทึกคำขอเข้า
 ];
 
+// เพิ่ม middleware เฉพาะสำหรับคำขอ API
 $uri = $_SERVER['REQUEST_URI'] ?? '';
 $isApiRequest = strpos($uri, '/api/') === 0;
 
+// ตรวจสอบถ้าเป็นคำขอ API
 if ($isApiRequest) {
     // API defaults
-    array_unshift($globalMiddleware, App\Middleware\CorsMiddleware::class);
-    $globalMiddleware[] = App\Middleware\RateLimitMiddleware::class;
+    array_unshift($globalMiddleware, App\Middleware\CorsMiddleware::class); // ตั้งค่า CORS สำหรับ API
+    $globalMiddleware[] = App\Middleware\RateLimitMiddleware::class; // จำกัดอัตราคำขอ API
 }
 
+// เรียกใช้ global middleware
 foreach ($globalMiddleware as $middlewareClass) {
     $middleware = new $middlewareClass();
 
