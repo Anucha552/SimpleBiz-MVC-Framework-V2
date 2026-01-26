@@ -99,7 +99,7 @@ class CorsMiddleware extends Middleware
         $this->logger = new Logger();
 
         // โหลด allowed origins จาก config ถ้ามี
-        $configOrigins = getenv('CORS_ALLOWED_ORIGINS');
+        $configOrigins = \env('CORS_ALLOWED_ORIGINS');
         if ($configOrigins) {
             $this->allowedOrigins = array_merge(
                 $this->allowedOrigins,

@@ -68,7 +68,7 @@ class Session
             // In CLI/testing, PHPUnit may have already written output (progress dots),
             // which makes session_start() fail. For tests, emulate session storage
             // using the in-memory $_SESSION array.
-            $isTesting = (getenv('APP_ENV') === 'testing');
+            $isTesting = (\env('APP_ENV') === 'testing');
             if (PHP_SAPI === 'cli' || $isTesting) {
                 if (!isset($_SESSION) || !is_array($_SESSION)) {
                     $_SESSION = [];

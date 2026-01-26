@@ -64,15 +64,15 @@ class Mail
     public function __construct()
     {
         // โหลดค่าคอนฟิกจาก environment
-        $this->from = getenv('MAIL_FROM_ADDRESS') ?: 'noreply@simplebiz.local';
-        $this->fromName = getenv('MAIL_FROM_NAME') ?: 'SimpleBiz MVC';
+        $this->from = \env('MAIL_FROM_ADDRESS') ?: 'noreply@simplebiz.local';
+        $this->fromName = \env('MAIL_FROM_NAME') ?: 'SimpleBiz MVC';
         
         $this->config = [
-            'host' => getenv('MAIL_HOST') ?: 'localhost',
-            'port' => getenv('MAIL_PORT') ?: 587,
-            'username' => getenv('MAIL_USERNAME') ?: '',
-            'password' => getenv('MAIL_PASSWORD') ?: '',
-            'encryption' => getenv('MAIL_ENCRYPTION') ?: 'tls',
+            'host' => \env('MAIL_HOST') ?: 'localhost',
+            'port' => \env('MAIL_PORT') ?: 587,
+            'username' => \env('MAIL_USERNAME') ?: '',
+            'password' => \env('MAIL_PASSWORD') ?: '',
+            'encryption' => \env('MAIL_ENCRYPTION') ?: 'tls',
         ];
     }
 

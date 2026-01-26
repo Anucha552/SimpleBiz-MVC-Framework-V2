@@ -68,7 +68,7 @@ class MaintenanceMiddleware extends Middleware
         $this->maintenanceFile = $basePath . '/storage/maintenance.json';
 
         // โหลด allowed IPs จาก config
-        $configIPs = getenv('MAINTENANCE_ALLOWED_IPS');
+        $configIPs = \env('MAINTENANCE_ALLOWED_IPS');
         if ($configIPs) {
             $ips = explode(',', $configIPs);
             $this->allowedIPs = array_merge($this->allowedIPs, array_map('trim', $ips));
@@ -110,7 +110,7 @@ class MaintenanceMiddleware extends Middleware
     private function isMaintenanceMode(): bool
     {
         // ตรวจสอบจาก environment variable
-        if (getenv('MAINTENANCE_MODE') === 'true') {
+        if (\env('MAINTENANCE_MODE') === 'true') {
             return true;
         }
 

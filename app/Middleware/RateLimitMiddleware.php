@@ -31,12 +31,13 @@ use App\Core\Middleware;
 use App\Core\Logger;
 use App\Core\Cache;
 use App\Core\Response;
+use App\Core\Session;
 
 class RateLimitMiddleware extends Middleware
 {
     private Logger $logger;
     private Cache $cache;
-
+    private Session $session;
     // การกำหนดค่าเริ่มต้น - สามารถปรับแต่งได้
     private int $maxRequests = 60;      // คำขอสูงสุดต่อ window
     private int $windowSeconds = 60;    // 1 นาที
@@ -66,9 +67,7 @@ class RateLimitMiddleware extends Middleware
         } catch (\Exception $e) {
             $this->useCache = false;
             // ถ้า Cache ไม่สามารถใช้ได้ ใช้ Session แทน
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
+            Session::start();
         }
     }
 
@@ -161,11 +160,10 @@ class RateLimitMiddleware extends Middleware
                 return json_decode($data, true);
             }
         } else {
-            if (!isset($_SESSION['rate_limits'])) {
-                $_SESSION['rate_limits'] = [];
-            }
-            if (isset($_SESSION['rate_limits'][$identifier])) {
-                return $_SESSION['rate_limits'][$identifier];
+            Session::start();
+            $all = Session::get('rate_limits', []);
+            if (isset($all[$identifier])) {
+                return $all[$identifier];
             }
         }
 
@@ -196,10 +194,10 @@ class RateLimitMiddleware extends Middleware
             $this->cache->set($key, json_encode($data), $this->windowSeconds);
         } else {
             // บันทึกใน Session
-            if (!isset($_SESSION['rate_limits'])) {
-                $_SESSION['rate_limits'] = [];
-            }
-            $_SESSION['rate_limits'][$identifier] = $data;
+            Session::start();
+            $all = Session::get('rate_limits', []);
+            $all[$identifier] = $data;
+            Session::set('rate_limits', $all);
         }
     }
 

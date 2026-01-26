@@ -1,7 +1,7 @@
 <?php
-// Minimal layout for unit testing
+/** Layout for tests: exposes markers used by ViewTest */
 ?>
-LAYOUT-BEGIN
-TITLE:<?= $this->yieldSection('title') ?>
-CONTENT:<?= trim(strip_tags($this->yieldSection('content'))) ?>
-LAYOUT-END
+<div>LAYOUT-BEGIN</div>
+<div>TITLE:<?= $this->yieldSection('title') ?></div>
+<div>CONTENT:<?= strip_tags($this->yieldSection('content')) ?></div>
+<div>LAYOUT-END</div>

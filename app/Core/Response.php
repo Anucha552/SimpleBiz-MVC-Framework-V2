@@ -250,7 +250,19 @@ class Response
             }
 
             foreach ($this->cookies as $cookie) {
-                setcookie($cookie['name'], $cookie['value'], $cookie['options']);
+                $options = $cookie['options'] ?? [];
+                if (is_array($options) && defined('PHP_VERSION_ID') && PHP_VERSION_ID >= 70300) {
+                    // PHP 7.3+ supports passing options array
+                    setcookie($cookie['name'], $cookie['value'], $options);
+                } else {
+                    // Backward compatible setcookie call
+                    $expires = $options['expires'] ?? 0;
+                    $path = $options['path'] ?? '/';
+                    $domain = $options['domain'] ?? '';
+                    $secure = $options['secure'] ?? false;
+                    $httponly = $options['httponly'] ?? false;
+                    setcookie($cookie['name'], $cookie['value'], $expires, $path, $domain, $secure, $httponly);
+                }
             }
         }
 

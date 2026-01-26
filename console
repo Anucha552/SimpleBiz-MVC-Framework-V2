@@ -133,6 +133,7 @@ class Console
             'config:cache' => 'cacheConfig',
             'view:cache' => 'cacheViews',
             'log:clear' => 'clearLogs',
+            'log:show' => 'showLogs',
             'log:tail' => 'tailLogs',
             'down' => 'enableMaintenanceMode',
             'up' => 'disableMaintenanceMode',
@@ -198,11 +199,24 @@ class Console
             }
             
             $this->info("รันคำสั่ง 'php console help' เพื่อดูรายการคำสั่งที่มี \n");
+            
             exit(1);
         }
         
         $method = $this->commands[$command];
-        $this->$method($args);
+
+        // Dispatch: call with $args only if the target method accepts parameters.
+        try {
+            $ref = new \ReflectionMethod($this, $method);
+            if ($ref->getNumberOfParameters() > 0) {
+                $this->$method($args);
+            } else {
+                $this->$method();
+            }
+        } catch (\ReflectionException $e) {
+            $this->error("Internal error dispatching command: " . $e->getMessage());
+            exit(1);
+        }
     }
     
     private function checkEnvironment(array $args): void
@@ -593,6 +607,10 @@ class Console
         // 17. เปลี่ยนชื่อโฟลเดอร์โปรเจค (ถ้าผู้ใช้เลือก)
         // ต้องทำท้ายสุดเท่านั้น เพราะโค้ดส่วนใหญ่ใช้ __DIR__ ในการอ้าง path
         if ($shouldRenameFolder) {
+            // ก่อนเปลี่ยนชื่อ: อัปเดต APP_URL และไฟล์ .htaccess ให้สอดคล้องกับชื่อโปรเจคใหม่
+            $this->updateAppUrlForRename($currentFolderName, $projectName);
+            $this->updateRootHtaccessForRename($currentFolderName, $projectName);
+
             $parentDir = dirname($currentFolderPath);
             $newFolderPath = $parentDir . DIRECTORY_SEPARATOR . $projectName;
 
@@ -681,6 +699,74 @@ class Console
         file_put_contents($envFile, $content);
         
         $this->success("  [OK] สร้าง APP_KEY แล้ว");
+    }
+
+    /**
+     * อัปเดต APP_URL ในไฟล์ .env เมื่อเปลี่ยนชื่อโฟลเดอร์โปรเจค
+     * จะพยายามแทนที่ชื่อโฟลเดอร์ใน APP_URL หากพบ หรือถ้าเป็น localhost จะต่อพาธใหม่
+     */
+    private function updateAppUrlForRename(string $oldFolder, string $newFolder): void
+    {
+        $envFile = __DIR__ . '/.env';
+
+        if (!file_exists($envFile)) {
+            return;
+        }
+
+        $content = file_get_contents($envFile);
+
+        if (!preg_match('/^APP_URL=(.*)$/m', $content, $m)) {
+            return;
+        }
+
+        $appUrlRaw = trim($m[1]);
+        $appUrl = trim($appUrlRaw, " \t\n\r\"'");
+
+        // ถ้ามีชื่อโฟลเดอร์เดิมอยู่ใน URL ให้แทนที่ด้วยชื่อใหม่
+        if (strpos($appUrl, $oldFolder) !== false) {
+            $newUrl = str_replace($oldFolder, $newFolder, $appUrl);
+        } else {
+            // ถ้าเป็น localhost หรือ 127.x ให้ต่อพาธใหม่
+            if (strpos($appUrl, 'localhost') !== false || strpos($appUrl, '127.') === 0) {
+                $newUrl = rtrim($appUrl, '/') . '/' . $newFolder;
+            } else {
+                // ไม่เปลี่ยนแปลงสำหรับ URL ที่เป็นโดเมนเต็ม
+                $newUrl = $appUrl;
+            }
+        }
+
+        if ($newUrl !== $appUrl) {
+            $content = preg_replace('/^APP_URL=.*$/m', 'APP_URL=' . $newUrl, $content);
+            file_put_contents($envFile, $content);
+            $this->success("  [OK] อัปเดต APP_URL ใน .env เป็น {$newUrl}");
+        }
+    }
+
+    /**
+     * อัปเดต root .htaccess ให้แทนที่ชื่อโฟลเดอร์เก่าด้วยชื่อใหม่ (ถ้ามี)
+     */
+    private function updateRootHtaccessForRename(string $oldFolder, string $newFolder): void
+    {
+        $htaccess = __DIR__ . '/.htaccess';
+
+        if (!file_exists($htaccess)) {
+            return;
+        }
+
+        $content = file_get_contents($htaccess);
+
+        // แทนที่ทั้งรูปแบบ /old/ และ occurrences ภายในบรรทัด RewriteBase
+        $replacements = [
+            '/' . $oldFolder . '/' => '/' . $newFolder . '/',
+            $oldFolder . '/' => $newFolder . '/',
+        ];
+
+        $newContent = str_replace(array_keys($replacements), array_values($replacements), $content);
+
+        if ($newContent !== $content) {
+            file_put_contents($htaccess, $newContent);
+            $this->success("  [OK] อัปเดตไฟล์ .htaccess ที่รากโปรเจคให้ใช้ชื่อโฟลเดอร์ใหม่");
+        }
     }
     
     private function updateReadme(string $projectName, string $appName, string $description): void
@@ -952,11 +1038,12 @@ EOT;
             $steps = !empty($args) && is_numeric($args[0]) ? (int) $args[0] : 1;
             
             $this->info("กำลังย้อนกลับ $steps batch(es)...");
-            echo Color::WHITE . "-------------------" . Color::RESET . "\n";
+            echo Color::WHITE . "──────────────────────────────────────────────────" . Color::RESET . "\n";
             
             $result = $runner->rollback($steps);
             echo "\n";
             $this->success($result['message']);
+            echo "\n";
             
         } catch (\Exception $e) {
             echo "\n";
@@ -1003,14 +1090,16 @@ EOT;
             }
             
             $this->info("กำลัง refresh database...");
-            echo Color::WHITE . "-------------------" . Color::RESET . "\n";
+            echo Color::WHITE . "──────────────────────────────────────────────────" . Color::RESET . "\n";
             
             $result = $runner->fresh();
             echo "\n";
             $this->success($result['message']);
+            echo "\n";
             
         } catch (\Exception $e) {
             $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            echo "\n";
             exit(1);
         }
     }
@@ -1505,7 +1594,7 @@ PHP;
             }
             
             $this->success("สร้าง {$type} Test สำเร็จ: tests/{$type}/{$name}.php");
-            $this->info("\nรันคำสั่งนี้เพื่อทดสอบ:");
+            $this->info("รันคำสั่งนี้เพื่อทดสอบ:");
             $this->info("  php console test tests/{$type}/{$name}.php");
             $this->info("  php console test --filter {$name}");
         } catch (\Exception $e) {
@@ -1833,13 +1922,17 @@ PHP;
         // Logs & Maintenance
         echo Color::YELLOW . "━━━ Logs และ Maintenance ━━━\n" . Color::RESET;
         echo Color::GREEN . "  log:clear" . Color::RESET . "\n";
-        echo Color::WHITE . "    ลบไฟล์ log ทั้งหมด\n";
-        echo Color::CYAN . "    ตัวอย่าง: php console log:clear\n" . Color::RESET . "\n";
+        echo Color::WHITE . "    ลบไฟล์ log ทั้งหมด หรือระบุชื่อ/pattern ของไฟล์ที่จะลบ\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console log:clear\n" . Color::CYAN . "             php console log:clear --force app.log 2026-01-20.log\n" . Color::CYAN . "             php console log:clear '*.log'\n" . Color::RESET . "\n";
+        echo Color::GREEN . "  log:show" . Color::RESET . "\n";
+        echo Color::WHITE . "    แสดงรายการไฟล์ในโฟลเดอร์ storage/logs (ชื่อ, ขนาด, เวลาแก้ไข)\n";
+        echo Color::CYAN . "    ตัวอย่าง: php console log:show\n" . Color::RESET . "\n";
         
-        echo Color::GREEN . "  log:tail " . Color::CYAN . "[lines]" . Color::RESET . "\n";
-        echo Color::WHITE . "    แสดง log บรรทัดล่าสุด (default: 50)\n";
+        echo Color::GREEN . "  log:tail " . Color::CYAN . "[lines] [filename]" . Color::RESET . "\n";
+        echo Color::WHITE . "    แสดง log บรรทัดล่าสุด (default: 50). ระบุชื่อไฟล์เพื่อดูไฟล์อื่น เช่น app.log หรือ YYYY-MM-DD.log\n";
         echo Color::CYAN . "    ตัวอย่าง: php console log:tail\n";
-        echo "              php console log:tail 100\n" . Color::RESET . "\n";
+        echo "              php console log:tail 100\n";
+        echo "              php console log:tail 200 app.log\n" . Color::RESET . "\n";
         
         echo Color::GREEN . "  down" . Color::RESET . "\n";
         echo Color::WHITE . "    เปิด Maintenance Mode\n";
@@ -1867,6 +1960,17 @@ PHP;
         echo Color::CYAN . "    ตัวอย่าง: php console test:feature\n";
         echo "              php console t:f\n" . Color::RESET . "\n";
         
+        // Aliases
+        echo Color::YELLOW . "━━━ Aliases (shortcuts) ━━━\n" . Color::RESET;
+        echo Color::GREEN . "  m, m:r, m:f, m:reset, m:refresh, m:s, m:c" . Color::RESET . "\n";
+        echo Color::WHITE . "    ย่อคำสั่ง migration (migrate, rollback, fresh, reset, refresh, status, create)\n" . Color::RESET . "\n";
+        echo Color::GREEN . "  s" . Color::RESET . "\n";
+        echo Color::WHITE . "    ย่อคำสั่ง serve (php console s)\n" . Color::RESET . "\n";
+        echo Color::GREEN . "  c:c" . Color::RESET . "\n";
+        echo Color::WHITE . "    ย่อคำสั่ง cache:clear\n" . Color::RESET . "\n";
+        echo Color::GREEN . "  t, t:u, t:f" . Color::RESET . "\n";
+        echo Color::WHITE . "    ย่อคำสั่ง test (all/unit/feature)\n" . Color::RESET . "\n";
+
         echo Color::CYAN . "[DOCS] อ่านเอกสารเพิ่มเติมได้ที่โฟลเดอร์: docs/\n" . Color::RESET;
         echo "\n";
     }
@@ -1967,10 +2071,10 @@ PHP;
     
     private function getMiddlewareTemplate(string $name): string
     {
-        return <<<PHP
+        $template = <<<'PHP'
 <?php
 /**
- * {$name}
+ * __NAME__
  * 
  * จุดประสงค์: [อธิบายหน้าที่ของ middleware]
  */
@@ -1978,23 +2082,28 @@ PHP;
 namespace App\Middleware;
 
 use App\Core\Middleware;
+use App\Core\Request;
+use App\Core\Response;
 
-class {$name} extends Middleware
+class __NAME__ extends Middleware
 {
     /**
      * จัดการคำขอ
      * 
-     * @return bool คืนค่า true เพื่อดำเนินการต่อ, false เพื่อหยุด
+     * @param Request|null $request
+     * @return bool|Response คืนค่า true เพื่อดำเนินการต่อ, false เพื่อหยุด หรือ Response เพื่อส่งกลับทันที
      */
-    public function handle(): bool
+    public function handle(?Request $request = null): bool|Response
     {
         // TODO: Implement middleware logic
-        
+
         return true;
     }
 }
 
 PHP;
+
+        return str_replace('__NAME__', $name, $template);
     }
     
     private function getSeederTemplate(string $name): string
@@ -2563,17 +2672,59 @@ PHP;
     private function clearLogs(array $args = []): void
     {
         $logDir = __DIR__ . '/storage/logs';
-        $logFiles = glob($logDir . '/*.log'); 
-        
-        if (empty($logFiles)) {
-            $this->warning("ไม่พบ log files");
+
+        if (!is_dir($logDir)) {
+            $this->warning("โฟลเดอร์ logs ไม่พบ: {$logDir}");
             return;
         }
-        
-        echo Color::YELLOW . "[WARNING] จะลบ log files ทั้งหมด (" . count($logFiles) . " files)" . Color::RESET . "\n\n";
-        
+
+        // Remove --force flag from args if present
+        $force = $this->hasForceFlag($args);
+        $cleanArgs = array_values(array_filter($args, function($a) {
+            return trim($a) !== '--force';
+        }));
+
+        $filesToDelete = [];
+
+        if (empty($cleanArgs)) {
+            // Default: all .log files
+            $filesToDelete = glob($logDir . '/*.log');
+        } else {
+            // Each arg can be a filename or a glob pattern
+            foreach ($cleanArgs as $pattern) {
+                // If pattern contains glob chars, use as-is
+                if (strpbrk($pattern, '*?[]') !== false) {
+                    $matches = glob($logDir . '/' . $pattern);
+                    if ($matches) {
+                        $filesToDelete = array_merge($filesToDelete, $matches);
+                    }
+                } else {
+                    // Treat as filename
+                    $path = $logDir . '/' . basename($pattern);
+                    if (file_exists($path)) {
+                        $filesToDelete[] = $path;
+                    }
+                }
+            }
+        }
+
+        // Unique and existing files
+        $filesToDelete = array_values(array_unique($filesToDelete));
+        $filesToDelete = array_filter($filesToDelete, 'is_file');
+
+        if (empty($filesToDelete)) {
+            $this->warning("ไม่พบไฟล์ที่จะลบ");
+            return;
+        }
+
+        echo Color::YELLOW . "[WARNING] จะลบไฟล์ต่อไปนี้ (" . count($filesToDelete) . " files)" . Color::RESET . "\n\n";
+        foreach ($filesToDelete as $f) {
+            echo "  - " . basename($f) . "\n";
+        }
+        echo "\n";
+
         // Require confirmation unless --force flag
-        if (!$this->hasForceFlag($args)) {
+        if (!$force) {
             if (!$this->confirm("คุณแน่ใจหรือไม่?")) {
                 $this->warning("ยกเลิกการทำงาน");
                 echo "\n";
@@ -2581,43 +2732,56 @@ PHP;
             }
             echo "\n";
         }
-        
+
         $this->info("กำลังลบ log files...");
-        
+
         $count = 0;
-        foreach ($logFiles as $file) {
-            if (unlink($file)) {
+        foreach ($filesToDelete as $file) {
+            if (@unlink($file)) {
                 $count++;
                 $this->info("  - ลบแล้ว: " . basename($file));
+            } else {
+                $this->warning("  - ลบไม่สำเร็จ: " . basename($file));
             }
         }
-        
+
         $this->success("ลบ log files เรียบร้อยแล้ว ({$count} files) \n");
     }
     
     private function tailLogs(array $args = []): void
     {
         $lines = isset($args[0]) && is_numeric($args[0]) ? (int)$args[0] : 50;
-        $logFile = __DIR__ . '/storage/logs/app.log';
-        
+
+        $logDir = __DIR__ . '/storage/logs';
+        $todayFile = $logDir . '/' . date('Y-m-d') . '.log';
+
+        // ถ้ามีอาร์กิวเมนต์ตัวที่สอง ให้ใช้เป็นชื่อไฟล์ (เช่น: app.log หรือ 2026-01-26.log)
+        if (isset($args[1]) && trim($args[1]) !== '') {
+            $requested = basename($args[1]);
+            $logFile = $logDir . '/' . $requested;
+        } else {
+            // เลือกไฟล์ของวันนี้ก่อน ถ้าไม่มี ให้ fallback ไปที่ app.log
+            $logFile = file_exists($todayFile) ? $todayFile : ($logDir . '/app.log');
+        }
+
         if (!file_exists($logFile)) {
-            $this->error("ไม่พบไฟล์ log: app.log");
+            $this->error("ไม่พบไฟล์ log: " . basename($logFile));
             return;
         }
-        
-        $this->info("กำลังแสดง {$lines} บรรทัดล่าสุดจาก app.log...");
+
+        $this->info("กำลังแสดง {$lines} บรรทัดล่าสุดจาก " . basename($logFile) . "...");
         echo str_repeat("─", 80) . "\n";
-        
+
         // Read last N lines
         $file = new SplFileObject($logFile, 'r');
         $file->seek(PHP_INT_MAX);
         $lastLine = $file->key();
         $startLine = max(0, $lastLine - $lines);
-        
+
         $file->seek($startLine);
         while (!$file->eof()) {
             $line = $file->current();
-            
+
             // Color code based on log level
             if (strpos($line, 'ERROR') !== false) {
                 echo Color::RED . $line . Color::RESET;
@@ -2628,12 +2792,65 @@ PHP;
             } else {
                 echo $line;
             }
-            
+
             $file->next();
         }
-        
+
         echo str_repeat("─", 80) . "\n";
         $this->success("แสดง logs เรียบร้อยแล้ว");
+    }
+
+    /**
+     * แสดงรายการไฟล์ล็อกในโฟลเดอร์ storage/logs พร้อมขนาดและเวลาแก้ไข
+     */
+    private function showLogs(array $args = []): void
+    {
+        $logDir = __DIR__ . '/storage/logs';
+
+        if (!is_dir($logDir)) {
+            $this->error("โฟลเดอร์ logs ไม่พบ: {$logDir}");
+            return;
+        }
+
+        $files = glob($logDir . '/*');
+        if (!$files) {
+            $this->warning("ไม่พบไฟล์ในโฟลเดอร์ storage/logs");
+            return;
+        }
+
+        // Sort by mtime desc
+        usort($files, function($a, $b) {
+            return filemtime($b) <=> filemtime($a);
+        });
+
+        echo Color::CYAN . "\nFiles in storage/logs:\n" . Color::RESET;
+        printf("% -40s %12s %22s\n", "Filename", "Size", "Modified (local)");
+        echo str_repeat('─', 80) . "\n";
+
+        foreach ($files as $file) {
+            $basename = basename($file);
+            $size = is_file($file) ? filesize($file) : 0;
+            $mtime = filemtime($file);
+            $sizeHr = $this->humanFilesize($size);
+            $timeStr = $mtime ? date('Y-m-d H:i:s', $mtime) : 'unknown';
+
+            printf("%-40s %12s %22s\n", $basename, $sizeHr, $timeStr);
+        }
+
+        echo str_repeat('─', 80) . "\n";
+        $this->success("เสร็จสิ้น");
+    }
+
+    /**
+     * แปลงขนาดไฟล์เป็นสตริงที่อ่านง่าย
+     */
+    private function humanFilesize(int $bytes, int $decimals = 2): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $factor = $bytes > 0 ? floor((log($bytes) / log(1024))) : 0;
+        $factor = min($factor, count($units) - 1);
+        $size = $bytes / pow(1024, $factor);
+        return round($size, $decimals) . ' ' . $units[$factor];
     }
     
     // ==================== Maintenance Commands ====================

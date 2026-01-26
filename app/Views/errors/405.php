@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>405 - Method Not Allowed</title>
+    <?php use App\Helpers\UrlHelper; ?>
+	<link rel="icon" type="image/png" href="<?php echo UrlHelper::asset('assets/img/logo/logo.png'); ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
+            background: #43cea2;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -25,7 +27,7 @@
         .error-description { font-size: 16px; opacity: 0.9; margin-bottom: 30px; }
         .btn-home {
             background: white;
-            color: #185a9d;
+            color: black;
             padding: 12px 40px;
             border-radius: 50px;
             text-decoration: none;
@@ -37,7 +39,7 @@
         .btn-home:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            color: #185a9d;
+            color: #43cea2;
         }
     </style>
 </head>

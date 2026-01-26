@@ -92,7 +92,7 @@ class Database
             ]);
         } catch (PDOException $e) {
             // ในโหมดโปรดักชัน ให้บันทึกข้อผิดพลาดนี้แทนการแสดงผล
-            if (getenv('APP_ENV') === 'production') {
+            if (\env('APP_ENV') === 'production') {
                 error_log("Database connection failed: " . $e->getMessage());
                 throw new PDOException("Database connection failed");
             } else {

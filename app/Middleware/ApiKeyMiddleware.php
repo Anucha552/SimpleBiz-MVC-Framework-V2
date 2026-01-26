@@ -41,28 +41,34 @@ class ApiKeyMiddleware extends Middleware
 
     /**
      * API keys ที่ถูกต้อง
-     * 
-     * ในโปรดักชัน:
-     * - โหลดจากฐานข้อมูล
-     * - โหลดจากตัวแปรสภาพแวดล้อม
-     * - ใช้คีย์ที่เข้ารหัสแล้ว
-     * 
-     * ตัวอย่างคีย์สำหรับการสาธิต:
+     *
+     * ในโปรดักชัน: โหลดจากฐานข้อมูลหรือ environment (ไม่ควรมีคีย์ตัวอย่างในโค้ด)
      */
-    private array $validKeys = [
-        'demo-api-key-12345',
-        'test-key-67890',
-    ];
+    private array $validKeys = [];
 
     public function __construct()
     {
         $this->logger = new Logger();
 
         // โหลด API keys จากสภาพแวดล้อมถ้ามี
-        $envKey = getenv('API_KEY');
-        if ($envKey) {
-            $this->validKeys[] = $envKey;
+        // รองรับทั้งชื่อเดียว (`API_KEY`) หรือรายการคีย์คั่นด้วย comma (`API_KEYS`)
+        $keys = [];
+        $envList = \env('API_KEYS');
+        if ($envList) {
+            if (is_array($envList)) {
+                $keys = $envList;
+            } else {
+                $keys = array_map('trim', explode(',', (string)$envList));
+            }
         }
+
+        $envKey = \env('API_KEY');
+        if ($envKey) {
+            $keys[] = $envKey;
+        }
+
+        // กำจัดค่าว่างและค่าซ้ำ
+        $this->validKeys = array_values(array_filter(array_unique($keys)));
     }
 
     /**
@@ -72,8 +78,8 @@ class ApiKeyMiddleware extends Middleware
      */
         public function handle(?\App\Core\Request $request = null): bool|Response
     {
-        // รับ API key จาก header หรือ query string
-        $apiKey = $this->getApiKey();
+            // รับ API key จาก header หรือ query string (รองรับ Request wrapper ถ้ามี)
+            $apiKey = $this->getApiKey($request);
 
         if (!$apiKey) {
             $this->logger->security('api.missing_key', [
@@ -111,27 +117,42 @@ class ApiKeyMiddleware extends Middleware
      * 
      * @return string|null API key หรือ null
      */
-    private function getApiKey(): ?string
+    private function getApiKey(?\App\Core\Request $request = null): ?string
     {
-        // ตรวจสอบ X-API-Key header
-        $headers = getallheaders();
-        if (isset($headers['X-API-Key'])) {
-            return trim($headers['X-API-Key']);
-        }
+        // Prefer Request wrapper if provided
+        if ($request !== null) {
+            $headerKey = $request->header('X-API-Key');
+            if ($headerKey) {
+                return trim($headerKey);
+            }
 
-        // ตรวจสอบ Authorization Bearer header
-        if (isset($headers['Authorization'])) {
-            $auth = $headers['Authorization'];
-            if (preg_match('/^Bearer\s+(.+)$/i', $auth, $matches)) {
-                return trim($matches[1]);
+            $bearer = $request->bearerToken();
+            if ($bearer) {
+                return trim($bearer);
+            }
+
+            $queryKey = $request->get('api_key');
+            if ($queryKey) {
+                return trim($queryKey);
             }
         }
 
-        // ตรวจสอบ query parameter
-        if (isset($_GET['api_key'])) {
-            return trim($_GET['api_key']);
+        // Fallback to server globals
+        if (function_exists('getallheaders')) {
+            $headers = getallheaders();
+            if (isset($headers['X-API-Key'])) {
+                return trim($headers['X-API-Key']);
+            }
+            if (isset($headers['Authorization'])) {
+                $auth = $headers['Authorization'];
+                if (preg_match('/^Bearer\s+(.+)$/i', $auth, $matches)) {
+                    return trim($matches[1]);
+                }
+            }
         }
 
+        // Do NOT accept API key from query string (avoid leaking via Referer/logs)
+        // No API key found
         return null;
     }
 

@@ -19,11 +19,14 @@
  * - ใช้ตัวแปรสภาพแวดล้อมในสภาพแวดล้อมจริง
  */
 
+require_once __DIR__ . '/env.php';
+
 return [
-    'host' => getenv('DB_HOST') ?: 'localhost',
-    'port' => getenv('DB_PORT') ?: '3306',
-    'database' => getenv('DB_DATABASE') ?: 'simplebiz_mvc',
-    'username' => getenv('DB_USERNAME') ?: 'root',
-    'password' => getenv('DB_PASSWORD') ?: '',
-    'charset' => 'utf8mb4',
+    'connection' => env('DB_CONNECTION', 'mysql', 'string'),
+    'host' => env('DB_HOST', '127.0.0.1', 'string'),
+    'port' => env('DB_PORT', '3306', 'string'),
+    'database' => env('DB_DATABASE', 'simplebiz_mvc', 'string'),
+    'username' => env('DB_USERNAME', 'root', 'string'),
+    'password' => env('DB_PASSWORD', '', 'string'),
+    'charset' => env('DB_CHARSET', 'utf8mb4', 'string'),
 ];

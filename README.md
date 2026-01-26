@@ -1,403 +1,150 @@
 # SimpleBiz MVC Framework V2
 
-**เฟรมเวิร์ก MVC สำหรับระบบอีคอมเมิร์ซที่สะอาด ปลอดภัย และขยายได้ง่าย**
+**เฟรมเวิร์ก MVC ขนาดเล็ก-กลาง สำหรับพัฒนาเว็บแอปและ API แบบปลอดภัย และขยายได้ง่าย**
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-blue)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## 🎯 ภาพรวมโปรเจค
+## 🎯 ภาพรวม (สรุปปัจจุบัน)
 
-SimpleBiz MVC Framework V2 เป็นเฟรมเวิร์ก PHP แบบ Custom-built ที่ออกแบบมาเพื่อเป็น **ฐานรากสำหรับพัฒนาระบบอีคอมเมิร์ซ** โดยมุ่งเน้นไปที่:
+SimpleBiz MVC Framework V2 เป็นเฟรมเวิร์ก PHP แบบเรียบง่ายที่ให้โครงสร้าง MVC, routing, middleware และบริการหลัก (Core services) เพื่อเร่งการพัฒนาแอปเว็บหรือ API ขนาดเล็กถึงกลาง
 
-### 🏗️ สถาปัตยกรรม
-- **รูปแบบ MVC ที่ชัดเจน** - แยกส่วนการทำงานระหว่าง Models (ตรรกะธุรกิจ), Controllers (ประสานงาน), และ Views (การแสดงผล)
-- **PSR-4 Autoloading** - โครงสร้าง namespace มาตรฐาน
-- **Router ที่ยืดหยุ่น** - รองรับ dynamic routes, parameters, และ middleware
-- **Database Layer** - PDO singleton พร้อมการป้องกัน SQL Injection
+จุดเด่นสั้น ๆ:
+- โครงสร้าง MVC และ PSR-4 autoloading
+- Router ที่รองรับการกำหนด middleware ต่อ route
+- Core services เช่น `Database` (PDO), `Session`, `Logger`, `Cache`, `Mail`, `FileUpload`, `View`
+- ระบบโมดูล (`modules/`) เพื่อแยกฟีเจอร์เสริมเป็นหน่วย
+- คำสั่ง CLI ช่วยงานพัฒนา (migrate, seed, make:*, serve, test)
 
-### 🛒 ฟีเจอร์อีคอมเมิร์ซหลัก
-- **ระบบสินค้า** - จัดการสินค้า ราคา สต็อก และสถานะ
-- **ตะกร้าสินค้า** - เพิ่ม แก้ไข ลบสินค้าพร้อมการตรวจสอบความพร้อม
-- **ระบบคำสั่งซื้อ** - สร้างคำสั่งซื้อจากตะกร้า พร้อมการคำนวณราคาฝั่งเซิร์ฟเวอร์
-- **การจัดการสต็อก** - ระบบลดสต็อกแบบ atomic พร้อม optimistic locking
-- **การยืนยันตัวตน** - ลงทะเบียน เข้าสู่ระบบด้วย bcrypt hashing
-
-### 🔒 ความปลอดภัย
-- **PDO Prepared Statements** - ป้องกัน SQL Injection 100%
-- **Password Hashing** - bcrypt พร้อม automatic salt
-- **Server-side Price Validation** - ห้ามเชื่อถือราคาจากฝั่ง client
-- **Input Validation** - ตรวจสอบข้อมูลทุกประเภท
-- **Security Logging** - บันทึกเหตุการณ์สำคัญทั้งหมด
-
-### 🌐 RESTful API
-- **JSON Endpoints** - API สำหรับ Products, Cart, Orders
-- **Authentication** - Session-based authentication
-- **API Key Protection** - รักษาความปลอดภัย sensitive endpoints
-- **Versioned API** - `/api/v1` สำหรับการพัฒนาต่อเนื่อง
-
-### 📚 จุดเด่นเพื่อการเรียนรู้
-- **คอมเมนต์ภาษาไทยครบถ้วน** - อธิบายทุกส่วนของโค้ดอย่างละเอียด
-- **Best Practices** - ใช้มาตรฐานการเขียนโค้ด PHP สมัยใหม่
-- **Security-First Approach** - เน้นความปลอดภัยตั้งแต่เริ่มออกแบบ
-- **Clean Code** - โครงสร้างที่อ่านและดูแลรักษาง่าย
+หมายเหตุ: เอกสารและตัวอย่างฟีเจอร์บางส่วนใน README แบบเดิม (เช่น catalog/cart/orders) ถูกย้ายออกจาก README และถูกยืนยันอยู่ใน `docs/` แทน — README นี้เป็นสรุปและชี้ไปยังเอกสารเชิงลึก
 
 ---
 
-## ✅ ใช้เป็น Framework Base (สำหรับรับงาน)
+## ✅ ใช้เป็นฐานโปรเจกต์
+ถ้าจะใช้เป็น “base” สำหรับงาน ให้เริ่มจากเช็คลิสต์ขั้นต่ำที่ [docs/guides/BASELINE_CHECKLIST.md](docs/guides/BASELINE_CHECKLIST.md)
 
-ถ้าคุณตั้งใจใช้โปรเจกต์นี้เป็น “ฐานเริ่มงาน” แนะนำให้อ่านเช็คลิสต์ขั้นต่ำก่อนเริ่มงานจริง:
-- [docs/BASELINE_CHECKLIST.md](docs/BASELINE_CHECKLIST.md)
+ถ้าต้องการแยกฟีเจอร์เป็นโมดูล ดู [docs/modules/MODULES_GUIDE.md](docs/modules/MODULES_GUIDE.md)
 
-ถ้าคุณต้องการทำฟีเจอร์แบบ “ส่วนเสริม” แยกจาก core (เช่น Auth/Blog/Admin/Payments):
-- [docs/MODULES_GUIDE.md](docs/MODULES_GUIDE.md)
+---
 
-## 📋 โครงสร้างโปรเจค
+## 📋 โครงสร้างโปรเจกต์ (ย่อ)
 
 ```
-SimpleBiz-MVC-Framework-V2/
-├── app/
-│   ├── Controllers/      # จัดการ HTTP requests
-│   │   ├── Api/V1/      # API controllers
-│   │   └── Ecommerce/   # Web controllers
-│   ├── Core/            # Framework core classes
-│   ├── Helpers/         # Helper functions
-│   ├── Middleware/      # Request filtering
-│   └── Models/          # Business logic
-├── config/              # Configuration files
-├── database/
-│   └── migrations/      # SQL schema files
-├── public/              # Web root (index.php)
-├── routes/              # Route definitions
-└── storage/
-    └── logs/            # Application logs
+app/           # Controllers, Core classes, Helpers, Middleware, Models
+config/        # การตั้งค่า (app, database, modules)
+modules/       # โมดูลเสริม (Auth, HelloWorld, ...)
+public/        # เว็บรูท (index.php)
+routes/        # web.php, api.php
+database/      # migrations, seeders
+docs/          # เอกสารแยกตามหมวดหมู่ (overview, guides, modules, reference, security)
+storage/       # cache, logs, views
+vendor/        # Composer dependencies
 ```
 
 ---
 
-## 🚀 เริ่มต้นใช้งาน
+## 🚀 เริ่มใช้งาน (ย่อ)
 
-### ความต้องการระบบ (System Requirements)
-
-เลือกวิธีติดตั้งที่เหมาะกับคุณ:
-
-#### 🎯 **วิธีที่ 1: ใช้เครื่องมือเสริม (แนะนำสำหรับผู้เริ่มต้น)**
-
-ติดตั้งแพ็คเกจที่รวมทุกอย่างไว้แล้ว:
-
-**Windows:**
-- [Laravel Herd](https://herd.laravel.com/) ⭐ **แนะนำ!** - ใหม่ล่าสุด รวม PHP 8.3, MySQL, Composer, Nginx เร็วและใช้งานง่าย
-- [Laragon](https://laragon.org/) - ติดตั้งง่าย รวมทุกอย่าง
-- [XAMPP](https://www.apachefriends.org/) - รวม PHP 8.0+, MySQL, Apache พร้อม extensions ครบ
-
-**Mac:**
-- [Laravel Herd](https://herd.laravel.com/) ⭐ **แนะนำ!** - เร็วและเบา รวม PHP 8.3, MySQL, Composer
-- [MAMP](https://www.mamp.info/) - รวม PHP, MySQL, Apache
-- [Laragon](https://laragon.org/download/)
-
-**Linux:**
-- [Laragon](https://laragon.org/download/) - รองรับ Ubuntu/Debian
-
-**ข้อดีของ Herd:**
-- ✅ ใช้งานง่ายที่สุด - ติดตั้งครั้งเดียวใช้ได้เลย
-- ✅ รวม Composer ไว้แล้ว - ไม่ต้องติดตั้งแยก
-- ✅ เบาและเร็ว - ใช้ Nginx แทน Apache
-- ✅ รองรับ PHP หลายเวอร์ชัน - สลับได้ง่าย
-- ✅ MySQL + phpMyAdmin ในตัว
-
-**หลังติดตั้งเสร็จ:**
-- ถ้าใช้ **Herd**: พร้อมใช้งานเลย ไม่ต้องติดตั้งอะไรเพิ่ม ✅
-- ถ้าใช้ **XAMPP/Laragon/MAMP**: ต้องติดตั้ง [Composer](https://getcomposer.org/download/) เพิ่ม
-
-#### 🔧 **วิธีที่ 2: ติดตั้งแยกทีละตัว (สำหรับผู้ใช้ขั้นสูง)**
-
-ติดตั้งแต่ละส่วนด้วยตัวเอง:
-
-**1. PHP 8.0+** พร้อม Extensions ที่จำเป็น:
-   - `pdo_mysql` - เชื่อมต่อฐานข้อมูล
-   - `mbstring` - จัดการภาษาไทย/Unicode
-   - `json` - API และ JSON
-   - `openssl` - เข้ารหัสรหัสผ่าน
-   - `fileinfo` - ตรวจสอบไฟล์อัปโหลด
+1. Clone และติดตั้ง dependencies
 
 ```bash
-# ตรวจสอบ PHP และ Extensions
-php -v
-php -m | grep -E 'pdo|mbstring|json|openssl|fileinfo'
-```
-
-**2. MySQL 5.7+ หรือ MariaDB 10.3+**
-```bash
-# ตรวจสอบ
-mysql --version
-```
-
-**3. Composer**
-```bash
-# ตรวจสอบ
-composer --version
-```
-
-**4. Web Server** - Apache หรือ Nginx (หรือใช้ `php console serve`)
-
-<details>
-<summary><b>📦 คำสั่งติดตั้งตามระบบปฏิบัติการ (คลิกเพื่อดู)</b></summary>
-
-**Ubuntu/Debian:**
-```bash
-# ติดตั้ง PHP และ Extensions
-sudo apt update
-sudo apt install php8.1 php8.1-mysql php8.1-mbstring php8.1-json php8.1-curl
-
-# ติดตั้ง MySQL
-sudo apt install mysql-server
-
-# ติดตั้ง Composer
-curl -sS https://getcomposer.org/installer | php
-sudo mv composer.phar /usr/local/bin/composer
-```
-
-**CentOS/RHEL:**
-```bash
-sudo yum install php php-mysqlnd php-mbstring php-json
-sudo yum install mysql-server
-```
-
-**Mac (Homebrew):**
-```bash
-brew install php@8.1 mysql composer
-```
-
-**Windows:**
-- ดาวน์โหลด [PHP](https://windows.php.net/download/)
-- ดาวน์โหลด [MySQL](https://dev.mysql.com/downloads/installer/)
-- ดาวน์โหลด [Composer](https://getcomposer.org/download/)
-
-</details>
-
----
-
-### ✅ เช็คลิสต์ก่อนติดตั้ง Framework
-
-ตรวจสอบว่าติดตั้งครบแล้ว:
-- [ ] PHP 8.0+ (`php -v`)
-- [ ] PHP Extensions ครบถ้วน (`php -m`)
-- [ ] MySQL/MariaDB (`mysql --version`)
-- [ ] Composer (`composer --version`)
-
----
-
-### การติดตั้งอย่างรวดเร็ว
-
-#### วิธีที่ 1: ใช้คำสั่ง Setup (แนะนำ - เร็วที่สุด!)
-
-```bash
-# 1. Clone repository
 git clone https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2.git
 cd SimpleBiz-MVC-Framework-V2
-
-# 2. ติดตั้ง Composer dependencies
 composer install
-
-# 3. รันคำสั่ง setup (ตั้งค่าทุกอย่างอัตโนมัติ)
-php console setup
-# จะถามคำถาม: ชื่อโปรเจค, database, APP_KEY ฯลฯ
-
-# 4. สร้างฐานข้อมูล
-mysql -u root -p
-CREATE DATABASE your_database_name CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-exit;
-
-# 5. รัน migrations (สร้างตาราง)
-php console migrate
-
-# 6. รัน seeders - สร้างข้อมูลตัวอย่าง (optional)
-php console seed
-
-# 7. เริ่มเซิร์ฟเวอร์
-php console serve
 ```
 
-#### วิธีที่ 2: ตั้งค่าด้วยมือ
+2. คัดลอก `.env` และปรับค่า
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2.git
-cd SimpleBiz-MVC-Framework-V2
-
-# 2. ติดตั้ง Composer dependencies
-composer install
-
-# 3. สร้างไฟล์ .env จาก template
 cp .env.example .env
-
-# 4. แก้ไข .env - ตั้งค่า database และ APP_KEY
-nano .env
-# หรือใช้ text editor อื่นๆ
-
-# 5. สร้างฐานข้อมูล
-mysql -u root -p
-CREATE DATABASE your_database_name CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-exit;
-
-# 6. รัน migrations
-php console migrate
-
-# 7. รัน seeders (optional)
-php console seed
-
-# 8. เริ่มเซิร์ฟเวอร์
-php console serve
+# แก้ค่า DB, APP_ENV, APP_DEBUG เป็นต้น
 ```
 
-เข้าถึงได้ที่: **http://localhost:8000**
-
-**บัญชีทดสอบ (หลังรัน seeder):**
-- Username: `admin` หรือ Email: `admin@simplebiz.local`
-- Password: `password123`
-- Role: Administrator
-
----
-
-## 🛠️ คำสั่ง CLI ที่มีให้ใช้งาน
-
-Framework มาพร้อมกับระบบ CLI ที่ช่วยในการพัฒนา:
+3. สร้าง `APP_KEY` หรือรัน `php console setup`
 
 ```bash
-# รันเซิร์ฟเวอร์พัฒนา
-php console serve [host] [port]
+php -r "echo 'APP_KEY=' . bin2hex(random_bytes(16)) . PHP_EOL;" >> .env
+php console setup   # (optional) interactive setup
+```
 
-# Database
-php console migrate          # รัน migrations
-php console seed            # รัน seeders
+4. สร้างฐานข้อมูลและรัน migrations
 
-# สร้างไฟล์ใหม่
-php console make:controller ControllerName
-php console make:model ModelName
-php console make:middleware MiddlewareName
+```bash
+mysql -u root -p -e "CREATE DATABASE my_project CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+php console migrate
+```
 
-# เครื่องมืออื่นๆ
-php console cache:clear     # ลบ cache
-php console test           # รัน PHPUnit tests
-php console help           # แสดงความช่วยเหลือ
+5. รันเซิร์ฟเวอร์พัฒนา
+
+```bash
+php console serve
+# เข้า: http://localhost:8000
+```
+
+6. รันชุดทดสอบ (ถ้ามี)
+
+```bash
+./vendor/bin/phpunit --colors=always
 ```
 
 ---
 
-## 🎓 สำหรับใคร?
+## 🛠️ คำสั่ง CLI ที่มี (ย่อ)
 
-โปรเจคนี้เหมาะสำหรับ:
-
-✅ **นักพัฒนาที่ต้องการเรียนรู้** - ศึกษาการสร้างเฟรมเวิร์ก MVC จากศูนย์  
-✅ **โปรเจคขนาดเล็ก-กลาง-ใหญ่** - มีเครื่องมือครบสำหรับ production  
-✅ **ระบบอีคอมเมิร์ซแบบกำหนดเอง** - มีฐานรากพร้อมขยายตามต้องการ  
-✅ **การเรียนรู้ Security Best Practices** - ดูตัวอย่างการป้องกันช่องโหว่ต่างๆ  
-✅ **Production Ready** - มี Testing, Error Handling, CLI Tools ครบถ้วน
-
----
-
-## ✨ ฟีเจอร์ที่เพิ่งเพิ่มเข้ามา (v2.0)
-
-### Testing Infrastructure ✅
-- PHPUnit configuration
-- Unit & Feature tests
-- Test base class พร้อม helpers
-
-### CLI Commands ✅
-- Console command runner
-- Code generators (controller, model, middleware)
-- Database tools (migrate, seed)
-- Test runner
-
-### Error Handling ✅
-- Custom error pages (404, 403, 500, 503)
-- Error handler class
-- JSON error responses
-
-### Database Seeder ✅
-- Seeder base class
-- Category, User, Product seeders
-- ข้อมูลตัวอย่างพร้อมใช้
-
-### Email Service ✅
-- Mail class พร้อม template support
-- Welcome, Order Confirmation, Password Reset templates
-- SMTP configuration
-
-ดู [docs/CHANGELOG.md](docs/CHANGELOG.md) สำหรับรายละเอียดเพิ่มเติม
+```bash
+php console serve          # รันเซิร์ฟเวอร์
+php console migrate        # รัน migrations
+php console seed           # รัน seeders
+php console make:controller Name
+php console make:model Name
+php console make:middleware Name
+php console cache:clear
+php console test
+```
 
 ---
 
-## 📖 เอกสารเพิ่มเติม
+## 📖 เอกสารเพิ่มเติม (ดูในโฟลเดอร์ `docs/`)
 
-เอกสารครบถ้วนและอัพเดทล่าสุด (มกราคม 2026):
-
-### 📘 เอกสารสำหรับเริ่มต้น
-- [docs/QUICK_START.md](docs/QUICK_START.md) - เริ่มต้นใช้งาน 5 นาที
-- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - โครงสร้างโปรเจคแบบละเอียด
-- [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) - คำสั่ง CLI ทั้งหมด
-
-### 🔧 เอกสารทางเทคนิค
-- [docs/CORE_USAGE.md](docs/CORE_USAGE.md) - คู่มือ Core Classes ครบถ้วน (19 classes)
-- [docs/HELPERS_GUIDE.md](docs/HELPERS_GUIDE.md) - Helper Functions ทั้งหมด
-- [docs/MIDDLEWARE_GUIDE.md](docs/MIDDLEWARE_GUIDE.md) - Middleware ทั้งหมดพร้อมตัวอย่าง
-- [docs/MODELS_GUIDE.md](docs/MODELS_GUIDE.md) - Models ทั้งหมดและ Relationships
-- [docs/VIEWS_GUIDE.md](docs/VIEWS_GUIDE.md) - View Templates และ Layouts
-
-### 💾 เอกสารฐานข้อมูล
-- [docs/MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - Migration System แบบละเอียด
-- [docs/SEEDING_GUIDE.md](docs/SEEDING_GUIDE.md) - การสร้างข้อมูลตัวอย่าง
-- [database/migrations/](database/migrations/) - Database Schema Files
-
-### 🌐 เอกสาร API และ Testing
-- [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - API Documentation ครบถ้วน
-- [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) - PHPUnit Testing Guide
-
-### 🚀 เอกสาร Deployment และ Production
-- [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - คู่มือ Deploy แบบละเอียด
-- [docs/SECURITY_HARDENING.md](docs/SECURITY_HARDENING.md) - Security Checklist สำหรับ Production
-- [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) - ตารางค่า Environment Variables
-
-### 📋 เอกสารอ้างอิง
-- [docs/SERVICES_GUIDE.md](docs/SERVICES_GUIDE.md) - Mail, FileUpload, Cache, Logger
-- [docs/CHANGELOG.md](docs/CHANGELOG.md) - ประวัติการเปลี่ยนแปลง
-- [docs/USE_CASES.md](docs/USE_CASES.md) - ตัวอย่างการใช้งานจริง
-
-**หมายเหตุ:** เอกสารทั้งหมดได้รับการอัพเดทให้เป็นปัจจุบันในเดือนมกราคม 2026
+- Overview: `docs/overview/PROJECT_STRUCTURE.md`, `docs/overview/FRAMEWORK_CAPABILITIES.md`
+- Guides: `docs/guides/` (CLI, Helpers, Services, Middleware, Baseline checklist)
+- Modules: `docs/modules/` (Auth, HelloWorld)
+- Reference: `docs/reference/API_REFERENCE.md`, testing guides
+- Security & Deployment: `docs/security/SECURITY_HARDENING.md`, `docs/DEPLOYMENT_GUIDE.md`
 
 ---
 
-## 🧪 การทดสอบ
+## 🧪 Testing
 
-รัน tests ด้วยคำสั่ง:
+รันโดย:
+
 ```bash
 php console test
-# หรือ
+```
+
+หรือ
+
+```bash
 ./vendor/bin/phpunit
 ```
 
 ---
 
-## 🤝 การมีส่วนร่วม
+## 🤝 Contributing
 
-เป็นโปรเจคแบบเปิด สามารถ fork และปรับแต่งได้ตามต้องการ
+Fork, ปรับแก้ และส่ง PR ได้ตามปกติ — ดู `CONTRIBUTING.md` (ถ้ามี)
 
 ---
 
 ## 📄 ใบอนุญาต
 
-MIT License - ใช้งานได้อย่างอิสระทั้งโปรเจคส่วนตัวและเชิงพาณิชย์
+MIT License
 
 ---
 
-## ⚠️ ข้อจำกัดความรับผิด
-
-โปรเจคนี้เป็น **เฟรมเวิร์กเพื่อการศึกษาและพัฒนา** ไม่ใช่โซลูชันอีคอมเมิร์ซที่สมบูรณ์ ควรเพิ่มฟีเจอร์เพิ่มเติม เช่น:
-- ระบบชำระเงิน (Payment Gateway)
-- ระบบจัดส่ง
-- การจัดการผู้ใช้ขั้นสูง (roles, permissions)
-- การแจ้งเตือนทาง email
+ต้องการให้ผม: 1) เพิ่มตารางการอ้างอิงคำสั่ง `console` ที่สกัดจากไฟล์ `console` หรือ 2) รันการตรวจสอบลิงก์ในทุก `docs/` ตอนนี้เลย? 
 - การจัดการภาพสินค้า
 
 **ใช้ในสภาพแวดล้อมจริงด้วยความระมัดระวัง และปรับปรุงตามความต้องการด้านความปลอดภัย**
@@ -785,6 +532,10 @@ php -S localhost:8000 -t public
 ### ดู Logs
 
 ```bash
+# ดูไฟล์ล็อกของวันนี้ (แนะนำ)
+tail -f storage/logs/$(date +%Y-%m-%d).log
+
+# หรือถ้าต้องการดูไฟล์ทั่วไป (fallback)
 tail -f storage/logs/app.log
 ```
 

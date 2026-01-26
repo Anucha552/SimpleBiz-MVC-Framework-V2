@@ -6,31 +6,20 @@ use App\Core\Controller;
 use App\Core\Response;
 
 /**
- * ApiController (API v1)
+ * ApiController
  *
- * Endpoints that are safe to expose publicly for monitoring.
+ * Controller สำหรับจัดการหน้าแรกของแอปพลิเคชัน
  */
 class ApiController extends Controller
 {
     /**
-     * GET /api/health
+     * แสดงหน้า API ต้อนรับ
      */
-    public function health(): Response
+    public function index(): Response
     {
         return Response::apiSuccess([
-            'status' => 'ok',
-            'timestamp' => date('c'),
+            'message' => 'Welcome to the API',
         ], 'OK');
     }
 
-    /**
-     * GET /api/ping
-     */
-    public function ping(): Response
-    {
-        return Response::apiSuccess([
-            'pong' => true,
-            'timestamp' => date('c'),
-        ], 'PONG');
-    }
 }

@@ -143,9 +143,19 @@ class Auth
         Session::remove(self::SESSION_KEY);
         self::$user = null;
 
-        // ลบ cookie
+        // ลบ cookie (ใช้ options เดียวกับการตั้งค่าเพื่อให้แน่ใจว่าถูกลบ)
         if (isset($_COOKIE[self::REMEMBER_COOKIE])) {
-            setcookie(self::REMEMBER_COOKIE, '', time() - 3600, '/');
+            $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+            $cookieOptions = [
+                'expires' => time() - 3600,
+                'path' => '/',
+                'domain' => \env('APP_COOKIE_DOMAIN', '', 'string'),
+                'secure' => $secure,
+                'httponly' => true,
+                'samesite' => \env('REMEMBER_SAMESITE', 'Lax', 'string'),
+            ];
+
+            setcookie(self::REMEMBER_COOKIE, '', $cookieOptions);
             unset($_COOKIE[self::REMEMBER_COOKIE]);
         }
 
@@ -323,16 +333,18 @@ class Auth
             'id' => $userId
         ]);
 
-        // ตั้งค่า cookie
-        setcookie(
-            self::REMEMBER_COOKIE,
-            $userId . '|' . $token,
-            time() + self::REMEMBER_DURATION,
-            '/',
-            '',
-            isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-            true
-        );
+        // ตั้งค่า cookie โดยใช้ options array (รองรับ PHP 7.3+)
+        $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        $cookieOptions = [
+            'expires' => time() + self::REMEMBER_DURATION,
+            'path' => '/',
+            'domain' => \env('APP_COOKIE_DOMAIN', '', 'string'),
+            'secure' => $secure,
+            'httponly' => true,
+            'samesite' => \env('REMEMBER_SAMESITE', 'Lax', 'string'),
+        ];
+
+        setcookie(self::REMEMBER_COOKIE, $userId . '|' . $token, $cookieOptions);
     }
 
     /**

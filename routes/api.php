@@ -5,7 +5,7 @@
  * จุดประสงค์: กำหนดเส้นทางของเว็บแอปพลิเคชัน (การตอบกลับแบบ JSON)
  * 
  * การกำหนดเส้นทาง:
- * $router->get('/path', $apiBasePath . 'Controller@method', [Middleware::class]);
+ * $router->get('/api/path', $apiBasePath . 'Controller@method', [Middleware::class]);
  * 
 * เมธอดที่ใช้ได้:
  * - get()    - คำขอ GET
@@ -19,7 +19,6 @@
  * 
  */
 
-use App\Core\Router;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\ApiKeyMiddleware;
 
@@ -30,5 +29,4 @@ $apiBasePath = 'App\\Controllers\\Api\\';
 // เส้นทาง API Routes
 // ===================================
 
-$router->get('/api/health', $apiBasePath . 'ApiController@health');
-$router->get('/api/ping', $apiBasePath . 'ApiController@ping');
+$router->get('/api', $apiBasePath . 'ApiController@index');

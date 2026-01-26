@@ -33,6 +33,8 @@ use App\Core\Middleware;
 use App\Core\Logger;
 use App\Core\Database;
 use App\Core\Response;
+use App\Core\Auth;
+use App\Core\Session;
 use PDO;
 
 class RoleMiddleware extends Middleware
@@ -61,10 +63,8 @@ class RoleMiddleware extends Middleware
      */
     public function __construct($roles = [])
     {
-        // เริ่มเซสชันถ้ายังไม่ได้เริ่ม
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        // Ensure session via Session wrapper
+        Session::start();
 
         $this->logger = new Logger();
 
@@ -176,7 +176,7 @@ class RoleMiddleware extends Middleware
         }
 
         // เก็บ URL เดิมเพื่อกลับมาหลังเข้าสู่ระบบ
-        $_SESSION['redirect_after_login'] = $uri;
+        Session::set('redirect_after_login', $uri);
         return $this->redirect('/login');
     }
 
@@ -244,18 +244,15 @@ class RoleMiddleware extends Middleware
      */
     public static function userHasRole(string $role): bool
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        if (!isset($_SESSION['user_id'])) {
+        $userId = Auth::id();
+        if ($userId === null) {
             return false;
         }
 
         $db = Database::getInstance()->getConnection();
         $sql = "SELECT role FROM users WHERE id = :id LIMIT 1";
         $stmt = $db->prepare($sql);
-        $stmt->execute(['id' => $_SESSION['user_id']]);
+        $stmt->execute(['id' => $userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user) {

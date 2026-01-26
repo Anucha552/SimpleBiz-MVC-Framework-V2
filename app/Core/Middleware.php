@@ -43,8 +43,8 @@ abstract class Middleware
      */
     protected function isAuthenticated(): bool
     {
-        Session::start();
-        return Session::has('user_id');
+        // Delegate to Auth to ensure consistent session key handling
+        return Auth::check();
     }
 
     /**
@@ -54,15 +54,8 @@ abstract class Middleware
      */
     protected function getUserId(): ?int
     {
-        Session::start();
-        $id = Session::get('user_id');
-        if (is_int($id)) {
-            return $id;
-        }
-        if (is_numeric($id)) {
-            return (int) $id;
-        }
-        return null;
+        // Delegate to Auth to ensure consistent session key handling
+        return Auth::id();
     }
 
     /**

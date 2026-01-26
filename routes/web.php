@@ -18,7 +18,6 @@
  * ตัวอย่าง: /products/{id} จับคู่กับ /products/123
  */
 
-use App\Core\Router;
 use App\Middleware\AuthMiddleware;
 
 // กำหนดตัวแปร Path เริ่มต้นสำหรับ Web
@@ -29,5 +28,3 @@ $webBasePath = 'App\\Controllers\\Web\\';
 // ===================================
 
 $router->get('/', $webBasePath . 'WebController@index');
-$router->get('/assets-demo', $webBasePath . 'WebController@assetsDemo');
-$router->get('/phpinfo', $webBasePath . 'WebController@phpinfo');

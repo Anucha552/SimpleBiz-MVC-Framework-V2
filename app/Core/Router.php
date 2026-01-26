@@ -230,7 +230,10 @@ class Router
                 return [
                     'controller' => $route['controller'],
                     'middleware' => $route['middleware'],
+                    // Positional params for backward compatibility
                     'params' => array_values($params),
+                    // Named parameters available under 'namedParams'
+                    'namedParams' => $params,
                 ];
             }
         }

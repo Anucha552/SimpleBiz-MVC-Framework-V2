@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php use App\Helpers\UrlHelper; ?>
+	<link rel="icon" type="image/png" href="<?php echo UrlHelper::asset('assets/img/logo/logo.png'); ?>">
     <title>403 - ไม่มีสิทธิ์เข้าถึง</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            background: #fee140;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -35,7 +37,7 @@
         }
         .btn-home {
             background: white;
-            color: #fa709a;
+            color: black;
             padding: 12px 40px;
             border-radius: 50px;
             text-decoration: none;
@@ -47,7 +49,7 @@
         .btn-home:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            color: #fa709a;
+            color: #fee140;
         }
     </style>
 </head>

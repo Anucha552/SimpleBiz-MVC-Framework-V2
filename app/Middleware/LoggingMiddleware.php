@@ -67,10 +67,10 @@ class LoggingMiddleware extends Middleware
         $this->logBody = $logBody;
 
         // โหลดการตั้งค่าจาก config
-        if (getenv('LOG_DETAILED') === 'true') {
+        if (\env('LOG_DETAILED') === 'true') {
             $this->detailed = true;
         }
-        if (getenv('LOG_REQUEST_BODY') === 'true') {
+        if (\env('LOG_REQUEST_BODY') === 'true') {
             $this->logBody = true;
         }
     }

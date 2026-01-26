@@ -1,21 +1,20 @@
-# การตั้งค่า Apache สำหรับ SimpleBiz MVC Framework
-#
-# จุดประสงค์: เปลี่ยนเส้นทางคำขอทั้งหมดไปยัง public/index.php
-# วางไฟล์นี้ในโฟลเดอร์รากของโปรเจค
+# การตั้งค่า Apache สำหรับ SimpleBiz MVC Framework (root)
+# ปรับให้ไม่พึ่งชื่อโฟลเดอร์โปรเจคแบบตายตัว เพื่อรองรับการเปลี่ยนชื่อโฟลเดอร์
 
 <IfModule mod_rewrite.c>
-    # เปิดใช้งาน mod_rewrite
     RewriteEngine On
-    RewriteBase /SimpleBiz-MVC-Framework-V2/
-    
-    # ถ้าเข้าไปยัง public/ แล้ว ไม่ต้อง redirect ซ้ำ
-    RewriteCond %{REQUEST_URI} ^/SimpleBiz-MVC-Framework-V2/public/
-    RewriteRule ^(.*)$ - [L]
-    
-    # เปลี่ยนเส้นทางไปยังโฟลเดอร์ public
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^(.*)$ public/$1 [L]
+
+    # ถ้าคำขอชี้ไปยังไฟล์หรือโฟลเดอร์จริง ให้เสิร์ฟตรงๆ
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # ถ้า URI มี /public/ อยู่แล้ว (ติดตั้งใน subfolder) ให้ไม่ต้อง rewrite
+    RewriteCond %{REQUEST_URI} /public/ [NC]
+    RewriteRule ^ - [L]
+
+    # ส่งคำขอทั้งหมดที่เหลือไปยังโฟลเดอร์ public/
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
 </IfModule>
 
 # กำหนด index file

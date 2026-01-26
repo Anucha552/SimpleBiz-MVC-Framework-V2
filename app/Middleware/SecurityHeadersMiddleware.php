@@ -35,7 +35,7 @@ class SecurityHeadersMiddleware extends Middleware
         ];
 
         // Optional CSP (keep it lenient by default to avoid breaking projects)
-        $csp = getenv('SECURITY_CSP');
+        $csp = \env('SECURITY_CSP');
         if ($csp) {
             $headers['Content-Security-Policy'] = $csp;
         }
@@ -44,11 +44,11 @@ class SecurityHeadersMiddleware extends Middleware
         $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 
-        if ($isHttps && getenv('SECURITY_HSTS') === 'true') {
+        if ($isHttps && \env('SECURITY_HSTS') === 'true') {
             // 6 months by default
-            $maxAge = getenv('SECURITY_HSTS_MAX_AGE') ?: '15552000';
-            $includeSubDomains = getenv('SECURITY_HSTS_INCLUDE_SUBDOMAINS') === 'true' ? '; includeSubDomains' : '';
-            $preload = getenv('SECURITY_HSTS_PRELOAD') === 'true' ? '; preload' : '';
+            $maxAge = \env('SECURITY_HSTS_MAX_AGE') ?: '15552000';
+            $includeSubDomains = \env('SECURITY_HSTS_INCLUDE_SUBDOMAINS') === 'true' ? '; includeSubDomains' : '';
+            $preload = \env('SECURITY_HSTS_PRELOAD') === 'true' ? '; preload' : '';
             $headers['Strict-Transport-Security'] = 'max-age=' . $maxAge . $includeSubDomains . $preload;
         }
 

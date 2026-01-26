@@ -185,7 +185,11 @@ class MigrationRunner
     {
         echo "Dropping all tables...\n";
         $this->dropAllTables();
-        
+
+        // หลังจากลบตารางทั้งหมด จะต้องสร้างตารางสำหรับติดตาม migrations ขึ้นมาใหม่
+        // มิฉะนั้นคำสั่ง run() จะพยายามอ่านจากตารางที่ถูกลบแล้วและเกิดข้อผิดพลาด
+        $this->createMigrationsTable();
+
         echo "\nRunning migrations...\n";
         return $this->run();
     }

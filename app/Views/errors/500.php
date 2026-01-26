@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>500 - เกิดข้อผิดพลาด</title>
+    <?php use App\Helpers\UrlHelper; ?>
+	<link rel="icon" type="image/png" href="<?php echo UrlHelper::asset('assets/img/logo/logo.png'); ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: #f5576c;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -35,7 +37,7 @@
         }
         .btn-home {
             background: white;
-            color: #f5576c;
+            color: black;
             padding: 12px 40px;
             border-radius: 50px;
             text-decoration: none;
@@ -70,7 +72,7 @@
             ทีมงานได้รับแจ้งและกำลังแก้ไขปัญหา
         </div>
         
-        <?php if (isset($error) && getenv('APP_ENV') !== 'production'): ?>
+        <?php if (isset($error) && env('APP_ENV') !== 'production'): ?>
         <div class="error-details">
             <strong>Error Details (Development Mode):</strong><br>
             <?= htmlspecialchars($error) ?>

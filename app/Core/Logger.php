@@ -34,6 +34,15 @@ class Logger
      * เส้นทางไฟล์ล็อก
      */
     private string $logFile;
+    /**
+     * หากต้องการหมุนตามขนาด (bytes)
+     */
+    private int $maxFileSize;
+
+    /**
+     * จำนวนวันที่เก็บไฟล์ก่อนลบ (days)
+     */
+    private int $retentionDays;
 
     /**
      * สร้างอินสแตนซ์ logger
@@ -43,6 +52,10 @@ class Logger
     public function __construct(?string $logFile = null)
     {
         $this->logFile = $logFile ?? __DIR__ . '/../../storage/logs/app.log';
+        // ค่าเริ่มต้นจาก env ถ้ามี (หน่วยเป็น bytes สำหรับ MAX_LOG_SIZE)
+        $this->maxFileSize = (int) (getenv('MAX_LOG_SIZE') ?: 0); // 0 = ไม่ตรวจขนาด
+        // retention days (default 7)
+        $this->retentionDays = (int) (getenv('LOG_RETENTION_DAYS') ?: 7);
         
         // ตรวจสอบว่ามีไดเรกทอรีล็อกหรือไม่
         $logDir = dirname($this->logFile);
@@ -147,12 +160,96 @@ class Logger
             $requestId
         );
 
+        // ก่อนเขียน ให้ตรวจสอบการหมุนไฟล์
+        $this->maybeRotate();
+
         // เขียนลงไฟล์ล็อก
         file_put_contents($this->logFile, $logMessage, FILE_APPEND | LOCK_EX);
 
         // สำหรับเหตุการณ์ความปลอดภัยที่สำคัญ ให้บันทึกลงล็อกข้อผิดพลาด PHP ด้วย
         if ($level === 'SECURITY') {
             error_log("SECURITY EVENT: {$event} - " . json_encode($context));
+        }
+    }
+
+    /**
+     * ตรวจสอบว่าต้องหมุนไฟล์หรือไม่: หมุนตามวันที่ (แยกไฟล์ตามวัน) และตามขนาด
+     */
+    private function maybeRotate(): void
+    {
+        $logDir = dirname($this->logFile);
+
+        // หมุนตามวันที่: ถ้าชื่อไฟล์ปัจจุบันไม่ใช่ไฟล์สำหรับวันนี้ ให้เปลี่ยนเป็น YYYY-MM-DD.log
+        $todayFile = $logDir . '/' . date('Y-m-d') . '.log';
+
+        if ($this->logFile !== $todayFile) {
+            // ย้าย/สร้างไฟล์ daily หากจำเป็น: ถ้าไฟล์ปัจจุบันมีข้อมูล ให้ย้ายเป็นไฟล์ชื่อวันที่
+            if (file_exists($this->logFile) && filesize($this->logFile) > 0) {
+                // ถ้าไฟล์วันที่มีอยู่แล้ว ให้ต่อท้ายด้วย suffix
+                if (file_exists($todayFile)) {
+                    // append current content to today's file then clear current
+                    $content = file_get_contents($this->logFile);
+                    file_put_contents($todayFile, $content, FILE_APPEND | LOCK_EX);
+                    file_put_contents($this->logFile, '');
+                } else {
+                    rename($this->logFile, $todayFile);
+                }
+            }
+
+            // เปลี่ยน logFile ไปชี้ไฟล์วันนี้เพื่อการเขียนถัดไป
+            $this->logFile = $todayFile;
+        }
+
+        // หมุนตามขนาด: ถ้ากำหนด maxFileSize และไฟล์เกิน ให้เปลี่ยนชื่อเป็น .1, .2 ...
+        if ($this->maxFileSize > 0 && file_exists($this->logFile) && filesize($this->logFile) >= $this->maxFileSize) {
+            // หาชื่อใหม่ด้วย suffix increment
+            $index = 1;
+            do {
+                $rotated = $this->logFile . '.' . $index;
+                $index++;
+            } while (file_exists($rotated) && $index < 1000);
+
+            // ย้ายไฟล์ปัจจุบันไปเป็น rotated
+            rename($this->logFile, $rotated);
+            // สร้างไฟล์ใหม่ว่างๆ
+            file_put_contents($this->logFile, '');
+        }
+
+        // ลบไฟล์เก่าตาม retention days
+        $this->cleanupOldLogs($logDir);
+    }
+
+    /**
+     * ลบไฟล์ log ที่เก่ากว่า retentionDays
+     */
+    private function cleanupOldLogs(string $logDir): void
+    {
+        // ป้องกัน loop ถ้าโฟลเดอร์ไม่มี
+        if (!is_dir($logDir)) {
+            return;
+        }
+
+        $files = glob($logDir . '/*.log*');
+        if (!$files) {
+            return;
+        }
+
+        $now = time();
+        foreach ($files as $file) {
+            // ข้ามไฟล์ปัจจุบัน
+            if ($file === $this->logFile) {
+                continue;
+            }
+
+            $mtime = filemtime($file);
+            if ($mtime === false) {
+                continue;
+            }
+
+            $ageDays = ($now - $mtime) / 86400;
+            if ($ageDays > $this->retentionDays) {
+                @unlink($file);
+            }
         }
     }
 

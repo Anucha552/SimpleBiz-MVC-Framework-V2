@@ -178,9 +178,8 @@ class Controller
      */
     protected function getUserId(): ?int
     {
-        Session::start();
-        $userId = Session::get('user_id');
-        return is_int($userId) ? $userId : null;
+        // Use Auth to obtain the current authenticated user id
+        return Auth::id();
     }
 
     /**
@@ -190,7 +189,7 @@ class Controller
      */
     protected function isAuthenticated(): bool
     {
-        Session::start();
-        return Session::has('user_id');
+        // Delegate authentication check to Auth
+        return Auth::check();
     }
 }

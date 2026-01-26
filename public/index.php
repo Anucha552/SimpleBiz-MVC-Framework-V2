@@ -40,7 +40,7 @@ if (!file_exists($autoloadPath)) {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="icon" type="image/png" href="assets/img/logo.png">
+        <link rel="icon" type="image/png" href="assets/img/logo/logo.png">
         <title>Setup Required - SimpleBiz MVC Framework</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -143,7 +143,7 @@ if (!file_exists($envPath)) {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="icon" type="image/png" href="assets/img/logo.png">
+        <link rel="icon" type="image/png" href="assets/img/logo/logo.png">
         <title>Setup Required - SimpleBiz MVC Framework</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }

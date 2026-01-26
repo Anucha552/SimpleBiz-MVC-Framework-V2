@@ -380,10 +380,35 @@ class Request
      */
     public function header(string $key, $default = null)
     {
-        // แปลงชื่อ header เป็นรูปแบบ SERVER
-        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $key));
-        
-        return $this->server[$key] ?? $default;
+        // Try multiple server keys to be robust across server configurations
+        $serverKeyHttp = 'HTTP_' . strtoupper(str_replace('-', '_', $key));
+        $serverKeyRaw = strtoupper(str_replace('-', '_', $key));
+
+        if (isset($this->server[$serverKeyHttp])) {
+            return $this->server[$serverKeyHttp];
+        }
+
+        if (isset($this->server[$serverKeyRaw])) {
+            return $this->server[$serverKeyRaw];
+        }
+
+        // Fallback to getallheaders if available (preserve original casing)
+        if (function_exists('getallheaders')) {
+            $headers = getallheaders();
+            $lookup = str_replace(' ', '-', ucwords(strtolower(str_replace('-', ' ', $key))));
+            if (isset($headers[$lookup])) {
+                return $headers[$lookup];
+            }
+            // case-insensitive search
+            $lowerLookup = strtolower($lookup);
+            foreach ($headers as $hname => $hvalue) {
+                if (strtolower($hname) === $lowerLookup) {
+                    return $hvalue;
+                }
+            }
+        }
+
+        return $default;
     }
 
     /**

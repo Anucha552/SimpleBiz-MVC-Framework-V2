@@ -48,7 +48,7 @@ class GuestMiddleware extends Middleware
         }
 
         // โหลด redirect path จาก config ถ้ามี
-        $configRedirect = getenv('GUEST_REDIRECT_TO');
+        $configRedirect = \env('GUEST_REDIRECT_TO');
         if ($configRedirect) {
             $this->redirectTo = $configRedirect;
         }

@@ -16,10 +16,12 @@
  * - โหลดค่าคอนฟิกที่ละเอียดอ่อนจากไฟล์ .env
  */
 
+require_once __DIR__ . '/env.php';
+
 return [
-    'name' => getenv('APP_NAME') ?: 'SimpleBiz MVC Framework V2',
-    'env' => getenv('APP_ENV') ?: 'development',
-    'debug' => getenv('APP_DEBUG') !== 'false',
-    'url' => getenv('APP_URL') ?: 'http://localhost',
-    'timezone' => 'UTC',
+    'name' => env('APP_NAME', 'SimpleBiz MVC Framework V2', 'string'),
+    'env' => env('APP_ENV', 'development', 'string'),
+    'debug' => env('APP_DEBUG', true, 'bool'),
+    'url' => env('APP_URL', 'http://localhost', 'string'),
+    'timezone' => env('APP_TIMEZONE', 'UTC', 'string'),
 ];

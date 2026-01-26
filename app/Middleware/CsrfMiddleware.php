@@ -110,8 +110,9 @@ class CsrfMiddleware extends Middleware
     private function ensureTokenExists(): void
     {
         // Backward-compat: if legacy csrf_token exists, mirror into Session token.
-        if (isset($_SESSION['csrf_token']) && !Session::getCsrfToken()) {
-            $_SESSION['_csrf_token'] = $_SESSION['csrf_token'];
+        $legacy = Session::get('csrf_token');
+        if ($legacy && !Session::getCsrfToken()) {
+            Session::set('_csrf_token', $legacy);
         }
 
         // Ensure Session token exists.
@@ -120,13 +121,13 @@ class CsrfMiddleware extends Middleware
         }
 
         // Mirror Session token to legacy key so old templates still work.
-        if (!isset($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = Session::getCsrfToken();
-            $_SESSION['csrf_token_time'] = time();
+        if (!Session::has('csrf_token')) {
+            Session::set('csrf_token', Session::getCsrfToken());
+            Session::set('csrf_token_time', time());
         }
 
-        if (!isset($_SESSION['csrf_token_time'])) {
-            $_SESSION['csrf_token_time'] = time();
+        if (!Session::has('csrf_token_time')) {
+            Session::set('csrf_token_time', time());
         }
     }
 
@@ -137,8 +138,8 @@ class CsrfMiddleware extends Middleware
     {
         // Generate via Session token, then mirror to legacy.
         $token = Session::generateCsrfToken();
-        $_SESSION['csrf_token'] = $token;
-        $_SESSION['csrf_token_time'] = time();
+        Session::set('csrf_token', $token);
+        Session::set('csrf_token_time', time());
     }
 
     /**
@@ -148,11 +149,11 @@ class CsrfMiddleware extends Middleware
      */
     private function isTokenExpired(): bool
     {
-        if (!isset($_SESSION['csrf_token_time'])) {
+        if (!Session::has('csrf_token_time')) {
             return true;
         }
 
-        return (time() - $_SESSION['csrf_token_time']) > self::TOKEN_LIFETIME;
+        return (time() - (int) Session::get('csrf_token_time')) > self::TOKEN_LIFETIME;
     }
 
     /**
@@ -215,8 +216,10 @@ class CsrfMiddleware extends Middleware
         Session::start();
         $token = Session::getCsrfToken() ?? Session::generateCsrfToken();
         // Mirror to legacy
-        $_SESSION['csrf_token'] = $token;
-        $_SESSION['csrf_token_time'] = $_SESSION['csrf_token_time'] ?? time();
+        Session::set('csrf_token', $token);
+        if (!Session::has('csrf_token_time')) {
+            Session::set('csrf_token_time', time());
+        }
         return $token;
     }
 
