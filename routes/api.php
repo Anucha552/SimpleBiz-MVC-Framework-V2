@@ -29,4 +29,6 @@ $apiBasePath = 'App\\Controllers\\Api\\';
 // เส้นทาง API Routes
 // ===================================
 
-$router->get('/api', $apiBasePath . 'ApiController@index');
+$router->get('/api', $apiBasePath . 'ApiController@index',[
+    ApiKeyMiddleware::class
+]);

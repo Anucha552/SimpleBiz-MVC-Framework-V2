@@ -203,11 +203,9 @@ class RoleMiddleware extends Middleware
      */
     private function getUserById(int $userId): ?array
     {
-        $db = Database::getInstance()->getConnection();
+        $db = Database::getInstance();
         $sql = "SELECT * FROM users WHERE id = :id LIMIT 1";
-        $stmt = $db->prepare($sql);
-        $stmt->execute(['id' => $userId]);
-        
+        $stmt = $db->query($sql, ['id' => $userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         return $user ?: null;
     }
@@ -249,10 +247,9 @@ class RoleMiddleware extends Middleware
             return false;
         }
 
-        $db = Database::getInstance()->getConnection();
+        $db = Database::getInstance();
         $sql = "SELECT role FROM users WHERE id = :id LIMIT 1";
-        $stmt = $db->prepare($sql);
-        $stmt->execute(['id' => $userId]);
+        $stmt = $db->query($sql, ['id' => $userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user) {

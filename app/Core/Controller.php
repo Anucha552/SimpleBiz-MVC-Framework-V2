@@ -1,9 +1,10 @@
 <?php
 /**
- * คลาสตัวควบคุมพื้นฐาน
+ * คลาสตัวควบคุมพื้นฐาน หรือ Controller Base จาก core
  * 
  * จุดประสงค์: คลาสแม่สำหรับตัวควบคุมทั้งหมด ให้ฟังก์ชันการทำงานทั่วไป
  * ปรัชญา: รักษาตัวควบคุมให้บาง - มอบหมายตรรกะทางธุรกิจให้โมเดล
+ * Controller ควรใช้กับอะไร: เมื่อคุณสร้างตัวควบคุมใหม่สำหรับจัดการคำขอ HTTP
  * 
  * ความรับผิดชอบของตัวควบคุม:
  * - ตรวจสอบความถูกต้องของคำขอที่เข้ามา
@@ -25,13 +26,16 @@ class Controller
 {
     /**
      * แสดงผลวิวพร้อมข้อมูล
+     * จุดประสงค์: แสดงผลวิว HTML โดยส่งข้อมูลไปยังวิวโดยไม่ต้องคืนค่า Response
+     * view() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลหน้าวิวพร้อมข้อมูลในตัวควบคุม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->view('home', ['name' => 'John']);
+     * ```
      * 
-     * วิวอยู่ใน app/Views/
-     * ตัวอย่าง: view('products/index', ['products' => $products])
-     * จะโหลด: app/Views/products/index.php
-     * 
-     * @param string $view เส้นทางไฟล์วิว (ไม่มีนามสกุล .php)
-     * @param array $data ข้อมูลที่จะส่งไปยังวิว
+     * @param string $view กำหนดชื่อวิวที่จะโหลด
+     * @param array $data กำหนดข้อมูลที่จะส่งไปยังวิว
+     * @return void ไม่คืนค่าอะไร
      */
     protected function view(string $view, array $data = []): void
     {
@@ -41,6 +45,18 @@ class Controller
 
     /**
      * สร้าง Response สำหรับ view (เหมาะกับ controller ที่ต้องการ return Response)
+     * จุดประสงค์: สร้าง Response HTML จากวิวพร้อมข้อมูลและเลย์เอาต์ (ถ้ามี)
+     * responseView() ควรใช้กับอะไร: เมื่อคุณต้องการคืนค่า Response HTML จากตัวควบคุม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * return $this->responseView('home', ['name' => 'John'], 'main_layout', 200);
+     * ```
+     *
+     * @param string $view กำหนดชื่อวิวที่จะโหลด
+     * @param array $data กำหนดข้อมูลที่จะส่งไปยังวิว
+     * @param string|null $layout กำหนดชื่อเลย์เอาต์ (ถ้ามี)
+     * @param int $statusCode กำหนดรหัสสถานะ HTTP เช่น 200, 404
+     * @return Response คืนค่า Response HTML
      */
     protected function responseView(string $view, array $data = [], ?string $layout = null, int $statusCode = 200): Response
     {
@@ -54,8 +70,16 @@ class Controller
 
     /**
      * เปลี่ยนเส้นทางไปยัง URL อื่น
+     * จุดประสงค์: สร้างการตอบกลับ HTTP redirect
+     * redirect() ควรใช้กับอะไร: เมื่อคุณต้องการเปลี่ยนเส้นทางผู้ใช้ไปยัง URL อื่นจากตัวควบคุม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * return $this->redirect('/home', 301);
+     * ```
      * 
-     * @param string $url URL ที่จะเปลี่ยนเส้นทางไป
+     * @param string $url กำหนด URL ที่จะเปลี่ยนเส้นทางไป
+     * @param int $statusCode กำหนดรหัสสถานะ HTTP เช่น 302, 301
+     * @return Response คืนค่า Response redirect
      */
     protected function redirect(string $url, int $statusCode = 302): Response
     {
@@ -64,6 +88,11 @@ class Controller
 
     /**
      * คืนค่าการตอบกลับแบบ JSON
+     * จุดประสงค์: สร้างการตอบกลับ JSON สำหรับ API
+     * json() ควรใช้กับอะไร: เมื่อคุณต้องการคืนค่าการตอบกลับ JSON จากตัวควบคุม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * return $this->json(true, ['id' => 1, 'name' => 'John'], 'User retrieved successfully', [], 200);
      * 
      * รูปแบบ JSON มาตรฐานสำหรับการตอบกลับ API:
      * {
@@ -72,12 +101,14 @@ class Controller
      *   "message": "...",
      *   "errors": [...]
      * }
+     * ```
      * 
-     * @param bool $success สถานะความสำเร็จ
-     * @param mixed $data ข้อมูลการตอบกลับ
-     * @param string $message ข้อความเพิ่มเติม (ไม่บังคับ)
-     * @param array $errors อาร์เรย์ข้อผิดพลาด (ไม่บังคับ)
-     * @param int $statusCode รหัสสถานะ HTTP
+     * @param bool $success กำหนดสถานะความสำเร็จของการตอบกลับ
+     * @param mixed $data กำหนดข้อมูลที่จะส่งกลับ (ถ้ามี)
+     * @param string $message กำหนดข้อความเพิ่มเติม (ไม่บังคับ)
+     * @param array $errors กำหนดอาร์เรย์ข้อผิดพลาด (ไม่บังคับ)
+     * @param int $statusCode กำหนดรหัสสถานะ HTTP
+     * @return Response คืนค่า Response JSON
      */
     protected function json(bool $success, $data = null, string $message = '', array $errors = [], int $statusCode = 200): Response
     {
@@ -86,8 +117,19 @@ class Controller
 
     /**
      * สร้าง Response แบบ JSON (ไม่ exit) เพื่อใช้กับ Router ที่รองรับ return Response
+     * จุดประสงค์: สร้างการตอบกลับ JSON สำหรับ API
+     * responseJson() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างการตอบกลับ JSON จากตัวควบคุม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * return $this->responseJson(true, ['id' => 1, 'name' => 'John'], 'User retrieved successfully', [], 200);
+     * ```
      *
-     * @param mixed $data
+     * @param bool $success กำหนดสถานะความสำเร็จของการตอบกลับ
+     * @param mixed $data กำหนดข้อมูลที่จะส่งกลับ (ถ้ามี)
+     * @param string $message กำหนดข้อความเพิ่มเติม (ไม่บังคับ)
+     * @param array $errors กำหนดอาร์เรย์ข้อผิดพลาด (ไม่บังคับ)
+     * @param int $statusCode กำหนดรหัสสถานะ HTTP
+     * @return Response คืนค่า Response JSON
      */
     protected function responseJson(bool $success, $data = null, string $message = '', array $errors = [], int $statusCode = 200): Response
     {
@@ -100,6 +142,16 @@ class Controller
 
     /**
      * สร้าง Response redirect (ไม่ exit)
+     * จุดประสงค์: สร้างการตอบกลับ HTTP redirect
+     * responseRedirect() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างการตอบกลับ redirect จากตัวควบคุม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * return $this->responseRedirect('/home', 301);
+     * ```
+     * 
+     * @param string $url กำหนด URL ที่จะเปลี่ยนเส้นทางไป
+     * @param int $statusCode กำหนดรหัสสถานะ HTTP เช่น 302, 301
+     * @return Response คืนค่า Response redirect
      */
     protected function responseRedirect(string $url, int $statusCode = 302): Response
     {
@@ -108,11 +160,15 @@ class Controller
 
     /**
      * ตรวจสอบพารามิเตอร์ POST ที่จำเป็น
+     * จุดประสงค์: ตรวจสอบว่าพารามิเตอร์ที่จำเป็นทั้งหมดมีอยู่ในคำขอ POST
+     * validateRequired() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าพารามิเตอร์ที่จำเป็นถูกส่งมาหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $missing = $this->validateRequired(['username', 'password', 'email']);
+     * ```
      * 
-     * คืนค่าอาร์เรย์ของพารามิเตอร์ที่ขาดหายหรืออาร์เรย์ว่างถ้ามีครบ
-     * 
-     * @param array $required อาร์เรย์ของชื่อพารามิเตอร์ที่จำเป็น
-     * @return array ชื่อพารามิเตอร์ที่ขาดหาย
+     * @param array $required กำหนดอาร์เรย์ของชื่อพารามิเตอร์ที่จำเป็น
+     * @return array คืนค่าอาร์เรย์ของชื่อพารามิเตอร์ที่ขาดหาย
      */
     protected function validateRequired(array $required): array
     {
@@ -129,12 +185,15 @@ class Controller
 
     /**
      * ทำความสะอาดสตริงที่ป้อนเข้า
+     * จุดประสงค์: ป้องกัน XSS โดยการลบแท็ก HTML และช่องว่าง
+     * sanitize() ควรใช้กับอะไร: เมื่อคุณต้องการทำความสะอาดข้อมูลสตริงที่ป้อนเข้าจากผู้ใช้
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanInput = $this->sanitize($_POST['user_input']);
+     * ```
      * 
-     * ลบแท็ก HTML และช่องว่าง
-     * ใช้สำหรับข้อมูลข้อความที่ผู้ใช้ป้อนเข้ามา
-     * 
-     * @param string $input ข้อมูลดิบ
-     * @return string ข้อมูลที่ทำความสะอาดแล้ว
+     * @param string $input กำหนดสตริงที่จะทำความสะอาด
+     * @return string คืนค่าสตริงที่ทำความสะอาดแล้ว
      */
     protected function sanitize(string $input): string
     {
@@ -143,12 +202,15 @@ class Controller
 
     /**
      * ตรวจสอบความถูกต้องของข้อมูลจำนวนเต็ม
+     * จุดประสงค์: ตรวจสอบว่าค่าเป็นจำนวนเต็มบวก
+     * validateInt() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าค่าที่ป้อนเข้าคือจำนวนเต็มบวก
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $validId = $this->validateInt($_POST['id']);
+     * ```
      * 
-     * ตรวจสอบว่าค่าเป็นจำนวนเต็มบวก
-     * ใช้สำหรับ ID, จำนวน, ฯลฯ
-     * 
-     * @param mixed $value ค่าที่จะตรวจสอบ
-     * @return int|null จำนวนเต็มที่ถูกต้องหรือ null
+     * @param mixed $value กำหนดค่าที่จะตรวจสอบ
+     * @return int|null คืนค่าจำนวนเต็มที่ถูกต้องหรือ null
      */
     protected function validateInt($value): ?int
     {
@@ -158,12 +220,15 @@ class Controller
 
     /**
      * ตรวจสอบความถูกต้องของข้อมูลทศนิยม
+     * จุดประสงค์: ตรวจสอบว่าค่าเป็นจำนวนบวกทศนิยม
+     * validateFloat() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าค่าที่ป้อนเข้าคือจำนวนบวกทศนิยม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $validPrice = $this->validateFloat($_POST['price']);
+     * ```
      * 
-     * ตรวจสอบว่าค่าเป็นจำนวนบวก
-     * ใช้สำหรับราคา, จำนวนเงิน, ฯลฯ
-     * 
-     * @param mixed $value ค่าที่จะตรวจสอบ
-     * @return float|null ทศนิยมที่ถูกต้องหรือ null
+     * @param mixed $value กำหนดค่าที่จะตรวจสอบ
+     * @return float|null คืนค่าทศนิยมที่ถูกต้องหรือ null
      */
     protected function validateFloat($value): ?float
     {
@@ -173,8 +238,14 @@ class Controller
 
     /**
      * ดึง ID ของผู้ใช้ที่ยืนยันตัวตนปัจจุบัน
+     * จุดประสงค์: รับ ID ของผู้ใช้ที่ยืนยันตัวตน
+     * getUserId() ควรใช้กับอะไร: เมื่อคุณต้องการรับ ID ของผู้ใช้ที่ยืนยันตัวตนในระบบ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $userId = $this->getUserId();
+     * ```
      * 
-     * @return int|null ID ผู้ใช้หรือ null ถ้าไม่ได้ยืนยันตัวตน
+     * @return int|null คืนค่า ID ผู้ใช้หรือ null ถ้าไม่ได้ยืนยันตัวตน
      */
     protected function getUserId(): ?int
     {
@@ -184,8 +255,19 @@ class Controller
 
     /**
      * ตรวจสอบว่าผู้ใช้ยืนยันตัวตนหรือไม่
+     * จุดประสงค์: ตรวจสอบสถานะการยืนยันตัวตนของผู้ใช้
+     * isAuthenticated() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าผู้ใช้ได้ยืนยันตัวตนแล้วหรือไม่
+     * ตัวอย่างการใช้งานโดยรวม:
+     * ```php
+     * // ตรวจสอบว่าผู้ใช้ยืนยันตัวตนหรือไม่
+     * if ($this->isAuthenticated()) {
+     *    // ผู้ใช้ยืนยันตัวตนแล้ว
+     * } else {
+     *    // ผู้ใช้ไม่ได้ยืนยันตัวตน
+     * }
+     * ```
      * 
-     * @return bool
+     * @return bool คืนค่า true หากผู้ใช้ยืนยันตัวตน, false หากไม่ใช่
      */
     protected function isAuthenticated(): bool
     {

@@ -108,7 +108,7 @@ final class RouterDispatchTest extends TestCase
         $_SERVER['HTTP_ORIGIN'] = 'http://localhost:3000';
 
         $router = new Router();
-        $router->get('/api/v1/cors-test', Fixtures\ResponseController::class . '@index', [\App\Middleware\CorsMiddleware::class]);
+        $router->get('/api/v1/cors-test', Fixtures\ResponseController::class . '@index', [\App\Middleware\Systems\CorsMiddleware::class]);
 
         ob_start();
         $router->dispatch(new Request());
@@ -128,7 +128,7 @@ final class RouterDispatchTest extends TestCase
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 
         $router = new Router();
-        $router->get('/api/v1/rl-test', Fixtures\ResponseController::class . '@index', [\App\Middleware\RateLimitMiddleware::class]);
+        $router->get('/api/v1/rl-test', Fixtures\ResponseController::class . '@index', [\App\Middleware\Systems\RateLimitMiddleware::class]);
 
         ob_start();
         $router->dispatch(new Request());
@@ -155,7 +155,7 @@ final class RouterDispatchTest extends TestCase
         $_SERVER['SCRIPT_NAME'] = '/index.php';
 
         $router = new Router();
-        $router->get('/api/v1/sec-test', Fixtures\ResponseController::class . '@index', [\App\Middleware\SecurityHeadersMiddleware::class]);
+        $router->get('/api/v1/sec-test', Fixtures\ResponseController::class . '@index', [\App\Middleware\Systems\SecurityHeadersMiddleware::class]);
 
         ob_start();
         $router->dispatch(new Request());

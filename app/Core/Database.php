@@ -1,11 +1,12 @@
 <?php
 /**
- * คลาสการเชื่อมต่อฐานข้อมูล
+ * คลาสการเชื่อมต่อฐานข้อมูล จาก Core
  * 
  * จุดประสงค์: จัดเตรียมการเชื่อมต่อฐานข้อมูล PDO ที่ปลอดภัยโดยใช้รูปแบบ singleton
  * ความปลอดภัย: ใช้ prepared statements เท่านั้นเพื่อป้องกัน SQL injection
+ * Database ควรใช้กับอะไร: เมื่อใดก็ตามที่คุณต้องการเชื่อมต่อกับฐานข้อมูล MySQL ในแอปพลิเคชันของคุณ
  * 
- * ทำไมต้อง Singleton?
+ * ทำไมต้อง Singleton
  * - รับประกันว่ามีการเชื่อมต่อฐานข้อมูลเพียงหนึ่งเดียวตลอดช่วงชีวิตแอปพลิเคชัน
  * - ลดภาระการเชื่อมต่อและการใช้ทรัพยากร
  * - รวมศูนย์การจัดการการเชื่อมต่อ
@@ -15,24 +16,168 @@
  * - ต้องใช้ prepared statements กับพารามิเตอร์ที่ผูกไว้เสมอ
  * - ปิดการใช้งาน emulated prepares เพื่อใช้ prepared statements จริง
  * - ตั้งค่าโหมดข้อผิดพลาดให้แสดง exceptions เพื่อการดีบักที่ดีขึ้น
+ * 
+ * ตัวอย่างการใช้งานโดยรวม:
+ * ```php
+ * $db = Database::getInstance();
+ * $stmt = $db->query("SELECT * FROM users WHERE id = :id", ['id' => $userId]);
+ * $user = $stmt->fetch();
+ * ```
  */
 
 namespace App\Core;
 
 use PDO;
 use PDOException;
+use PDOStatement;
+use App\Core\Logger;
 
 class Database
 {
     /**
-     * อินสแตนซ์ Singleton
+     * return $this->getConnection()->prepare($sql);
+     * จุดประสงค์: อินสแตนซ์ singleton ของ Database
      */
     private static ?Database $instance = null;
     
     /**
-     * อ็อบเจ็กต์การเชื่อมต่อ PDO
+     * อ็อบเจ็กต์การเชื่อมต่อ PDO สำหรับฐานข้อมูล
      */
     private ?PDO $connection = null;
+
+    /** 
+     * Logger สำหรับบันทึกคำสั่ง query (ถ้ามี)
+     */
+    private ?Logger $logger = null;
+
+    /** 
+     * เปิด/ปิดการบันทึกคำสั่ง query
+     */
+    private bool $queryLoggingEnabled = false;
+
+    /** 
+     * บันทึกคำสั่ง query ที่ดำเนินการ
+     */
+    private array $queryLog = [];
+
+    /**
+     * เตรียมคำสั่ง SQL
+     * จุดประสงค์: สร้างคำสั่ง SQL ที่เตรียมไว้เพื่อใช้กับการดำเนินการฐานข้อมูล
+     * prepare() ควรใช้กับอะไร: เมื่อคุณต้องการเตรียมคำสั่ง SQL ที่ปลอดภัยโดยใช้ prepared statements
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $stmt = $db->prepare("SELECT * FROM users WHERE id = :id");
+     * ```
+     *
+     * @param string $sql กำหนดคำสั่ง SQL ที่จะเตรียม
+     * @return PDOStatement คืนค่าอ็อบเจ็กต์ PDOStatement ที่เตรียมไว้
+     */
+    public function prepare(string $sql)
+    {
+        return $this->connection->prepare($sql);
+    }
+
+    /**
+     * เปิดหรือปิดการบันทึกคำสั่ง query
+     * จุดประสงค์: เปิดหรือปิดฟีเจอร์การบันทึกคำสั่ง query ที่ดำเนินการ
+     * enableQueryLog() ควรใช้กับอะไร: เมื่อคุณต้องการเปิดหรือปิดการบันทึกคำสั่ง query
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $db->enableQueryLog(true); // เปิดการบันทึก
+     * ```
+     *
+     * @param bool $enable กำหนด true เพื่อเปิดการบันทึก, false เพื่อปิด
+     * @return void ไม่คืนค่าอะไร
+     */
+    public function enableQueryLog(bool $enable = true): void
+    {
+        $this->queryLoggingEnabled = $enable;
+        if ($this->logger === null) {
+            $this->logger = new Logger();
+        }
+    }
+
+    /**
+     * ตรวจสอบว่าการบันทึกคำสั่ง query เปิดอยู่หรือไม่
+     * จุดประสงค์: ตรวจสอบสถานะของฟีเจอร์การบันทึกคำสั่ง query
+     * isQueryLogEnabled() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าการบันทึกคำสั่ง query เปิดอยู่หรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * if ($db->isQueryLogEnabled()) {
+     *     // การบันทึกคำสั่ง query เปิดอยู่
+     * }
+     * ```
+     *
+     * @return bool คืนค่า true หากการบันทึกเปิดอยู่, false หากปิดอยู่
+     */
+    public function isQueryLogEnabled(): bool
+    {
+        return $this->queryLoggingEnabled;
+    }
+
+    /**
+     * ดึงบันทึกคำสั่ง query ที่ดำเนินการ
+     * จุดประสงค์: รับรายการของคำสั่ง query ที่ถูกบันทึก
+     * getQueryLog() ควรใช้กับอะไร: เมื่อคุณต้องการดึงบันทึกคำสั่ง query ที่ดำเนินการ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $log = $db->getQueryLog();
+     * ```
+     *
+     * @return array คืนค่าอาร์เรย์ของบันทึกคำสั่ง query
+     */
+    public function getQueryLog(): array
+    {
+        return $this->queryLog;
+    }
+
+    /**
+     * ล้างบันทึกคำสั่ง query
+     * จุดประสงค์: ล้างรายการของคำสั่ง query ที่ถูกบันทึก
+     * clearQueryLog() ควรใช้กับอะไร: เมื่อคุณต้องการล้างบันทึกคำสั่ง query
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $db->clearQueryLog();
+     * ```
+     *
+     * @return void ไม่คืนค่าอะไร
+     */
+    public function clearQueryLog(): void
+    {
+        $this->queryLog = [];
+    }
+
+    /**
+     * บันทึกคำสั่ง query ที่ดำเนินการ
+     * จุดประสงค์: บันทึกรายละเอียดของคำสั่ง query ที่ดำเนินการ
+     * recordQuery() ควรใช้กับอะไร: ใช้ภายในคลาสเพื่อบันทึกคำสั่ง query เมื่อการบันทึกเปิดอยู่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * // ใช้ภายในคลาส Database เท่านั้น
+     * $this->recordQuery($sql, $params, $durationMs);
+     * ```
+     * 
+     * @param string $sql กำหนดคำสั่ง SQL ที่ดำเนินการ
+     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่ผูกกับคำสั่ง SQL
+     * @param float $durationMs กำหนดระยะเวลาที่ใช้ในการดำเนินการเป็นมิลลิวินาที
+     * @return void ไม่คืนค่าอะไร
+     */
+    private function recordQuery(string $sql, array $params, float $durationMs): void
+    {
+        if (!$this->queryLoggingEnabled) {
+            return;
+        }
+        $entry = [
+            'sql' => $sql,
+            'params' => $params,
+            'time_ms' => $durationMs,
+            'ts' => microtime(true),
+        ];
+        $this->queryLog[] = $entry;
+        if ($this->logger) {
+            $this->logger->info('db.query', $entry);
+        }
+    }
 
     /**
      * คอนสตรัคเตอร์แบบ private เพื่อป้องกันการสร้างอินสแตนซ์โดยตรง
@@ -45,8 +190,14 @@ class Database
 
     /**
      * ดึงอินสแตนซ์ singleton
+     * จุดประสงค์: รับอินสแตนซ์เดียวของคลาส Database
+     * getInstance() ควรใช้กับอะไร: เมื่อคุณต้องการรับอินสแตนซ์ของ Database เพื่อเชื่อมต่อกับฐานข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $db = Database::getInstance();
+     * ```
      * 
-     * @return Database
+     * @return Database คืนค่าอินสแตนซ์ของ Database
      */
     public static function getInstance(): Database
     {
@@ -58,6 +209,8 @@ class Database
 
     /**
      * สร้างการเชื่อมต่อฐานข้อมูล
+     * จุดประสงค์: เชื่อมต่อกับฐานข้อมูล MySQL โดยใช้ PDO
+     * method: connect ตั้งเป็น private เพื่อป้องกันการเรียกใช้ภายนอก
      * 
      * การกำหนดค่าโหลดจาก config/database.php
      * 
@@ -68,6 +221,7 @@ class Database
      * - ATTR_STRINGIFY_FETCHES: False เพื่อรักษาประเภทข้อมูล
      * 
      * @throws PDOException ถ้าการเชื่อมต่อล้มเหลว
+     * @return void ไม่คืนค่าอะไร
      */
     private function connect(): void
     {
@@ -102,13 +256,347 @@ class Database
     }
 
     /**
-     * ดึงการเชื่อมต่อ PDO
+     * ดึงการเชื่อมต่อ PDO ดิบ
+     * จุดประสงค์: รับอ็อบเจ็กต์การเชื่อมต่อ PDO ดิบ
+     * getConnection() ควรใช้กับอะไร: เมื่อคุณต้องการเข้าถึงอ็อบเจ็กต์ PDO ดิบเพื่อใช้ฟีเจอร์ขั้นสูงที่ไม่ได้ห่อหุ้มในคลาส Database
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $pdo = $db->getConnection();
+     * ```
      * 
-     * @return PDO
+     * @return PDO คืนค่าอ็อบเจ็กต์การเชื่อมต่อ PDO
      */
     public function getConnection(): PDO
     {
         return $this->connection;
+    }
+
+    /**
+     * ดึงอ็อบเจ็กต์ PDO ดิบ
+     * จุดประสงค์: รับอ็อบเจ็กต์ PDO ดิบ (เหมือนกับ getConnection)
+     * getPdo() ควรใช้กับอะไร: เมื่อคุณต้องการเข้าถึงอ็อบเจ็กต์ PDO ดิบเพื่อใช้ฟีเจอร์ขั้นสูงที่ไม่ได้ห่อหุ้มในคลาส Database
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $pdo = $db->getPdo();
+     * ```
+     * 
+     * @return PDO คืนค่าอ็อบเจ็กต์การเชื่อมต่อ PDO
+     */
+    public function getPdo(): \PDO
+    {
+        return $this->getConnection();
+    }
+
+    /**
+     * สร้างและดำเนินการคำสั่ง SQL ที่เตรียมไว้
+     * จุดประสงค์: ดำเนินการคำสั่ง SQL ที่ปลอดภัยโดยใช้ prepared statements
+     * query() ควรใช้กับอะไร: เมื่อคุณต้องการดำเนินการคำสั่ง SQL ที่ปลอดภัยโดยใช้ prepared statements
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $stmt = $db->query("SELECT * FROM users WHERE id = :id", ['id' => $userId]);
+     * ```
+     *
+     * @param string $sql กำหนดคำสั่ง SQL ที่จะดำเนินการ
+     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่จะผูกกับคำสั่ง SQL
+     * @return PDOStatement คืนค่าอ็อบเจ็กต์ PDOStatement ที่ดำเนินการแล้ว
+     */
+    public function query(string $sql, array $params = []): PDOStatement
+    {
+        $start = microtime(true);
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute($params);
+        $duration = (microtime(true) - $start) * 1000.0;
+        $this->recordQuery($sql, $params, $duration);
+        return $stmt;
+    }
+
+    /**
+     * Fetch สำหรับแถวเดียว
+     * จุดประสงค์: ดึงแถวเดียวจากผลลัพธ์ของคำสั่ง SQL ที่เตรียมไว้
+     * fetch() ควรใช้กับอะไร: เมื่อคุณต้องการดึงแถวเดียวจากผลลัพธ์ของคำสั่ง SQL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $user = $db->fetch("SELECT * FROM users WHERE id = :id", ['id' => $userId]);
+     * ```
+     *
+     * @param string $sql กำหนดคำสั่ง SQL ที่จะดำเนินการ
+     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่จะผูกกับคำสั่ง SQL
+     * @return mixed คืนค่าแถวเดียวหรือ false ถ้าไม่มีข้อมูล
+     */
+    public function fetch(string $sql, array $params = [])
+    {
+        return $this->query($sql, $params)->fetch();
+    }
+
+    /**
+     * Fetch all rows.
+     * จุดประสงค์: ดึงแถวทั้งหมดจากผลลัพธ์ของคำสั่ง SQL ที่เตรียมไว้
+     * fetchAll() ควรใช้กับอะไร: เมื่อคุณต้องการดึงแถวทั้งหมดจากผลลัพธ์ของคำสั่ง SQL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $users = $db->fetchAll("SELECT * FROM users WHERE status = :status", ['status' => 'active']);
+     * ```
+     * 
+     * @param string $sql กำหนดคำสั่ง SQL ที่จะดำเนินการ
+     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่จะผูกกับคำสั่ง SQL
+     * @return array คืนค่าอาร์เรย์ของแถวทั้งหมด
+     */
+    public function fetchAll(string $sql, array $params = []): array
+    {
+        return $this->query($sql, $params)->fetchAll();
+    }
+
+    /**
+     * ดึงข้อมูลคอลัมน์แรกของแถวแรก
+     * จุดประสงค์: ดึงคอลัมน์แรกของแถวแรกจากผลลัพธ์ของคำสั่ง SQL ที่เตรียมไว้
+     * fetchColumn() ควรใช้กับอะไร: เมื่อคุณต้องการดึงค่าของคอลัมน์แรกจากแถวแรกของผลลัพธ์
+     * ตัวอย่างการใช้งาน: 
+     * ```php
+     * $count = $db->fetchColumn("SELECT COUNT(*) FROM users WHERE status = :status", ['status' => 'active']);
+     * ```
+     * 
+     * @param string $sql กำหนดคำสั่ง SQL ที่จะดำเนินการ
+     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่จะผูกกับคำสั่ง SQL
+     * @return mixed คืนค่าของคอลัมน์แรกหรือ false ถ้าไม่มีข้อมูล
+     */
+    public function fetchColumn(string $sql, array $params = [])
+    {
+        return $this->query($sql, $params)->fetchColumn();
+    }
+
+    /**
+     * ดึงคอลัมน์แรกจากทุกแถว
+     * จุดประสงค์: ดึงคอลัมน์แรกจากทุกแถวในผลลัพธ์ของคำสั่ง SQL ที่เตรียมไว้
+     * fetchList() ควรใช้กับอะไร: เมื่อคุณต้องการดึงรายการของค่าจากคอลัมน์แรกของผลลัพธ์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $usernames = $db->fetchList("SELECT username FROM users WHERE status = :status", ['status' => 'active']);
+     * ```
+     * 
+     * @param string $sql กำหนดคำสั่ง SQL ที่จะดำเนินการ
+     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่จะผูกกับคำสั่ง SQL
+     * @return array คืนค่าอาร์เรย์ของค่าจากคอลัมน์แรก
+     */
+    public function fetchList(string $sql, array $params = []): array
+    {
+        return $this->query($sql, $params)->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * ดึงคู่คีย์-ค่า
+     * จุดประสงค์: ดึงอาร์เรย์ของคู่คีย์-ค่า จากผลลัพธ์ของคำสั่ง SQL ที่เตรียมไว้
+     * fetchPairs() ควรใช้กับอะไร: เมื่อคุณต้องการดึงอาร์เรย์ของคู่คีย์-ค่าจากผลลัพธ์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $userMap = $db->fetchPairs("SELECT id, username FROM users WHERE status = :status", ['status' => 'active']);
+     * ```
+     * 
+     * @param string $sql กำหนดคำสั่ง SQL ที่จะดำเนินการ
+     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่จะผูกกับคำสั่ง SQL
+     * @return array คืนค่าอาร์เรย์ของคู่คีย์-ค่า
+     */
+    public function fetchPairs(string $sql, array $params = []): array
+    {
+        $rows = $this->query($sql, $params)->fetchAll(PDO::FETCH_NUM);
+        $result = [];
+        foreach ($rows as $row) {
+            if (isset($row[0])) {
+                $key = $row[0];
+                $value = $row[1] ?? null;
+                $result[$key] = $value;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Execute a statement (INSERT/UPDATE/DELETE).
+     * จุดประสงค์: ดำเนินการคำสั่ง SQL ที่เปลี่ยนแปลงข้อมูลในฐานข้อมูล
+     * execute() ควรใช้กับอะไร: เมื่อคุณต้องการดำเนินการคำสั่ง SQL ที่เปลี่ยนแปลงข้อมูล เช่น INSERT, UPDATE, DELETE
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $affectedRows = $db->execute("UPDATE users SET status = :status WHERE id = :id", ['status' => 'active', 'id' => $userId]);
+     * ```
+     *
+     * @param string $sql กำหนดคำสั่ง SQL ที่จะดำเนินการ
+     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่จะผูกกับคำสั่ง SQL
+     * @return int คืนค่าจำนวนแถวที่ได้รับผลกระทบ
+     */
+    public function execute(string $sql, array $params = []): int
+    {
+        $start = microtime(true);
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute($params);
+        $duration = (microtime(true) - $start) * 1000.0;
+        $this->recordQuery($sql, $params, $duration);
+        return $stmt->rowCount();
+    }
+
+    /**
+     * Get last insert id.
+     * จุดประสงค์: รับ ID ของแถวที่เพิ่งแทรกล่าสุด
+     * lastInsertId() ควรใช้กับอะไร: เมื่อคุณต้องการรับ ID ของแถวที่เพิ่งแทรกในฐานข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $lastId = $db->lastInsertId();
+     * ```
+     *
+     * @param string|null $name กำหนดชื่อของลำดับ (ถ้ามี)
+     * @return string คืนค่า ID ของแถวที่เพิ่งแทรกล่าสุด
+     */
+    public function lastInsertId(?string $name = null): string
+    {
+        return $this->connection->lastInsertId($name);
+    }
+
+    /** Transaction helpers
+     * จุดประสงค์: จัดการธุรกรรมฐานข้อมูลอย่างปลอดภัย
+     * beginTransaction() ควรใช้กับอะไร: เมื่อคุณต้องการเริ่มต้นธุรกรรมฐานข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $db->beginTransaction();
+     * ```
+     * 
+     * @return bool คืนค่า true หากเริ่มธุรกรรมสำเร็จ, false หากไม่สำเร็จ
+     */
+    public function beginTransaction(): bool
+    {
+        return $this->connection->beginTransaction();
+    }
+
+    /**
+     * ยืนยันธุรกรรมปัจจุบัน
+     * จุดประสงค์: ยืนยันการเปลี่ยนแปลงในธุรกรรมฐานข้อมูล
+     * commit() ควรใช้กับอะไร: เมื่อคุณต้องการยืนยันธุรกรรมฐานข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $db->commit();
+     * ```
+     * 
+     * @return bool คืนค่า true หากยืนยันธุรกรรมสำเร็จ, false หากไม่สำเร็จ
+     */
+    public function commit(): bool
+    {
+        return $this->connection->commit();
+    }
+
+    /**
+     * ยกเลิกธุรกรรมปัจจุบัน
+     * จุดประสงค์: ยกเลิกการเปลี่ยนแปลงในธุรกรรมฐานข้อมูล
+     * rollBack() ควรใช้กับอะไร: เมื่อคุณต้องการยกเลิกธุรกรรมฐานข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $db->rollBack();
+     * ```
+     * 
+     * @return bool คืนค่า true หากยกเลิกธุรกรรมสำเร็จ, false หากไม่สำเร็จ
+     */
+    public function rollBack(): bool
+    {
+        return $this->connection->rollBack();
+    }
+
+    /**
+     * เรียกใช้คำสั่ง SQL ดิบ (ไม่มีพารามิเตอร์)
+     * จุดประสงค์: ดำเนินการคำสั่ง SQL ดิบที่ไม่มีพารามิเตอร์
+     * execRaw() ควรใช้กับอะไร: เมื่อคุณต้องการดำเนินการคำสั่ง SQL ดิบที่ไม่มีพารามิเตอร์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $affectedRows = $db->execRaw("DELETE FROM sessions WHERE last_active < NOW() - INTERVAL 30 DAY");
+     * ```
+     * 
+     * @param string $sql กำหนดคำสั่ง SQL ดิบที่จะดำเนินการ
+     * @return int คืนค่าจำนวนแถวที่ได้รับผลกระทบ
+     */
+    public function execRaw(string $sql): int
+    {
+        $start = microtime(true);
+        $result = $this->connection->exec($sql);
+        $duration = (microtime(true) - $start) * 1000.0;
+        $this->recordQuery($sql, [], $duration);
+        return $result;
+    }
+
+    /**
+     * เรียกใช้หลายคำสั่ง SQL ดิบในธุรกรรมเดียว
+     * จุดประสงค์: ดำเนินการหลายคำสั่ง SQL ดิบในธุรกรรมเดียว
+     * execMultiple() ควรใช้กับอะไร: เมื่อคุณต้องการดำเนินการหลายคำสั่ง SQL ดิบในธุรกรรมเดียว
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $statements = [
+     *     "UPDATE accounts SET balance = balance - 100 WHERE id = 1",
+     *     "UPDATE accounts SET balance = balance + 100 WHERE id = 2",
+     * ];
+     * $results = $db->execMultiple($statements);
+     * ```
+     * 
+     * @param array $statements กำหนดอาร์เรย์ของคำสั่ง SQL ดิบที่จะดำเนินการ
+     * @return array คืนค่าอาร์เรย์ของจำนวนแถวที่ได้รับผลกระทบสำหรับแต่ละคำสั่ง
+     */
+    public function execMultiple(array $statements): array
+    {
+        $this->beginTransaction();
+        $results = [];
+        try {
+            foreach ($statements as $sql) {
+                $results[] = $this->connection->exec($sql);
+            }
+            $this->commit();
+            return $results;
+        } catch (\Throwable $e) {
+            if ($this->connection->inTransaction()) {
+                $this->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * ตรวจสอบว่ากำลังอยู่ในธุรกรรมหรือไม่
+     * จุดประสงค์: ตรวจสอบสถานะของธุรกรรมฐานข้อมูลปัจจุบัน
+     * inTransaction() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่ากำลังอยู่ในธุรกรรมฐานข้อมูลหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * if ($db->inTransaction()) {
+     *     // กำลังอยู่ในธุรกรรม
+     * }
+     * ```
+     *
+     * @return bool คืนค่า true หากอยู่ในธุรกรรม, false หากไม่อยู่
+     */
+    public function inTransaction(): bool
+    {
+        return $this->connection->inTransaction();
+    }
+
+    /**
+     * Convenience transactional wrapper.
+     * Rolls back automatically on exception.
+     * จุดประสงค์: ดำเนินการธุรกรรมฐานข้อมูลโดยอัตโนมัติ
+     * transaction() ควรใช้กับอะไร: เมื่อคุณต้องการดำเนินการธุรกรรมฐานข้อมูลโดยอัตโนมัติและจัดการข้อผิดพลาด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $result = $db->transaction(function($db) {
+     *     // ดำเนินการฐานข้อมูลที่นี่
+     *     return $someValue;
+     * ```
+     *
+     * @param callable $cb กำหนดฟังก์ชันที่จะดำเนินการภายในธุรกรรม
+     * @return mixed คืนค่าผลลัพธ์จากฟังก์ชัน callback
+     */
+    public function transaction(callable $cb)
+    {
+        $this->beginTransaction();
+        try {
+            $result = $cb($this);
+            $this->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($this->connection->inTransaction()) {
+                $this->rollBack();
+            }
+            throw $e;
+        }
     }
 
     /**
@@ -118,6 +606,8 @@ class Database
 
     /**
      * ป้องกันการ unserialize ของ singleton
+     * จุดประสงค์: ป้องกันการสร้างอินสแตนซ์ใหม่ผ่าน unserialize
+     * @throws \Exception เสมอเมื่อพยายาม unserialize
      */
     public function __wakeup()
     {

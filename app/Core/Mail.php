@@ -1,11 +1,16 @@
 <?php
 /**
- * Mail Service
+ * คลาส Mail สำหรับจัดการการส่งอีเมล
  * 
  * จุดประสงค์: จัดการการส่งอีเมล
  * ฟีเจอร์: รองรับ SMTP, HTML templates, attachments
+ * Mail ควรใช้กับอะไร: เมื่อคุณต้องการส่งอีเมลจากแอปพลิเคชันของคุณ
  * 
- * ตัวอย่างการใช้งาน:
+ * ถ้าไม่ใช้ SMTP library ภายนอก จะใช้ฟังก์ชัน mail() ของ PHP
+ * SMTP library ภายนอกแนะนำสำหรับ production
+ * - Mailer เช่น PHPMailer, SwiftMailer
+ * 
+ * ตัวอย่างการใช้งานโดยรวม:
  * ```php
  * $mail = new Mail();
  * $mail->to('user@example.com', 'John Doe')
@@ -26,38 +31,38 @@ namespace App\Core;
 class Mail
 {
     /**
-     * ผู้รับอีเมล
+     * ผู้รับอีเมล สำหรับหลายคน
      */
     private array $to = [];
 
     /**
-     * ผู้ส่งอีเมล
+     * ผู้ส่งอีเมล สำหรับค่าเริ่มต้น
      */
     private string $from;
     private string $fromName;
 
     /**
-     * หัวข้ออีเมล
+     * หัวข้ออีเมล สำหรับอีเมล
      */
     private string $subject = '';
 
     /**
-     * เนื้อหาอีเมล
+     * เนื้อหาอีเมล สำหรับเนื้อหา HTML
      */
     private string $body = '';
 
     /**
-     * ไฟล์แนบ
+     * ไฟล์แนบ สำหรับ attachments
      */
     private array $attachments = [];
 
     /**
-     * Headers
+     * Headers สำหรับอีเมล
      */
     private array $headers = [];
 
     /**
-     * SMTP Configuration
+     * การตั้งค่า SMTP
      */
     private array $config = [];
 
@@ -67,6 +72,7 @@ class Mail
         $this->from = \env('MAIL_FROM_ADDRESS') ?: 'noreply@simplebiz.local';
         $this->fromName = \env('MAIL_FROM_NAME') ?: 'SimpleBiz MVC';
         
+        // การตั้งค่า SMTP
         $this->config = [
             'host' => \env('MAIL_HOST') ?: 'localhost',
             'port' => \env('MAIL_PORT') ?: 587,
@@ -78,10 +84,16 @@ class Mail
 
     /**
      * ตั้งค่าผู้รับ
+     * จุดประสงค์: เพิ่มผู้รับอีเมลหลายคนได้
+     * to() ควรใช้กับอะไร: เมื่อคุณต้องการเพิ่มผู้รับอีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $mail->to('user@example.com', 'John Doe');
+     * ```
      * 
-     * @param string $email อีเมลผู้รับ
-     * @param string $name ชื่อผู้รับ (optional)
-     * @return self
+     * @param string $email กำหนดอีเมลผู้รับ
+     * @param string $name กำหนดชื่อผู้รับ (optional)
+     * @return self คืนค่าอ็อบเจ็กต์ Mail เพื่อเรียกใช้เมธอดแบบ method chaining
      */
     public function to(string $email, string $name = ''): self
     {
@@ -91,10 +103,16 @@ class Mail
 
     /**
      * ตั้งค่าผู้ส่ง
+     * จุดประสงค์: กำหนดผู้ส่งอีเมล
+     * from() ควรใช้กับอะไร: เมื่อคุณต้องการกำหนดผู้ส่งอีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $mail->from('noreply@example.com', 'No Reply');
+     * ```
      * 
-     * @param string $email อีเมลผู้ส่ง
-     * @param string $name ชื่อผู้ส่ง
-     * @return self
+     * @param string $email กำหนดอีเมลผู้ส่ง
+     * @param string $name กำหนดชื่อผู้ส่ง
+     * @return self คืนค่าอ็อบเจ็กต์ Mail เพื่อเรียกใช้เมธอดแบบ method chaining
      */
     public function from(string $email, string $name = ''): self
     {
@@ -105,9 +123,15 @@ class Mail
 
     /**
      * ตั้งค่าหัวข้อ
+     * จุดประสงค์: กำหนดหัวข้ออีเมล
+     * subject() ควรใช้กับอะไร: เมื่อคุณต้องการกำหนดหัวข้ออีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $mail->subject('Welcome!');
+     * ```
      * 
-     * @param string $subject
-     * @return self
+     * @param string $subject กำหนดหัวข้ออีเมล
+     * @return self คืนค่าอ็อบเจ็กต์ Mail เพื่อเรียกใช้เมธอดแบบ method chaining
      */
     public function subject(string $subject): self
     {
@@ -117,9 +141,15 @@ class Mail
 
     /**
      * ตั้งค่าเนื้อหาแบบ HTML
+     * จุดประสงค์: กำหนดเนื้อหาอีเมลในรูปแบบ HTML
+     * html() ควรใช้กับอะไร: เมื่อคุณต้องการกำหนดเนื้อหาอีเมลเป็น HTML
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $mail->html('<h1>Hello World</h1>');
+     * ```
      * 
-     * @param string $html
-     * @return self
+     * @param string $html กำหนดเนื้อหาอีเมลในรูปแบบ HTML
+     * @return self คืนค่าอ็อบเจ็กต์ Mail เพื่อเรียกใช้เมธอดแบบ method chaining
      */
     public function html(string $html): self
     {
@@ -129,15 +159,22 @@ class Mail
 
     /**
      * ตั้งค่าเนื้อหาจาก template
+     * จุดประสงค์: โหลดเนื้อหาอีเมลจากไฟล์ template พร้อมส่งตัวแปรข้อมูล
+     * template() ควรใช้กับอะไร: เมื่อคุณต้องการโหลดเนื้อหาอีเมลจากไฟล์ template
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $mail->template('welcome', ['name' => 'John']);
+     * ```
      * 
-     * @param string $template ชื่อ template
-     * @param array $data ข้อมูลส่งไปยัง template
-     * @return self
+     * @param string $template กำหนดชื่อ template
+     * @param array $data กำหนดข้อมูลส่งไปยัง template
+     * @return self คืนค่าอ็อบเจ็กต์ Mail เพื่อเรียกใช้เมธอดแบบ method chaining
      */
     public function template(string $template, array $data = []): self
     {
         $templatePath = __DIR__ . "/../Views/emails/{$template}.php";
         
+        // ตรวจสอบว่าไฟล์ template มีอยู่หรือไม่
         if (!file_exists($templatePath)) {
             throw new \Exception("Email template not found: {$template}");
         }
@@ -155,10 +192,16 @@ class Mail
 
     /**
      * เพิ่มไฟล์แนบ
+     * จุดประสงค์: แนบไฟล์กับอีเมล
+     * attach() ควรใช้กับอะไร: เมื่อคุณต้องการแนบไฟล์กับอีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $mail->attach('/path/to/file.pdf', 'Document.pdf');
+     * ```
      * 
-     * @param string $path เส้นทางไฟล์
-     * @param string $name ชื่อไฟล์ที่แสดง (optional)
-     * @return self
+     * @param string $path กำหนดเส้นทางไฟล์
+     * @param string $name กำหนดชื่อไฟล์ที่แสดง (optional)
+     * @return self คืนค่าอ็อบเจ็กต์ Mail เพื่อเรียกใช้เมธอดแบบ method chaining
      */
     public function attach(string $path, string $name = ''): self
     {
@@ -176,19 +219,28 @@ class Mail
 
     /**
      * ส่งอีเมล
+     * จุดประสงค์: ส่งอีเมลที่ตั้งค่ามาแล้ว
+     * send() ควรใช้กับอะไร: เมื่อคุณต้องการส่งอีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $mail->send();
+     * ```
      * 
-     * @return bool
+     * @return bool คืนค่าความสำเร็จของการส่งอีเมล (true/false)
      */
     public function send(): bool
     {
+        // ตรวจสอบว่ามีผู้รับ หัวข้อ และเนื้อหาหรือไม่
         if (empty($this->to)) {
             throw new \Exception("No recipients specified");
         }
         
+        // ตรวจสอบหัวข้อและเนื้อหา
         if (empty($this->subject)) {
             throw new \Exception("No subject specified");
         }
         
+        // ตรวจสอบเนื้อหา
         if (empty($this->body)) {
             throw new \Exception("No email body specified");
         }
@@ -196,10 +248,12 @@ class Mail
         // ใช้ mail() function ของ PHP (สำหรับ development)
         // ใน production ควรใช้ library เช่น PHPMailer หรือ SwiftMailer
         
-        $headers = $this->buildHeaders();
-        $body = $this->buildBody();
+        $headers = $this->buildHeaders(); // สร้าง headers
+        $body = $this->buildBody(); // สร้าง body
         
         $success = true;
+
+        // ส่งอีเมลไปยังแต่ละผู้รับ
         foreach ($this->to as $recipient) {
             $to = $recipient['name'] 
                 ? "{$recipient['name']} <{$recipient['email']}>" 
@@ -211,7 +265,7 @@ class Mail
             }
         }
         
-        // บันทึก log
+        // บันทึก log การส่งอีเมล
         $this->logEmail($success);
         
         return $success;
@@ -219,8 +273,14 @@ class Mail
 
     /**
      * สร้าง headers
+     * จุดประสงค์: สร้าง headers สำหรับส่งอีเมล
+     * buildHeaders() ควรใช้กับอะไร: เมื่อคุณต้องการสร้าง headers สำหรับส่งอีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $headers = $mail->buildHeaders();
+     * ```
      * 
-     * @return string
+     * @return string คืนค่า headers ในรูปแบบสตริง
      */
     private function buildHeaders(): string
     {
@@ -246,8 +306,14 @@ class Mail
 
     /**
      * สร้าง body
+     * จุดประสงค์: สร้าง body สำหรับส่งอีเมล
+     * buildBody() ควรใช้กับอะไร: เมื่อคุณต้องการสร้าง body สำหรับส่งอีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $body = $mail->buildBody();
+     * ```
      * 
-     * @return string
+     * @return string คืนค่า body ในรูปแบบสตริง
      */
     private function buildBody(): string
     {
@@ -259,8 +325,15 @@ class Mail
 
     /**
      * บันทึก log การส่งอีเมล
+     * จุดประสงค์: บันทึกข้อมูลการส่งอีเมลเพื่อการตรวจสอบ
+     * logEmail() ควรใช้กับอะไร: เมื่อคุณต้องการบันทึก log การส่งอีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $mail->logEmail(true);
+     * ```
      * 
-     * @param bool $success
+     * @param bool $success กำหนดสถานะความสำเร็จของการส่งอีเมล
+     * @return void ไม่คืนค่าอะไร
      */
     private function logEmail(bool $success): void
     {
@@ -280,11 +353,17 @@ class Mail
 
     /**
      * Static helper สำหรับส่งอีเมลอย่างรวดเร็ว
+     * จุดประสงค์: ส่งอีเมลอย่างรวดเร็วโดยไม่ต้องสร้างอ็อบเจ็กต์ Mail
+     * quick() ควรใช้กับอะไร: เมื่อคุณต้องการส่งอีเมลอย่างรวดเร็ว
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * Mail::quick('recipient@example.com', 'Subject', '<p>Body</p>');
+     * ```
      * 
-     * @param string $to
-     * @param string $subject
-     * @param string $body
-     * @return bool
+     * @param string $to กำหนดอีเมลผู้รับ
+     * @param string $subject กำหนดหัวข้ออีเมล
+     * @param string $body กำหนดเนื้อหาอีเมลในรูปแบบ HTML
+     * @return bool คืนค่าความสำเร็จของการส่งอีเมล (true/false)
      */
     public static function quick(string $to, string $subject, string $body): bool
     {

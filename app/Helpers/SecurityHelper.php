@@ -8,14 +8,31 @@
  * - ป้องกัน XSS, SQL Injection
  * - Sanitize และ Escape
  * - การเข้ารหัส
+ * - การตรวจสอบความถูกต้องของข้อมูล
+ * - การจัดการ CSRF
+ * - การตั้งค่า security headers
+ * - การจำกัดอัตราการเข้าถึง (Rate Limiting)
+ * - การตรวจสอบความแข็งแรงของรหัสผ่าน
+ * 
  */
 
 namespace App\Helpers;
+
+use finfo;
 
 class SecurityHelper
 {
     /**
      * Escape HTML เพื่อป้องกัน XSS
+     * จุดประสงค์: ใช้เพื่อแปลงอักขระพิเศษในสตริงเป็นรูปแบบที่ปลอดภัยสำหรับการแสดงผลใน HTML
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $safeString = SecurityHelper::escape('<script>alert("XSS")</script>');
+     * ```
+     * 
+     * ผลลัพธ์: &lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;
+     * 
+     * returns string สตริงที่ถูก escape แล้ว
      * 
      * @param string $string
      * @return string
@@ -27,6 +44,15 @@ class SecurityHelper
 
     /**
      * Escape HTML แบบเต็มรูปแบบ
+     * จุดประสงค์: ใช้เพื่อแปลงอักขระพิเศษทั้งหมดในสตริงเป็นรูปแบบ HTML entities
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $safeString = SecurityHelper::escapeHtml('<div class="test">Hello & Welcome</div>');
+     * ```
+     * 
+     * ผลลัพธ์: &amp;lt;div class=&amp;quot;test&amp;quot;&amp;gt;Hello &amp;amp; Welcome&amp;lt;/div&amp;gt;
+     * 
+     * returns string สตริงที่ถูก escape แล้ว
      * 
      * @param string $string
      * @return string
@@ -38,7 +64,15 @@ class SecurityHelper
 
     /**
      * ทำความสะอาด string
+     * จุดประสงค์: ใช้เพื่อลบ HTML tags, ช่องว่างส่วนเกิน และ whitespace ซ้ำในสตริง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanString = SecurityHelper::sanitize('  <b>Hello</b>   World!  ');
+     * ```
      * 
+     * ผลลัพธ์: Hello World!
+     * 
+     * returns string สตริงที่ถูกทำความสะอาดแล้ว
      * @param string $string
      * @return string
      */
@@ -58,6 +92,15 @@ class SecurityHelper
 
     /**
      * ทำความสะอาด email
+     * จุดประสงค์: ใช้เพื่อลบอักขระที่ไม่เหมาะสมออกจากอีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanEmail = SecurityHelper::sanitizeEmail(' user@example.com ');
+     * ```
+     * 
+     * ผลลัพธ์: user@example.com
+     * 
+     * returns string อีเมลที่ถูกทำความสะอาดแล้ว
      * 
      * @param string $email
      * @return string
@@ -69,6 +112,15 @@ class SecurityHelper
 
     /**
      * ทำความสะอาด URL
+     * จุดประสงค์: ใช้เพื่อลบอักขระที่ไม่เหมาะสมออกจาก URL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanUrl = SecurityHelper::sanitizeUrl(' https://example.com ');
+     * ```
+     * 
+     * ผลลัพธ์: https://example.com
+     * 
+     * returns string URL ที่ถูกทำความสะอาดแล้ว
      * 
      * @param string $url
      * @return string
@@ -80,6 +132,15 @@ class SecurityHelper
 
     /**
      * ทำความสะอาดตัวเลข
+     * จุดประสงค์: ใช้เพื่อลบอักขระที่ไม่เหมาะสมออกจากตัวเลข
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanNumber = SecurityHelper::sanitizeInt(' 123abc ');
+     * ```
+     * 
+     * ผลลัพธ์: 123
+     * 
+     * returns int ตัวเลขที่ถูกทำความสะอาดแล้ว
      * 
      * @param string $number
      * @return int
@@ -91,6 +152,15 @@ class SecurityHelper
 
     /**
      * ทำความสะอาดทศนิยม
+     * จุดประสงค์: ใช้เพื่อลบอักขระที่ไม่เหมาะสมออกจากทศนิยม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanFloat = SecurityHelper::sanitizeFloat(' 123.45abc ');
+     * ```
+     * 
+     * ผลลัพธ์: 123.45
+     * 
+     * returns float ทศนิยมที่ถูกทำความสะอาดแล้ว
      * 
      * @param string $float
      * @return float
@@ -102,6 +172,15 @@ class SecurityHelper
 
     /**
      * ลบ HTML tags
+     * จุดประสงค์: ใช้เพื่อลบ HTML tags ออกจากสตริง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanString = SecurityHelper::stripTags('<b>Hello</b> World!');
+     * ```
+     * 
+     * ผลลัพธ์: Hello World!
+     * 
+     * returns string สตริงที่ถูกลบ HTML tags แล้ว
      * 
      * @param string $string
      * @param string|null $allowedTags
@@ -114,6 +193,15 @@ class SecurityHelper
 
     /**
      * ลบ JavaScript
+     * จุดประสงค์: ใช้เพื่อลบโค้ด JavaScript ออกจากสตริง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanString = SecurityHelper::stripJavaScript('<script>alert("XSS")</script>Hello World!');
+     * ```
+     * 
+     * ผลลัพธ์: Hello World!
+     * 
+     * returns string สตริงที่ถูกลบ JavaScript แล้ว
      * 
      * @param string $string
      * @return string
@@ -125,6 +213,15 @@ class SecurityHelper
 
     /**
      * ลบ SQL keywords
+     * จุดประสงค์: ใช้เพื่อลบคำสำคัญของ SQL ออกจากสตริง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanString = SecurityHelper::stripSqlKeywords('SELECT * FROM users');
+     * ```
+     * 
+     * ผลลัพธ์: * FROM users
+     * 
+     * returns string สตริงที่ถูกลบคำสำคัญของ SQL แล้ว
      * 
      * @param string $string
      * @return string
@@ -141,6 +238,15 @@ class SecurityHelper
 
     /**
      * Validate email
+     * จุดประสงค์: ใช้เพื่อตรวจสอบความถูกต้องของอีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isValid = SecurityHelper::isValidEmail('example@example.com');
+     * ```
+     * 
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบอีเมล
      * 
      * @param string $email
      * @return bool
@@ -152,6 +258,15 @@ class SecurityHelper
 
     /**
      * Validate URL
+     * จุดประสงค์: ใช้เพื่อตรวจสอบความถูกต้องของ URL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isValid = SecurityHelper::isValidUrl('https://example.com');
+     * ```
+     * 
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบ URL
      * 
      * @param string $url
      * @return bool
@@ -163,6 +278,15 @@ class SecurityHelper
 
     /**
      * Validate IP
+     * จุดประสงค์: ใช้เพื่อตรวจสอบความถูกต้องของ IP address
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isValid = SecurityHelper::isValidIp('192.168.1.1');
+     * ```
+     * 
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบ IP address
      * 
      * @param string $ip
      * @return bool
@@ -174,6 +298,15 @@ class SecurityHelper
 
     /**
      * เข้ารหัส string ด้วย base64
+     * จุดประสงค์: ใช้เพื่อเข้ารหัสสตริงเป็นรูปแบบ base64
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $encoded = SecurityHelper::base64Encode('Hello World');
+     * ```
+     * 
+     * ผลลัพธ์: SGVsbG8gV29ybGQ=
+     * 
+     * returns string สตริงที่ถูกเข้ารหัสด้วย base64
      * 
      * @param string $string
      * @return string
@@ -185,7 +318,15 @@ class SecurityHelper
 
     /**
      * ถอดรหัส base64
+     * จุดประสงค์: ใช้เพื่อถอดรหัสสตริงที่ถูกเข้ารหัสด้วย base64
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $decoded = SecurityHelper::base64Decode('SGVsbG8gV29ybGQ=');
+     * ```
      * 
+     * ผลลัพธ์: Hello World
+     * 
+     * returns string สตริงที่ถูกถอดรหัส base64 แล้ว
      * @param string $string
      * @return string
      */
@@ -196,6 +337,15 @@ class SecurityHelper
 
     /**
      * เข้ารหัสแบบ URL-safe base64
+     * จุดประสงค์: ใช้เพื่อเข้ารหัสสตริงเป็นรูปแบบ base64 ที่ปลอดภัยสำหรับ URL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $encoded = SecurityHelper::base64UrlEncode('Hello World');
+     * ```
+     * 
+     * ผลลัพธ์: SGVsbG8gV29ybGQ
+     * 
+     * returns string สตริงที่ถูกเข้ารหัสด้วย URL-safe base64
      * 
      * @param string $string
      * @return string
@@ -207,6 +357,15 @@ class SecurityHelper
 
     /**
      * ถอดรหัส URL-safe base64
+     * จุดประสงค์: ใช้เพื่อถอดรหัสสตริงที่ถูกเข้ารหัสด้วย URL-safe base64
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $decoded = SecurityHelper::base64UrlDecode('SGVsbG8gV29ybGQ');
+     * ```
+     * 
+     * ผลลัพธ์: Hello World
+     * 
+     * returns string สตริงที่ถูกถอดรหัส URL-safe base64 แล้ว
      * 
      * @param string $string
      * @return string
@@ -218,6 +377,15 @@ class SecurityHelper
 
     /**
      * Hash password
+     * จุดประสงค์: ใช้เพื่อสร้าง hash ของรหัสผ่านโดยใช้ฟังก์ชัน password_hash
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $hash = SecurityHelper::hashPassword('my_secure_password');
+     * ```
+     * 
+     * ผลลัพธ์: (string) hash ของรหัสผ่าน
+     * 
+     * returns string hash ของรหัสผ่าน
      * 
      * @param string $password
      * @return string
@@ -229,6 +397,15 @@ class SecurityHelper
 
     /**
      * Verify password
+     * จุดประสงค์: ใช้เพื่อตรวจสอบรหัสผ่านกับ hash ที่เก็บไว้โดยใช้ฟังก์ชัน password_verify
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isValid = SecurityHelper::verifyPassword('my_secure_password', $hash);
+     * ```
+     * 
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบรหัสผ่าน
      * 
      * @param string $password
      * @param string $hash
@@ -241,6 +418,15 @@ class SecurityHelper
 
     /**
      * สร้าง token สุ่ม
+     * จุดประสงค์: ใช้เพื่อสร้าง token สุ่มที่มีความยาวตามที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $token = SecurityHelper::generateToken(32);
+     * ```
+     * 
+     * ผลลัพธ์: (string) token สุ่ม
+     * 
+     * returns string token สุ่ม
      * 
      * @param int $length
      * @return string
@@ -252,6 +438,15 @@ class SecurityHelper
 
     /**
      * สร้าง UUID v4
+     * จุดประสงค์: ใช้เพื่อสร้าง UUID เวอร์ชัน 4 ที่ไม่ซ้ำกัน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $uuid = SecurityHelper::uuid();
+     * ```
+     * 
+     * ผลลัพธ์: (string) UUID v4
+     * 
+     * returns string UUID v4
      * 
      * @return string
      */
@@ -267,6 +462,15 @@ class SecurityHelper
 
     /**
      * สร้าง CSRF token
+     * จุดประสงค์: ใช้เพื่อสร้าง token สำหรับป้องกัน CSRF
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $csrfToken = SecurityHelper::generateCsrfToken();
+     * ```
+     * 
+     * ผลลัพธ์: (string) CSRF token
+     * 
+     * returns string CSRF token
      * 
      * @return string
      */
@@ -285,6 +489,15 @@ class SecurityHelper
 
     /**
      * ตรวจสอบ CSRF token
+     * จุดประสงค์: ใช้เพื่อตรวจสอบ token สำหรับป้องกัน CSRF
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isValid = SecurityHelper::verifyCsrfToken($token);
+     * ```
+     * 
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบ CSRF token
      * 
      * @param string $token
      * @return bool
@@ -299,7 +512,15 @@ class SecurityHelper
     }
 
     /**
-     * Encrypt string
+     * เข้ารหัสข้อความ
+     * จุดประสงค์: ใช้เพื่อเข้ารหัสข้อความด้วย AES-256-CBC
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $encrypted = SecurityHelper::encrypt('Hello World', 'my_secret_key');
+     * ```
+     * ผลลัพธ์: (string) ข้อความที่ถูกเข้ารหัส
+     * 
+     * returns string ข้อความที่ถูกเข้ารหัส
      * 
      * @param string $data
      * @param string $key
@@ -314,7 +535,15 @@ class SecurityHelper
     }
 
     /**
-     * Decrypt string
+     * ถอดรหัสข้อความ
+     * จุดประสงค์: ใช้เพื่อถอดรหัสข้อความที่ถูกเข้ารหัสด้วย AES-256-CBC
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $decrypted = SecurityHelper::decrypt($encryptedData, 'my_secret_key');
+     * ```
+     * ผลลัพธ์: (string|false) ข้อความที่ถูกถอดรหัสหรือ false ถ้าถอดรหัสไม่สำเร็จ
+     * 
+     * returns string|false ข้อความที่ถูกถอดรหัสหรือ false
      * 
      * @param string $data
      * @param string $key
@@ -331,6 +560,16 @@ class SecurityHelper
 
     /**
      * สร้าง hash
+     * จุดประสงค์: ใช้เพื่อสร้าง hash ของข้อมูลด้วยอัลกอริทึมที่กำหนด
+     * อัลกอริทึมที่รองรับ: md5, sha1, sha256, sha512 เป็นต้น
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $hash = SecurityHelper::hash('my_data', 'sha256');
+     * ```
+     * 
+     * ผลลัพธ์: (string) hash ของข้อมูล
+     * 
+     * returns string hash ของข้อมูล
      * 
      * @param string $data
      * @param string $algo
@@ -343,6 +582,16 @@ class SecurityHelper
 
     /**
      * สร้าง HMAC
+     * จุดประสงค์: ใช้เพื่อสร้าง HMAC ของข้อมูลด้วยอัลกอริทึมที่กำหนด
+     * อัลกอริทึมที่รองรับ: md5, sha1, sha256, sha512 เป็นต้น
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $hmac = SecurityHelper::hmac('my_data', 'my_secret_key', 'sha256');
+     * ```
+     * 
+     * ผลลัพธ์: (string) HMAC ของข้อมูล
+     * 
+     * returns string HMAC ของข้อมูล
      * 
      * @param string $data
      * @param string $key
@@ -356,6 +605,15 @@ class SecurityHelper
 
     /**
      * ตรวจสอบ hash แบบปลอดภัย
+     * จุดประสงค์: ใช้เพื่อตรวจสอบความเท่ากันของ hash สองค่าอย่างปลอดภัย
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isEqual = SecurityHelper::hashEquals($knownHash, $userHash);
+     * ```
+     * 
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบความเท่ากันของ hash
      * 
      * @param string $known
      * @param string $user
@@ -368,6 +626,15 @@ class SecurityHelper
 
     /**
      * ซ่อนข้อมูลบางส่วน (เช่น อีเมล, เบอร์โทร)
+     * จุดประสงค์: ใช้เพื่อซ่อนข้อมูลบางส่วนของสตริงด้วยอักขระมาสก์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $maskedString = SecurityHelper::mask('1234567890', 3, 4);
+     * ```
+     * 
+     * ผลลัพธ์: 123****890
+     * 
+     * returns string สตริงที่ถูกซ่อนข้อมูลบางส่วนแล้ว
      * 
      * @param string $string
      * @param int $start
@@ -389,6 +656,15 @@ class SecurityHelper
 
     /**
      * ซ่อนอีเมล
+     * จุดประสงค์: ใช้เพื่อซ่อนส่วนหนึ่งของอีเมลเพื่อความเป็นส่วนตัว
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $maskedEmail = SecurityHelper::maskEmail('example@example.com');
+     * ```
+     * 
+     * ผลลัพธ์: ex******@example.com
+     * 
+     * returns string อีเมลที่ถูกซ่อนบางส่วนแล้ว
      * 
      * @param string $email
      * @return string
@@ -410,6 +686,15 @@ class SecurityHelper
 
     /**
      * ซ่อนเบอร์โทร
+     * จุดประสงค์: ใช้เพื่อซ่อนส่วนหนึ่งของเบอร์โทรเพื่อความเป็นส่วนตัว
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $maskedPhone = SecurityHelper::maskPhone('0123456789');
+     * ```
+     * 
+     * ผลลัพธ์: 012****789
+     * 
+     * returns string เบอร์โทรที่ถูกซ่อนบางส่วนแล้ว
      * 
      * @param string $phone
      * @return string
@@ -426,7 +711,15 @@ class SecurityHelper
     }
 
     /**
-     * Clean filename
+     * ทำความสะอาดชื่อไฟล์
+     * จุดประสงค์: ใช้เพื่อลบอักขระที่ไม่ปลอดภัยออกจากชื่อไฟล์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanFilename = SecurityHelper::cleanFilename('../etc/passwd');
+     * 
+     * ผลลัพธ์: etc_passwd
+     * 
+     * returns string ชื่อไฟล์ที่ถูกทำความสะอาดแล้ว
      * 
      * @param string $filename
      * @return string
@@ -444,6 +737,14 @@ class SecurityHelper
 
     /**
      * ตรวจสอบ file extension
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่าไฟล์มีนามสกุลที่อนุญาตหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isAllowed = SecurityHelper::isAllowedExtension('image.jpg', ['jpg', 'png', 'gif']);
+     * ```
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบนามสกุลไฟล์
      * 
      * @param string $filename
      * @param array $allowedExtensions
@@ -457,6 +758,14 @@ class SecurityHelper
 
     /**
      * ตรวจสอบ MIME type
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่าไฟล์มี MIME type ที่อนุญาตหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isAllowed = SecurityHelper::isAllowedMimeType('path/to/file.jpg', ['image/jpeg', 'image/png']);
+     * ```
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบ MIME type
      * 
      * @param string $file
      * @param array $allowedMimeTypes
@@ -467,16 +776,24 @@ class SecurityHelper
         if (!file_exists($file)) {
             return false;
         }
-        
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file);
-        finfo_close($finfo);
-        
-        return in_array($mimeType, $allowedMimeTypes);
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($file);
+
+        return in_array($mimeType, $allowedMimeTypes, true);
     }
+
 
     /**
      * Escape JSON
+     * จุดประสงค์: ใช้เพื่อป้องกันการโจมตีแบบ JSON Injection
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $escapedJson = SecurityHelper::escapeJson('{"key": "value"}');
+     * ```
+     * ผลลัพธ์: "{\"key\": \"value\"}"
+     * 
+     * returns string ข้อความ JSON ที่ถูก escape แล้ว
      * 
      * @param string $string
      * @return string
@@ -488,6 +805,15 @@ class SecurityHelper
 
     /**
      * Escape JavaScript
+     * จุดประสงค์: ใช้เพื่อป้องกันการโจมตีแบบ JavaScript Injection
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $escapedJs = SecurityHelper::escapeJs("alert('XSS');");
+     * ```
+     * 
+     * ผลลัพธ์: alert(\'XSS\');
+     * 
+     * returns string ข้อความ JavaScript ที่ถูก escape แล้ว
      * 
      * @param string $string
      * @return string
@@ -503,6 +829,15 @@ class SecurityHelper
 
     /**
      * Escape attribute
+     * จุดประสงค์: ใช้เพื่อป้องกันการโจมตีแบบ Attribute Injection
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $escapedAttr = SecurityHelper::escapeAttr('onmouseover="alert(\'XSS\')"');
+     * ```
+     * 
+     * ผลลัพธ์: onmouseover=&quot;alert(&#039;XSS&#039;)&quot;
+     * 
+     * returns string ข้อความ Attribute ที่ถูก escape แล้ว
      * 
      * @param string $string
      * @return string
@@ -514,6 +849,15 @@ class SecurityHelper
 
     /**
      * ป้องกัน clickjacking
+     * จุดประสงค์: ใช้เพื่อป้องกันการโจมตีแบบ clickjacking โดยการตั้งค่า header X-Frame-Options
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * SecurityHelper::preventClickjacking();
+     * ```
+     * 
+     * ผลลัพธ์: ตั้งค่า header X-Frame-Options เป็น DENY
+     * 
+     * returns void
      * 
      * @return void
      */
@@ -524,6 +868,15 @@ class SecurityHelper
 
     /**
      * ตั้งค่า Content Security Policy
+     * จุดประสงค์: ใช้เพื่อป้องกันการโจมตีแบบ Content Security Policy
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * SecurityHelper::setCSP("default-src 'self'; script-src 'self' https://trustedscripts.example.com");
+     * ```
+     * 
+     * ผลลัพธ์: ตั้งค่า header Content-Security-Policy ตามนโยบายที่กำหนด
+     * 
+     * returns void
      * 
      * @param string $policy
      * @return void
@@ -535,7 +888,15 @@ class SecurityHelper
 
     /**
      * ตั้งค่า security headers
+     * จุดประสงค์: ใช้เพื่อป้องกันการโจมตีแบบ security headers
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * SecurityHelper::setSecurityHeaders();
+     * ```
      * 
+     * ผลลัพธ์: ตั้งค่า header X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
+     * 
+     * returns void
      * @return void
      */
     public static function setSecurityHeaders(): void
@@ -549,6 +910,15 @@ class SecurityHelper
 
     /**
      * Force HTTPS
+     * จุดประสงค์: ใช้เพื่อบังคับให้เชื่อมต่อผ่าน HTTPS
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * SecurityHelper::forceHttps();
+     * ```
+     * 
+     * ผลลัพธ์: ถ้าไม่ใช่ HTTPS จะทำการ redirect ไปยัง URL ที่ใช้ HTTPS
+     * 
+     * returns void
      * 
      * @return void
      */
@@ -563,6 +933,15 @@ class SecurityHelper
 
     /**
      * ป้องกัน MIME type sniffing
+     * จุดประสงค์: ใช้เพื่อป้องกันการโจมตีแบบ MIME type sniffing
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * SecurityHelper::preventMimeSniffing();
+     * ```
+     * 
+     * ผลลัพธ์: ตั้งค่า header X-Content-Type-Options เป็น nosniff
+     * 
+     * returns void
      * 
      * @return void
      */
@@ -573,6 +952,15 @@ class SecurityHelper
 
     /**
      * Rate limiting check
+     * จุดประสงค์: ใช้เพื่อตรวจสอบการจำกัดอัตราการเข้าถึงตามคีย์ที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isAllowed = SecurityHelper::rateLimitCheck('login_attempts', 5, 1);
+     * ```
+     * 
+     * ผลลัพธ์: true ถ้ายังไม่เกินจำนวนครั้งที่กำหนด, false ถ้าเกิน
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบ rate limit
      * 
      * @param string $key
      * @param int $maxAttempts
@@ -617,6 +1005,15 @@ class SecurityHelper
 
     /**
      * Clear rate limit
+     * จุดประสงค์: ใช้เพื่อล้างข้อมูล rate limit สำหรับคีย์ที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * SecurityHelper::clearRateLimit('login_attempts');
+     * ```
+     * 
+     * ผลลัพธ์: ล้างข้อมูล rate limit สำหรับคีย์ที่กำหนด
+     * 
+     * returns void
      * 
      * @param string $key
      * @return void
@@ -633,6 +1030,20 @@ class SecurityHelper
 
     /**
      * ตรวจสอบความแข็งแรงของรหัสผ่าน
+     * จุดประสงค์: ใช้เพื่อตรวจสอบความแข็งแรงของรหัสผ่าน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $strength = SecurityHelper::checkPasswordStrength('MyP@ssw0rd');
+     * ```
+     * 
+     * ผลลัพธ์:
+     * [
+     *   'score' => 4,
+     *   'label' => 'แข็งแรงมาก',
+     *   'feedback' => []
+     * ]
+     * 
+     * returns array ผลลัพธ์การตรวจสอบความแข็งแรงของรหัสผ่าน
      * 
      * @param string $password
      * @return array

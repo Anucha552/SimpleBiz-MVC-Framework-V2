@@ -1,49 +1,64 @@
 <?php
+/**
+ * คลาสนี้เป็นตัวแทนของการตอบสนอง HTTP ที่ส่งกลับไปยังไคลเอนต์
+ * 
+ * จุดประสงค์: จัดการการสร้างและส่งการตอบสนอง HTTP
+ * Response() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างและส่งการตอบสนอง HTTP
+ * 
+ * ฟีเจอร์หลัก:
+ * - สร้างการตอบสนองด้วยสถานะ, หัวข้อ, และเนื้อหา
+ * - ส่งการตอบสนองไปยังไคลเอนต์
+ * 
+ * ตัวอย่างการใช้งานโดยรวม:
+ * ```php
+ * $response = new Response('Hello, World!', 200, ['Content-Type' => 'text/plain']);
+ * $response->send();
+ * ```
+ */
 
 namespace App\Core;
 
-/**
- * Lightweight HTTP Response.
- *
- * Design goals:
- * - Minimal surface area (good for small freelance projects)
- * - Easy to return from controllers/middleware
- * - Can still be used alongside existing echo/exit patterns
- */
 class Response
 {
+    /**
+     * สถานะรหัส HTTP ของการตอบสนอง
+     */
     private int $statusCode;
 
-    /** @var array<string, string> */
+    /**
+     * หัวข้อของการตอบสนอง
+     *
+     */
     private array $headers = [];
 
+    /**
+     * เนื้อหาของการตอบสนอง
+     */
     private string $body;
 
     /**
-     * @var array<int, array{name:string,value:string,options:array}>
+     * คุกกี้ของการตอบสนอง
      */
     private array $cookies = [];
 
     /**
-     * Test/debug helper: headers sent by the last Response::send() call.
-     *
-     * @var array<int, string>
+     * บันทึกหัวข้อที่ถูกส่งล่าสุด (สำหรับการทดสอบ)
      */
     private static array $lastSentHeaders = [];
 
     /**
-     * @return array<int, string>
+     * สร้างอินสแตนซ์ใหม่ของ Response
+     * จุดประสงค์: สร้างการตอบสนอง HTTP ใหม่
+     * Response() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างการตอบสนอง HTTP ใหม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = new Response('Hello, World!', 200, ['Content-Type' => 'text/plain']);
+     * ```
+     *
+     * @param string $body เนื้อหาของการตอบสนอง
+     * @param int $statusCode รหัสสถานะ HTTP (ค่าเริ่มต้น: 200)
+     * @param array<string, string> $headers หัวข้อเพิ่มเติมสำหรับการตอบสนอง
      */
-    public static function getLastSentHeaders(): array
-    {
-        return self::$lastSentHeaders;
-    }
-
-    public static function clearLastSentHeaders(): void
-    {
-        self::$lastSentHeaders = [];
-    }
-
     public function __construct(string $body = '', int $statusCode = 200, array $headers = [])
     {
         $this->body = $body;
@@ -54,6 +69,51 @@ class Response
         }
     }
 
+    /**
+     * รับหัวข้อที่ถูกส่งล่าสุด (สำหรับการทดสอบ)
+     * จุดประสงค์: ดึงหัวข้อที่ถูกส่งล่าสุด
+     * getLastSentHeaders() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $headers = Response::getLastSentHeaders();
+     * ```
+     * 
+     * @return array<int, string> คืนค่าหัวข้อที่ถูกส่งล่าสุด
+     */
+    public static function getLastSentHeaders(): array
+    {
+        return self::$lastSentHeaders;
+    }
+
+    /**
+     * ล้างหัวข้อที่ถูกส่งล่าสุด (สำหรับการทดสอบ)
+     * จุดประสงค์: ล้างบันทึกหัวข้อที่ถูกส่งล่าสุด
+     * clearLastSentHeaders() ควรใช้กับอะไร: เมื่อคุณต้องการล้างบันทึกหัวข้อที่ถูกส่งล่าสุด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * Response::clearLastSentHeaders();
+     * ```
+     * 
+     * @return void ไม่มีค่าที่ส่งกลับ
+     */
+    public static function clearLastSentHeaders(): void
+    {
+        self::$lastSentHeaders = [];
+    }
+
+    /**
+     * สร้างการตอบสนอง HTML
+     * จุดประสงค์: สร้างการตอบสนอง HTML
+     * html() ควรใช้กับอะไร: เมื่อคุณต้องการส่งการตอบสนอง HTML
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = Response::html('<h1>Hello, World!</h1>');
+     * ```
+     * 
+     * @param string $html เนื้อหา HTML ของการตอบสนอง
+     * @param int $statusCode รหัสสถานะ HTTP (ค่าเริ่มต้น: 200)
+     * @return self คืนค่าอินสแตนซ์ของ Response
+     */
     public static function html(string $html, int $statusCode = 200): self
     {
         return (new self($html, $statusCode))
@@ -61,16 +121,19 @@ class Response
     }
 
     /**
-     * Standard API success response.
+     * สร้างการตอบสนอง API สำเร็จรูป
+     * จุดประสงค์: สร้างการตอบสนอง API ที่แสดงถึงความสำเร็จ
+     * apiSuccess() ควรใช้กับอะไร: เมื่อคุณต้องการส่งการตอบสนอง API ที่แสดงถึงความสำเร็จ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = Response::apiSuccess($data, 'Operation successful', ['page' => 1], 200);
+     * ```
      *
-     * Shape:
-     * - success: true
-     * - data: mixed
-     * - message: string
-     * - errors: []
-     * - meta: optional
-     *
-     * @param mixed $data
+     * @param mixed $data กำหนดข้อมูลที่ส่งกลับ
+     * @param string $message กำหนดข้อความที่เกี่ยวข้องกับการตอบสนอง
+     * @param array $meta กำหนดข้อมูลเมตาเพิ่มเติม (ถ้ามี)
+     * @param int $statusCode รหัสสถานะ HTTP (ค่าเริ่มต้น: 200)
+     * @return self คืนค่าอินสแตนซ์ของ Response
      */
     public static function apiSuccess($data = null, string $message = 'Success', array $meta = [], int $statusCode = 200): self
     {
@@ -90,14 +153,19 @@ class Response
     }
 
     /**
-     * Standard API error response.
-     *
-     * Shape:
-     * - success: false
-     * - data: null
-     * - message: string
-     * - errors: array
-     * - meta: optional
+     * สร้างการตอบสนอง API ที่แสดงถึงข้อผิดพลาด
+     * จุดประสงค์: สร้างการตอบสนอง API ที่แสดงถึงข้อผิดพลาด
+     * apiError() ควรใช้กับอะไร: เมื่อคุณต้องการส่งการตอบสนอง API ที่แสดงถึงข้อผิดพลาด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = Response::apiError('An error occurred', ['field' => 'Invalid value'], 400);
+     * ```
+     * 
+     * @param string $message กำหนดข้อความที่อธิบายข้อผิดพลาด
+     * @param array $errors กำหนดรายละเอียดข้อผิดพลาดเพิ่มเติม
+     * @param int $statusCode รหัสสถานะ HTTP (ค่าเริ่มต้น: 400)
+     * @param array $meta กำหนดข้อมูลเมตาเพิ่มเติม (ถ้ามี)
+     * @return self คืนค่าอินสแตนซ์ของ Response
      */
     public static function apiError(string $message, array $errors = [], int $statusCode = 400, array $meta = []): self
     {
@@ -115,13 +183,35 @@ class Response
         return self::json($payload, $statusCode, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     }
 
+    /**
+     * สร้างการตอบสนองไม่มีเนื้อหา (204 No Content)
+     * จุดประสงค์: สร้างการตอบสนองที่ไม่มีเนื้อหา
+     * noContent() ควรใช้กับอะไร: เมื่อคุณต้องการส่งการตอบสนองที่ไม่มีเนื้อหา
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = Response::noContent();
+     * ```
+     * 
+     * @return self คืนค่าอินสแตนซ์ของ Response
+     */
     public static function noContent(): self
     {
         return new self('', 204);
     }
 
     /**
-     * @param mixed $data
+     * สร้างการตอบสนอง JSON
+     * จุดประสงค์: สร้างการตอบสนอง JSON
+     * json() ควรใช้กับอะไร: เมื่อคุณต้องการส่งการตอบสนอง JSON
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = Response::json($data, 200);
+     * ```
+     * 
+     * @param mixed $data กำหนดข้อมูลที่จะถูกเข้ารหัสเป็น JSON
+     * @param int $statusCode รหัสสถานะ HTTP (ค่าเริ่มต้น: 200)
+     * @param int $jsonFlags ธงสำหรับ json_encode (ค่าเริ่มต้น: 0)
+     * @return self คืนค่าอินสแตนซ์ของ Response
      */
     public static function json($data, int $statusCode = 200, int $jsonFlags = 0): self
     {
@@ -148,6 +238,19 @@ class Response
             ->withHeader('Content-Type', 'application/json; charset=UTF-8');
     }
 
+    /**
+     * สร้างการตอบสนองเปลี่ยนเส้นทาง
+     * จุดประสงค์: สร้างการตอบสนองที่เปลี่ยนเส้นทางไปยัง URL ใหม่
+     * redirect() ควรใช้กับอะไร: เมื่อคุณต้องการส่งการตอบสนองที่เปลี่ยนเส้นทาง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = Response::redirect('https://example.com', 302);
+     * ```
+     * 
+     * @param string $location กำหนด URL ที่จะเปลี่ยนเส้นทางไป
+     * @param int $statusCode รหัสสถานะ HTTP (ค่าเริ่มต้น: 302)
+     * @return self คืนค่าอินสแตนซ์ของ Response
+     */
     public static function redirect(string $location, int $statusCode = 302): self
     {
         return (new self('', $statusCode))
@@ -155,9 +258,18 @@ class Response
     }
 
     /**
-     * Add a cookie to be sent with this response.
-     *
-     * Options map to PHP's setcookie options: expires, path, domain, secure, httponly, samesite.
+     * เพิ่มคุกกี้ที่จะถูกส่งพร้อมกับการตอบสนองนี้
+     * จุดประสงค์: เพิ่มคุกกี้ในการตอบสนอง HTTP
+     * withCookie() ควรใช้กับอะไร: เมื่อคุณต้องการตั้งค่าคุกกี้ที่จะถูกส่งกับการตอบสนอง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = $response->withCookie('session_id', 'abc123', ['path' => '/', 'httponly' => true]);
+     * ```
+     * 
+     * @param string $name กำหนดชื่อของคุกกี้
+     * @param string $value กำหนดค่าของคุกกี้
+     * @param array $options กำหนดตัวเลือกเพิ่มเติมสำหรับคุกกี้ (เช่น expires, path, domain, secure, httponly)
+     * @return self คืนค่าอินสแตนซ์ของ Response ที่มีคุกกี้เพิ่มขึ้น
      */
     public function withCookie(string $name, string $value, array $options = []): self
     {
@@ -170,6 +282,18 @@ class Response
         return $clone;
     }
 
+    /**
+     * เพิ่มรหัสสถานะให้กับการตอบสนองนี้
+     * จุดประสงค์: ตั้งค่ารหัสสถานะ HTTP ของการตอบสนอง
+     * withStatus() ควรใช้กับอะไร: เมื่อคุณต้องการตั้งค่ารหัสสถานะ HTTP ของการตอบสนอง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = $response->withStatus(404);
+     * ```
+     * 
+     * @param int $statusCode กำหนดรหัสสถานะ HTTP
+     * @return self คืนค่าอินสแตนซ์ของ Response ที่มีรหัสสถานะที่ตั้งค่าใหม่
+     */
     public function withStatus(int $statusCode): self
     {
         $clone = clone $this;
@@ -177,6 +301,19 @@ class Response
         return $clone;
     }
 
+    /**
+     * เพิ่มหัวข้อเดียว
+     * จุดประสงค์: เพิ่มหัวข้อ HTTP ให้กับการตอบสนอง
+     * withHeader() ควรใช้กับอะไร: เมื่อคุณต้องการเพิ่มหัวข้อ HTTP ให้กับการตอบสนอง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = $response->withHeader('Content-Type', 'application/json');
+     * ```
+     * 
+     * @param string $name กำหนดชื่อของหัวข้อ
+     * @param string $value กำหนดค่าของหัวข้อ
+     * @return self คืนค่าอินสแตนซ์ของ Response ที่มีหัวข้อเพิ่มขึ้น
+     */
     public function withHeader(string $name, string $value): self
     {
         $clone = clone $this;
@@ -185,9 +322,17 @@ class Response
     }
 
     /**
-     * Add multiple headers.
-     *
-     * @param array<string, string> $headers
+     * เพิ่มหลายหัวข้อ
+     * จุดประสงค์: เพิ่มหลายหัวข้อ HTTP ให้กับการตอบสนอง
+     * withHeaders() ควรใช้กับอะไร: เมื่อคุณต้องการเพิ่มหลายหัวข้อ HTTP ให้กับการตอบสนอง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = $response->withHeaders(['Content-Type' => 'application/json', 'Cache-Control' => 'no-cache'], false);
+     * ```
+     * 
+     * @param array<string, string> $headers กำหนดหัวข้อที่ต้องการเพิ่ม
+     * @param bool $overwrite กำหนดว่าควรเขียนทับ
+     * @return self คืนค่าอินสแตนซ์ของ Response ที่มีหัวข้อเพิ่มขึ้น
      */
     public function withHeaders(array $headers, bool $overwrite = true): self
     {
@@ -209,12 +354,33 @@ class Response
         return $clone;
     }
 
+    /**
+     * ส่งคืนรหัสสถานะของการตอบสนอง
+     * จุดประสงค์: ดึงรหัสสถานะ HTTP ของการตอบสนอง
+     * getStatusCode() ควรใช้กับอะไร: เมื่อคุณต้องการทราบรหัสสถานะ HTTP ของการตอบสนอง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $statusCode = $response->getStatusCode();
+     * ```
+     * 
+     * @return int คืนค่ารหัสสถานะ HTTP ของการตอบสนอง
+     */
     public function getStatusCode(): int
     {
         return $this->statusCode;
     }
 
-    /** @return array<string, string> */
+    /** 
+     * ส่งคืนหัวข้อของการตอบสนอง
+     * จุดประสงค์: ดึงหัวข้อ HTTP ของการตอบสนอง
+     * getHeaders() ควรใช้กับอะไร: เมื่อคุณต้องการทราบหัวข้อ HTTP ของการตอบสนอง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $headers = $response->getHeaders();
+     * ```
+     * 
+     * @return array<string, string> คืนค่าหัวข้อของการตอบสนอง
+     */
     public function getHeaders(): array
     {
         return $this->headers;
@@ -226,13 +392,32 @@ class Response
     }
 
     /**
-     * @return array<int, array{name:string,value:string,options:array}>
+     * ส่งคืนคุกกี้ของการตอบสนอง
+     * จุดประสงค์: ดึงคุกกี้ที่ถูกตั้งค่าใน การตอบสนอง
+     * getCookies() ควรใช้กับอะไร: เมื่อคุณต้องการทราบคุกกี้ที่ถูกตั้งค่าใน การตอบสนอง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cookies = $response->getCookies();
+     * ```
+     * 
+     * @return array คืนค่าคุกกี้ของการตอบสนอง
      */
     public function getCookies(): array
     {
         return $this->cookies;
     }
 
+    /**
+     * ส่งการตอบสนองไปยังไคลเอนต์
+     * จุดประสงค์: ส่งการตอบสนอง HTTP ไปยังไคลเอนต์
+     * send() ควรใช้กับอะไร: เมื่อคุณต้องการส่งการตอบสนอง HTTP ไปยังไคลเอนต์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response->send();
+     * ```
+     * 
+     * @return void ไม่มีค่าที่ส่งกลับ
+     */
     public function send(): void
     {
         // Reset per-send record (useful for tests)

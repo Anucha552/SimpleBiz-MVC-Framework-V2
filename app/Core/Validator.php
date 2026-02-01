@@ -1,8 +1,9 @@
 <?php
 /**
- * คลาส Validator
+ * คลาส Validator สำหรับตรวจสอบความถูกต้องของข้อมูล
  * 
  * จุดประสงค์: ตรวจสอบความถูกต้องของข้อมูล
+ * Validator ควรใช้กับอะไร: ข้อมูลที่ต้องการตรวจสอบและกฎการตรวจสอบ
  * ฟีเจอร์: กฎการตรวจสอบหลากหลาย, ข้อความแสดงข้อผิดพลาดภาษาไทย, custom rules
  * 
  * กฎการตรวจสอบที่รองรับ:
@@ -20,7 +21,7 @@
  * - in: ต้องอยู่ในรายการที่กำหนด
  * - regex: ตรงกับ pattern
  * 
- * ตัวอย่างการใช้งาน:
+ * ตัวอย่างการใช้งานโดยรวม:
  * ```php
  * $validator = new Validator($data, [
  *     'username' => 'required|alphanumeric|min:3|max:20',
@@ -86,6 +87,17 @@ class Validator
 
     /**
      * สร้างอินสแตนซ์ Validator ใหม่
+     * จุดประสงค์: สร้างอินสแตนซ์ของ Validator พร้อมข้อมูลและกฎการตรวจสอบ
+     * Validator() ควรใช้กับอะไร: ข้อมูลที่ต้องการตรวจสอบและกฎการตรวจสอบ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $validator = new Validator($data, [
+     *     'username' => 'required|alphanumeric|min:3|max:20',
+     *     'email' => 'required|email|unique:users,email',
+     *    'password' => 'required|min:8',
+     *    'password_confirm' => 'required|match:password'
+     * ]);
+     * ```
      * 
      * @param array $data ข้อมูลที่ต้องการตรวจสอบ
      * @param array $rules กฎการตรวจสอบ
@@ -100,8 +112,19 @@ class Validator
 
     /**
      * ทำการตรวจสอบ
+     * จุอประสงค์: ทำการตรวจสอบข้อมูลตามกฎที่กำหนด
+     * validate() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบข้อมูลตามกฎที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * if ($validator->validate()) {
+     *     // ข้อมูลถูกต้อง
+     * } else {
+     *    $errors = $validator->errors();
+     * }
+     * ```
      * 
-     * @return bool
+     * 
+     * @return bool true ถ้าข้อมูลผ่านการตรวจสอบ, false ถ้าไม่ผ่าน
      */
     public function validate(): bool
     {
@@ -121,8 +144,18 @@ class Validator
 
     /**
      * ตรวจสอบว่าผ่านหรือไม่
+     * จุดประสงค์: ตรวจสอบว่าข้อมูลผ่านการตรวจสอบตามกฎที่กำหนดหรือไม่
+     * passes() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าข้อมูลผ่านการตรวจสอบหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * if ($validator->passes()) {
+     *    // ข้อมูลถูกต้อง
+     * } else {
+     *   $errors = $validator->errors();
+     * }
+     * ```
      * 
-     * @return bool
+     * @return bool true ถ้าข้อมูลผ่านการตรวจสอบ, false ถ้าไม่ผ่าน
      */
     public function passes(): bool
     {
@@ -131,8 +164,18 @@ class Validator
 
     /**
      * ตรวจสอบว่าไม่ผ่านหรือไม่
+     * จุดประสงค์: ตรวจสอบว่าข้อมูลไม่ผ่านการตรวจสอบตามกฎที่กำหนดหรือไม่
+     * fails() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าข้อมูลไม่ผ่านการตรวจสอบหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * if ($validator->fails()) {
+     *    $errors = $validator->errors();
+     * } else {
+     *    // ข้อมูลถูกต้อง
+     * }
+     * ```
      * 
-     * @return bool
+     * @return bool true ถ้าข้อมูลไม่ผ่านการตรวจสอบ, false ถ้าผ่าน
      */
     public function fails(): bool
     {
@@ -141,8 +184,14 @@ class Validator
 
     /**
      * รับข้อความแสดงข้อผิดพลาดทั้งหมด
+     * จุดประสงค์: รับข้อความแสดงข้อผิดพลาดทั้งหมดที่เกิดขึ้นจากการตรวจสอบ
+     * errors() ควรใช้กับอะไร: เมื่อคุณต้องการดึงข้อความแสดงข้อผิดพลาดทั้งหมด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $errors = $validator->errors();
+     * ```
      * 
-     * @return array
+     * @return array ข้อความแสดงข้อผิดพลาดทั้งหมด
      */
     public function errors(): array
     {
@@ -151,9 +200,14 @@ class Validator
 
     /**
      * รับข้อความแสดงข้อผิดพลาดของฟิลด์
-     * 
-     * @param string $field
-     * @return array
+     * จุดประสงค์: รับข้อความแสดงข้อผิดพลาดของฟิลด์ที่ระบุ
+     * getError() ควรใช้กับอะไร: เมื่อคุณต้องการดึงข้อความแสดงข้อผิดพลาดของฟิลด์เฉพาะ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $usernameErrors = $validator->getError('username');
+     * ```
+     * @param string $field ชื่อฟิลด์ที่ต้องการดึงข้อผิดพลาด
+     * @return array ข้อความแสดงข้อผิดพลาดของฟิลด์
      */
     public function getError(string $field): array
     {
@@ -162,10 +216,16 @@ class Validator
 
     /**
      * ตรวจสอบกฎแต่ละข้อ
-     * 
-     * @param string $field
-     * @param mixed $value
-     * @param string $rule
+     * จุดประสงค์: ตรวจสอบข้อมูลตามกฎที่กำหนด
+     * validateRule() ควรใช้กับอะไร: ชื่อฟิลด์, ค่าของฟิลด์, กฎที่ต้องการตรวจสอบ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateRule('email', 'test@example.com', 'required|email');
+     * ```
+     * @param string $field ชื่อฟิลด์
+     * @param mixed $value ค่าของฟิลด์
+     * @param string $rule กฎที่ต้องการตรวจสอบ
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     private function validateRule(string $field, $value, string $rule): void
     {
@@ -188,10 +248,15 @@ class Validator
 
     /**
      * เพิ่มข้อความแสดงข้อผิดพลาด
-     * 
-     * @param string $field
-     * @param string $rule
-     * @param mixed $param
+     * จุดประสงค์: เพิ่มข้อความแสดงข้อผิดพลาดสำหรับฟิลด์และกฎที่ระบุ
+     * addError() ควรใช้กับอะไร: ชื่อฟิลด์, ชื่อกฎ, และพารามิเตอร์ของกฎ (ถ้ามี)
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->addError('email', 'required');
+     * ```
+     * @param string $field ชื่อฟิลด์
+     * @param string $rule ชื่อกฎ
+     * @param mixed $param พารามิเตอร์ของกฎ (ถ้ามี)
      */
     private function addError(string $field, string $rule, $param = null): void
     {
@@ -221,6 +286,13 @@ class Validator
 
     /**
      * กฎ required: ต้องมีค่า
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์มีค่าหรือไม่
+     * validateRequired() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าฟิลด์มีค่าหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateRequired($value);
+     * ```
+     * @param mixed $value ค่าของฟิลด์
      */
     private function validateRequired($value, $param = null): bool
     {
@@ -241,6 +313,14 @@ class Validator
 
     /**
      * กฎ email: รูปแบบอีเมล
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์มีรูปแบบอีเมลที่ถูกต้องหรือไม่
+     * validateEmail() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบรูปแบบอีเมล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateEmail($value);
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
      */
     private function validateEmail($value, $param = null): bool
     {
@@ -253,6 +333,15 @@ class Validator
 
     /**
      * กฎ min: ความยาวขั้นต่ำ
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์มีความยาวขั้นต่ำที่กำหนดหรือไม่
+     * validateMin() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบความยาวขั้นต่ำ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateMin($value, 3);
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param พารามิเตอร์ของกฎ (ความยาวขั้นต่ำ)
      */
     private function validateMin($value, $param): bool
     {
@@ -269,6 +358,15 @@ class Validator
 
     /**
      * กฎ max: ความยาวสูงสุด
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์มีความยาวสูงสุดที่กำหนดหรือไม่
+     * validateMax() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบความยาวสูงสุด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateMax($value, 10);
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param พารามิเตอร์ของกฎ (ความยาวสูงสุด)
      */
     private function validateMax($value, $param): bool
     {
@@ -285,6 +383,16 @@ class Validator
 
     /**
      * กฎ numeric: ต้องเป็นตัวเลข
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์เป็นตัวเลขหรือไม่
+     * validateNumeric() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าฟิลด์เป็นตัวเลข
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateNumeric($value);
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @return bool true ถ้าเป็นตัวเลข, false ถ้าไม่ใช่
+     * @return bool true ถ้าเป็นตัวเลข, false ถ้าไม่ใช่
      */
     private function validateNumeric($value, $param = null): bool
     {
@@ -297,6 +405,16 @@ class Validator
 
     /**
      * กฎ integer: ต้องเป็นจำนวนเต็ม
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์เป็นจำนวนเต็มหรือไม่
+     * validateInteger() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าฟิลด์เป็นจำนวนเต็ม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateInteger($value);
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param พารามิเตอร์ของกฎ (ถ้ามี)
+     * @return bool true ถ้าเป็นจำนวนเต็ม, false ถ้าไม่ใช่
      */
     private function validateInteger($value, $param = null): bool
     {
@@ -309,6 +427,16 @@ class Validator
 
     /**
      * กฎ alpha: เฉพาะตัวอักษร
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์ประกอบด้วยตัวอักษรเท่านั้น
+     * validateAlpha() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าฟิลด์ประกอบด้วยตัวอักษรเท่านั้น
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateAlpha($value);
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param พารามิเตอร์ของกฎ (ถ้ามี)
+     * @return bool true ถ้าประกอบด้วยตัวอักษรเท่านั้น, false ถ้าไม่ใช่
      */
     private function validateAlpha($value, $param = null): bool
     {
@@ -321,6 +449,16 @@ class Validator
 
     /**
      * กฎ alphanumeric: ตัวอักษรและตัวเลข
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์ประกอบด้วยตัวอักษรและตัวเลขเท่านั้น
+     * validateAlphanumeric() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าฟิลด์ประกอบด้วยตัวอักษรและตัวเลขเท่านั้น
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateAlphanumeric($value);
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param พารามิเตอร์ของกฎ (ถ้ามี)
+     * @return bool true ถ้าประกอบด้วยตัวอักษรและตัวเลขเท่านั้น, false ถ้าไม่ใช่
      */
     private function validateAlphanumeric($value, $param = null): bool
     {
@@ -333,6 +471,15 @@ class Validator
 
     /**
      * กฎ url: รูปแบบ URL
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์เป็นรูปแบบ URL ที่ถูกต้องหรือไม่
+     * validateUrl() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบรูปแบบ URL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateUrl($value);
+     * ```
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param พารามิเตอร์ของกฎ (ถ้ามี)
+     * @return bool true ถ้าเป็น URL ที่ถูกต้อง, false ถ้าไม่ใช
      */
     private function validateUrl($value, $param = null): bool
     {
@@ -345,6 +492,16 @@ class Validator
 
     /**
      * กฎ match: ต้องตรงกับฟิลด์อื่น
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์ตรงกับฟิลด์อื่นที่ระบุหรือไม่
+     * validateMatch() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าฟิลด์ตรงกับฟิลด์อื่น
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateMatch($value, 'password_confirm');
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param ชื่อฟิลด์ที่ต้องการเปรียบเทียบ
+     * @return bool true ถ้าตรงกัน, false ถ้าไม่ตรง
      */
     private function validateMatch($value, $param): bool
     {
@@ -354,6 +511,16 @@ class Validator
 
     /**
      * กฎ in: ต้องอยู่ในรายการที่กำหนด
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์มีค่าอยู่ในรายการที่กำหนดหรือไม่
+     * validateIn() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าฟิลด์มีค่าอยู่ในรายการที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateIn($value, 'apple,banana,orange');
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param รายการค่าที่อนุญาต (คั่นด้วยเครื่องหมายจุลภาค)
+     * @return bool true ถ้าอยู่ในรายการ, false ถ้าไม่ใช่
      */
     private function validateIn($value, $param): bool
     {
@@ -367,6 +534,16 @@ class Validator
 
     /**
      * กฎ regex: ตรงกับ pattern
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์ตรงกับ pattern ที่กำหนดหรือไม่
+     * validateRegex() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าฟิลด์ตรงกับ pattern ที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateRegex($value, '/^[a-zA-Z0-9]+$/');
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param pattern ที่ต้องการตรวจสอบ
+     * @return bool true ถ้าตรงกับ pattern, false ถ้าไม่ตรง
      */
     private function validateRegex($value, $param): bool
     {
@@ -379,6 +556,16 @@ class Validator
 
     /**
      * กฎ date: วันที่ที่ถูกต้อง
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์เป็นวันที่ที่ถูกต้องหรือไม่
+     * validateDate() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าฟิลด์เป็นวันที่ที่ถูกต้อง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateDate($value);
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param พารามิเตอร์ของกฎ (ถ้ามี)
+     * @return bool true ถ้าเป็นวันที่ที่ถูกต้อง, false ถ้าไม่ใช่
      */
     private function validateDate($value, $param = null): bool
     {
@@ -391,6 +578,16 @@ class Validator
 
     /**
      * กฎ phone: เบอร์โทรศัพท์ไทย
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์เป็นเบอร์โทรศัพท์ไทยที่ถูกต้องหรือไม่
+     * validatePhone() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบรูปแบบเบอร์โทรศัพท์ไทย
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validatePhone($value);
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param พารามิเตอร์ของกฎ (ถ้ามี)
+     * @return bool true ถ้าเป็นเบอร์โทรศัพท์ไทยที่ถูกต้อง, false ถ้าไม่ใช่
      */
     private function validatePhone($value, $param = null): bool
     {
@@ -426,6 +623,16 @@ class Validator
     /**
      * กฎ unique: ต้องไม่ซ้ำในฐานข้อมูล
      * รูปแบบ: unique:table,column,except_id
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์ไม่มีค่าเดียวกันในฐานข้อมูล
+     * validateUnique() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบความไม่ซ้ำกันในฐานข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateUnique($value, 'users,email,1');
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param พารามิเตอร์ของกฎ (table,column,except_id)
+     * @return bool true ถ้าไม่ซ้ำ, false ถ้าซ้ำ
      */
     private function validateUnique($value, $param): bool
     {
@@ -442,21 +649,19 @@ class Validator
             return true;
         }
 
-        $db = Database::getInstance()->getConnection();
+        $db = Database::getInstance();
         $sql = "SELECT COUNT(*) FROM {$table} WHERE {$column} = :value";
 
         if ($exceptId) {
             $sql .= " AND id != :except_id";
         }
 
-        $stmt = $db->prepare($sql);
-        $stmt->bindValue(':value', $value);
-
+        $params = ['value' => $value];
         if ($exceptId) {
-            $stmt->bindValue(':except_id', $exceptId);
+            $params['except_id'] = $exceptId;
         }
 
-        $stmt->execute();
+        $stmt = $db->query($sql, $params);
         $count = $stmt->fetchColumn();
 
         return $count == 0;
@@ -465,6 +670,16 @@ class Validator
     /**
      * กฎ exists: ต้องมีอยู่ในฐานข้อมูล
      * รูปแบบ: exists:table,column
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์มีค่าอยู่ในฐานข้อมูล
+     * validateExists() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบความมีอยู่ของค่าภายในฐานข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateExists($value, 'users,email');
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param พารามิเตอร์ของกฎ (table,column)
+     * @return bool true ถ้ามีอยู่ในฐานข้อมูล, false ถ้าไม่มี
      */
     private function validateExists($value, $param): bool
     {
@@ -480,11 +695,9 @@ class Validator
             return true;
         }
 
-        $db = Database::getInstance()->getConnection();
+        $db = Database::getInstance();
         $sql = "SELECT COUNT(*) FROM {$table} WHERE {$column} = :value";
-        $stmt = $db->prepare($sql);
-        $stmt->bindValue(':value', $value);
-        $stmt->execute();
+        $stmt = $db->query($sql, ['value' => $value]);
         $count = $stmt->fetchColumn();
 
         return $count > 0;
@@ -492,6 +705,16 @@ class Validator
 
     /**
      * กฎ before: วันที่ต้องเป็นก่อนหน้าวันที่กำหนด
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์เป็นวันที่ก่อนวันที่กำหนด
+     * validateBefore() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบวันที่ก่อนวันที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateBefore($value, '2024-01-01');
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param วันที่เปรียบเทียบ
+     * @return bool true ถ้าวันที่เป็นก่อนวันที่กำหนด, false ถ้าไม่ใช่
      */
     private function validateBefore($value, $param): bool
     {
@@ -511,6 +734,16 @@ class Validator
 
     /**
      * กฎ after: วันที่ต้องเป็นหลังจากวันที่กำหนด
+     * จุดประสงค์: ตรวจสอบว่าฟิลด์เป็นวันที่หลังวันที่กำหนด
+     * validateAfter() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบวันที่หลังวันที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->validateAfter($value, '2024-01-01');
+     * ```
+     * 
+     * @param mixed $value ค่าของฟิลด์
+     * @param mixed $param วันที่เปรียบเทียบ
+     * @return bool true ถ้าวันที่เป็นหลังจากวันที่กำหนด, false ถ้าไม่ใช่
      */
     private function validateAfter($value, $param): bool
     {

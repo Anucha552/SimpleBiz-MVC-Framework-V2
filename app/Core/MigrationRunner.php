@@ -1,26 +1,67 @@
 <?php
 /**
- * Migration Runner
+ * คลาส MigrationRunner สำหรับจัดการการรัน migrations
  * 
  * จุดประสงค์: จัดการการรันและติดตาม migrations
+ * MigrationRunner ควรใช้กับอะไร: เมื่อคุณต้องการรัน, rollback, fresh, หรือดูสถานะของ migrations
+ * 
+ * ฟีเจอร์หลัก:
+ * - รัน migrations ที่ยังไม่ได้รัน
+ * - ย้อนกลับ migrations ตาม batch
+ * - รีเซ็ตฐานข้อมูลทั้งหมดแล้วรัน migrations ใหม่
+ * - แสดงสถานะ migrations
+ * ตัวอย่างการใช้งาน:
+ * 
+ * ```php
+ * $migrationRunner = new MigrationRunner();
+ * $migrationRunner->run(); // รัน migrations ที่ยังไม่ได้รัน
+ * ```
  */
 
 namespace App\Core;
 
-use PDO;
 use PDOException;
 
 class MigrationRunner
 {
-    private PDO $db;
+    /**
+     * การเชื่อมต่อฐานข้อมูล (Database wrapper)
+     */
+    private Database $db;
+
+    /**
+     * Logger สำหรับบันทึกข้อผิดพลาด
+     */
     private Logger $logger;
+
+    /**
+     * เส้นทางไปยังโฟลเดอร์ migrations
+     */
     private string $migrationsPath;
+
+    /**
+     * ชื่อตารางสำหรับติดตาม migrations
+     */
     private string $migrationsTable = 'migrations';
+
+    /**
+     * โมดูลที่ระบุ (ถ้ามี)
+     */
     private ?string $modulePath = null;
     
+    /**
+     * สร้างอินสแตนซ์ของ MigrationRunner
+     * จุดประสงค์: เตรียมการเชื่อมต่อฐานข้อมูลและตั้งค่าต่างๆ สำหรับการรัน migrations
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $migrationRunner = new MigrationRunner();
+     * ```
+     * 
+     * @param string|null $migrationsPath เส้นทางไปยังโฟลเดอร์ migrations (ถ้าไม่ระบุจะใช้ค่าเริ่มต้น)
+     */
     public function __construct(?string $migrationsPath = null)
     {
-        $this->db = Database::getInstance()->getConnection();
+        $this->db = Database::getInstance();
         $this->logger = new Logger();
         $this->migrationsPath = $migrationsPath ?? dirname(__DIR__, 2) . '/database/migrations';
         
@@ -29,9 +70,15 @@ class MigrationRunner
     
     /**
      * กำหนด module ที่จะรัน migration
+     * จุดประสงค์: ระบุโมดูลเฉพาะสำหรับรัน migrations
+     * setModule() ควรใช้กับอะไร: เมื่อคุณต้องการรัน migrations สำหรับโมดูลเฉพาะ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $migrationRunner->setModule('UserModule')->run();
+     * ```
      * 
-     * @param string|null $module
-     * @return self
+     * @param string|null $module กำหนดชื่อโมดูล (หรือ null เพื่อรันทุกโมดูล)
+     * @return self คืนค่าอินสแตนซ์ของ MigrationRunner เพื่อให้สามารถเรียกใช้แบบ method chaining ได้
      */
     public function setModule(?string $module): self
     {
@@ -41,6 +88,14 @@ class MigrationRunner
     
     /**
      * สร้างตารางสำหรับติดตาม migrations
+     * จุดประสงค์: สร้างตาราง migrations ในฐานข้อมูลหากยังไม่มี
+     * createMigrationsTable() ควรใช้กับอะไร: เมื่อคุณต้องการเตรียมตารางสำหรับติดตามสถานะของ migrations   
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $migrationRunner = new MigrationRunner();
+     * $migrationRunner->createMigrationsTable();
+     * ```  
+     * @return void ไม่คืนค่าอะไร
      */
     private function createMigrationsTable(): void
     {
@@ -54,7 +109,7 @@ class MigrationRunner
         ";
         
         try {
-            $this->db->exec($sql);
+            $this->db->execRaw($sql);
         } catch (PDOException $e) {
             die("Error creating migrations table: " . $e->getMessage() . "\n");
         }
@@ -62,8 +117,14 @@ class MigrationRunner
     
     /**
      * รัน migrations ทั้งหมดที่ยังไม่ได้รัน
+     * จุดประสงค์: รัน migrations ที่ยังไม่ถูกนำไปใช้ในฐานข้อมูล
+     * run() ควรใช้กับอะไร: เมื่อคุณต้องการรัน migrations ที่ยังไม่ได้รัน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $migrationRunner->run();
+     * ```
      * 
-     * @return array
+     * @return array ผลลัพธ์: คืนค่าข้อความสรุปและรายการ migrations ที่ถูกรัน   
      */
     public function run(): array
     {
@@ -118,9 +179,15 @@ class MigrationRunner
     
     /**
      * Rollback migrations batch ล่าสุด
+     * จุดประสงค์: ย้อนกลับ migrations ตามจำนวน batch ที่ระบุ
+     * rollback() ควรใช้กับอะไร: เมื่อคุณต้องการย้อนกลับ migrations ที่ถูกรันล่าสุด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $migrationRunner->rollback(2);
+     * ```
      * 
-     * @param int $steps จำนวน batch ที่ต้องการ rollback
-     * @return array
+     * @param int $steps กำหนดจำนวน batch ที่ต้องการ rollback
+     * @return array คืนค่าข้อความสรุปและรายการ migrations ที่ถูก rollback
      */
     public function rollback(int $steps = 1): array
     {
@@ -178,8 +245,14 @@ class MigrationRunner
     
     /**
      * รีเซ็ตฐานข้อมูลทั้งหมดแล้วรันใหม่
+     * จุดประสงค์: ลบตารางทั้งหมดในฐานข้อมูลแล้วรัน migrations ใหม่ทั้งหมด
+     * fresh() ควรใช้กับอะไร: เมื่อคุณต้องการรีเซ็ตฐานข้อมูลและเริ่มต้นใหม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $migrationRunner->fresh();
+     * ```
      * 
-     * @return array
+     * @return array คืนค่ารายการ migrations ที่ถูกรันใหม่
      */
     public function fresh(): array
     {
@@ -196,8 +269,14 @@ class MigrationRunner
     
     /**
      * แสดงสถานะ migrations
+     * จุดประสงค์: แสดงรายการ migrations ทั้งหมดพร้อมสถานะการรัน
+     * status() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบสถานะของ migrations
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $status = $migrationRunner->status();
+     * ```
      * 
-     * @return array
+     * @return array คืนค่ารายการ migrations พร้อมสถานะการรัน
      */
     public function status(): array
     {
@@ -220,8 +299,15 @@ class MigrationRunner
     
     /**
      * รัน migration จากไฟล์
+     * จุดประสงค์: รัน migration ที่ระบุในไฟล์                         
+     * runMigration() ควรใช้กับอะไร: เมื่อคุณต้องการรัน migration จากไฟล์เฉพาะ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->runMigration('2024_01_01_000001_create_users_table.php');
+     * ```
      * 
-     * @param string $file
+     * @param string $file กำหนดเส้นทางไปยังไฟล์ migration  
+     * @return void ไม่คืนค่าอะไร
      */
     private function runMigration(string $file): void
     {
@@ -231,8 +317,15 @@ class MigrationRunner
     
     /**
      * ย้อนกลับ migration จากไฟล์
+     * จุดประสงค์: ย้อนกลับ migration ที่ระบุในไฟล์
+     * rollbackMigration() ควรใช้กับอะไร: เมื่อคุณต้องการย้อนกลับ migration จากไฟล์เฉพาะ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->rollbackMigration('2024_01_01_000001_create_users_table.php');
+     * ```
      * 
-     * @param string $file
+     * @param string $file กำหนดเส้นทางไปยังไฟล์ migration  
+     * @return void ไม่คืนค่าอะไร
      */
     private function rollbackMigration(string $file): void
     {
@@ -242,9 +335,15 @@ class MigrationRunner
     
     /**
      * โหลด migration class
+     * จุดประสงค์: โหลดและสร้างอินสแตนซ์ของ migration จากไฟล์
+     * loadMigration() ควรใช้กับอะไร: เมื่อคุณต้องการโหลด migration จากไฟล์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $migration = $this->loadMigration('2024_01_01_000001_create_users_table.php');
+     * ```
      * 
-     * @param string $file
-     * @return Migration
+     * @param string $file กำหนดเส้นทางไปยังไฟล์ migration  
+     * @return Migration คืนค่าอินสแตนซ์ของ migration class
      */
     private function loadMigration(string $file): Migration
     {
@@ -261,9 +360,15 @@ class MigrationRunner
     
     /**
      * ดึงชื่อ class จากไฟล์
+     * จุดประสงค์: ดึงชื่อ class ที่ประกาศในไฟล์ migration
+     * getClassNameFromFile() ควรใช้กับอะไร: เมื่อคุณต้องการดึงชื่อ class จากไฟล์ migration
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $className = $this->getClassNameFromFile('2024_01_01_000001_create_users_table.php');
+     * ```
      * 
-     * @param string $file
-     * @return string
+     * @param string $file กำหนดเส้นทางไปยังไฟล์ migration  
+     * @return string คืนค่าชื่อ class พร้อม namespace
      */
     private function getClassNameFromFile(string $file): string
     {
@@ -282,8 +387,14 @@ class MigrationRunner
     
     /**
      * ดึงรายการ migrations ที่ยังไม่ได้รัน
+     * จุดประสงค์: คืนค่ารายการไฟล์ migration ที่ยังไม่ได้ถูกรัน
+     * getPendingMigrations() ควรใช้กับอะไร: เมื่อคุณต้องการดึงรายการ migrations ที่ยังไม่ได้รัน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $pending = $this->getPendingMigrations();
+     * ```
      * 
-     * @return array
+     * @return array คืนค่ารายการไฟล์ migration ที่ยังไม่ได้รัน
      */
     private function getPendingMigrations(): array
     {
@@ -299,8 +410,14 @@ class MigrationRunner
     
     /**
      * ดึงรายการไฟล์ migration ทั้งหมด
+     * จุดประสงค์: คืนค่ารายการไฟล์ migration ทั้งหมดในระบบ
+     * getAllMigrationFiles() ควรใช้กับอะไร: เมื่อคุณต้องการดึงรายการไฟล์ migration ทั้งหมด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $allFiles = $this->getAllMigrationFiles();
+     * ```
      * 
-     * @return array
+     * @return array คืนค่ารายการไฟล์ migration ทั้งหมด
      */
     private function getAllMigrationFiles(): array
     {
@@ -336,9 +453,15 @@ class MigrationRunner
     
     /**
      * ดึงชื่อ migration จากไฟล์
+     * จุดประสงค์: คืนค่าชื่อ migration จากไฟล์
+     * getMigrationName() ควรใช้กับอะไร: เมื่อคุณต้องการดึงชื่อ migration จากไฟล์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $name = $this->getMigrationName('2024_01_01_000001_create_users_table.php');
+     * ```
      * 
-     * @param string $file
-     * @return string
+     * @param string $file กำหนดเส้นทางไปยังไฟล์ migration
+     * @return string คืนค่าชื่อ migration
      */
     private function getMigrationName(string $file): string
     {
@@ -347,44 +470,64 @@ class MigrationRunner
     
     /**
      * ดึงรายการ migrations ที่รันแล้ว
+     * จุดประสงค์: คืนค่ารายการ migrations ที่ถูกรันแล้วจากฐานข้อมูล
+     * getRanMigrations() ควรใช้กับอะไร: เมื่อคุณต้องการดึงรายการ migrations ที่ถูกรันแล้ว
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $ranMigrations = $this->getRanMigrations();
+     * ```
      * 
-     * @return array
+     * @return array คืนค่ารายการ migrations ที่ถูกรันแล้ว
      */
     private function getRanMigrations(): array
     {
-        $stmt = $this->db->query("SELECT * FROM {$this->migrationsTable} ORDER BY id");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->db->fetchAll("SELECT * FROM {$this->migrationsTable} ORDER BY id");
     }
     
     /**
      * ดึง migrations ตาม batch
+     * จุดประสงค์: คืนค่ารายการ migrations ใน batch ที่ระบุ
+     * getMigrationsByBatch() ควรใช้กับอะไร: เมื่อคุณต้องการดึงรายการ migrations ตาม batch
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $migrations = $this->getMigrationsByBatch(2);
+     * ```
      * 
-     * @param int $batch
-     * @return array
+     * @param int $batch กำหนดหมายเลข batch
+     * @return array คืนค่ารายการ migrations ใน batch ที่ระบุ
      */
     private function getMigrationsByBatch(int $batch): array
     {
-        $stmt = $this->db->prepare("SELECT * FROM {$this->migrationsTable} WHERE batch = ? ORDER BY id");
-        $stmt->execute([$batch]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->db->fetchAll("SELECT * FROM {$this->migrationsTable} WHERE batch = ? ORDER BY id", [$batch]);
     }
     
     /**
      * ดึงเลข batch ล่าสุด
+     * จุดประสงค์: คืนค่าเลข batch ล่าสุดที่รัน
+     * getLastBatchNumber() ควรใช้กับอะไร: เมื่อคุณต้องการทราบเลข batch ล่าสุด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $lastBatch = $this->getLastBatchNumber();
+     * ```
      * 
-     * @return int
+     * @return int คืนค่าเลข batch ล่าสุดที่รัน
      */
     private function getLastBatchNumber(): int
     {
-        $stmt = $this->db->query("SELECT MAX(batch) as batch FROM {$this->migrationsTable}");
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $result = $this->db->fetch("SELECT MAX(batch) as batch FROM {$this->migrationsTable}");
         return (int) ($result['batch'] ?? 0);
     }
     
     /**
      * ดึงเลข batch ถัดไป
+     * จุดประสงค์: คืนค่าเลข batch ถัดไปที่จะใช้ในการรัน migrations
+     * getNextBatchNumber() ควรใช้กับอะไร: เมื่อคุณต้องการทราบเลข batch ถัดไป
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $nextBatch = $this->getNextBatchNumber();
+     * ```
      * 
-     * @return int
+     * @return int คืนค่าเลข batch ถัดไปที่จะใช้ในการรัน migrations
      */
     private function getNextBatchNumber(): int
     {
@@ -393,46 +536,68 @@ class MigrationRunner
     
     /**
      * ดึงเลข batch ของ migration
+     * จุดประสงค์: คืนค่าเลข batch ของ migration ที่ระบุ
+     * getMigrationBatch() ควรใช้กับอะไร: เมื่อคุณต้องการทราบเลข batch ของ migration ที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $batch = $this->getMigrationBatch('2024_01_01_000001_create_users_table');
+     * ```
      * 
-     * @param string $name
-     * @return int|null
+     * @param string $name กำหนดชื่อ migration
+     * @return int|null คืนค่าเลข batch ของ migration หรือ null หากไม่พบ
      */
     private function getMigrationBatch(string $name): ?int
     {
-        $stmt = $this->db->prepare("SELECT batch FROM {$this->migrationsTable} WHERE migration = ?");
-        $stmt->execute([$name]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $result = $this->db->fetch("SELECT batch FROM {$this->migrationsTable} WHERE migration = ?", [$name]);
         return $result ? (int) $result['batch'] : null;
     }
     
     /**
      * บันทึก migration ที่รันแล้ว
+     * จุดประสงค์: บันทึกชื่อ migration และ batch ลงในตาราง migrations
+     * recordMigration() ควรใช้กับอะไร: เมื่อคุณต้องการบันทึก migration ที่รันแล้ว
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->recordMigration('2024_01_01_000001_create_users_table', 1);
+     * ```
      * 
-     * @param string $migration
-     * @param int $batch
+     * @param string $migration กำหนดชื่อ migration
+     * @param int $batch กำหนดหมายเลข batch
+     * @return void ไม่คืนค่าอะไร
      */
     private function recordMigration(string $migration, int $batch): void
     {
-        $stmt = $this->db->prepare("INSERT INTO {$this->migrationsTable} (migration, batch) VALUES (?, ?)");
-        $stmt->execute([$migration, $batch]);
+        $this->db->execute("INSERT INTO {$this->migrationsTable} (migration, batch) VALUES (?, ?)", [$migration, $batch]);
     }
     
     /**
      * ลบบันทึก migration
+     * จุดประสงค์: ลบชื่อ migration ออกจากตาราง migrations
+     * removeMigrationRecord() ควรใช้กับอะไร: เมื่อคุณต้องการลบบันทึก migration ที่ถูก rollback
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->removeMigrationRecord('2024_01_01_000001_create_users_table');
+     * ```
      * 
-     * @param string $migration
+     * @param string $migration กำหนดชื่อ migration
+     * @return void ไม่คืนค่าอะไร
      */
     private function removeMigrationRecord(string $migration): void
     {
-        $stmt = $this->db->prepare("DELETE FROM {$this->migrationsTable} WHERE migration = ?");
-        $stmt->execute([$migration]);
+        $this->db->execute("DELETE FROM {$this->migrationsTable} WHERE migration = ?", [$migration]);
     }
     
     /**
      * หาไฟล์ migration
+     * จุดประสงค์: ค้นหาไฟล์ migration ตามชื่อ
+     * findMigrationFile() ควรใช้กับอะไร: เมื่อคุณต้องการค้นหาไฟล์ migration ตามชื่อ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $file = $this->findMigrationFile('2024_01_01_000001_create_users_table');
+     * ```
      * 
-     * @param string $name
-     * @return string|null
+     * @param string $name กำหนดชื่อ migration
+     * @return string|null คืนค่า path ของไฟล์ migration หรือ null หากไม่พบ
      */
     private function findMigrationFile(string $name): ?string
     {
@@ -456,23 +621,30 @@ class MigrationRunner
     
     /**
      * ลบตารางทั้งหมด
+     * จุดประสงค์: ลบตารางทั้งหมดในฐานข้อมูล
+     * dropAllTables() ควรใช้กับอะไร: เมื่อคุณต้องการลบตารางทั้งหมดในฐานข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->dropAllTables();
+     * ```
+     * 
+     * @return void ไม่คืนค่าอะไร
      */
     private function dropAllTables(): void
     {
         // Disable foreign key checks
-        $this->db->exec("SET FOREIGN_KEY_CHECKS = 0");
-        
+        $this->db->execRaw("SET FOREIGN_KEY_CHECKS = 0");
+
         // Get all tables
-        $stmt = $this->db->query("SHOW TABLES");
-        $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        
+        $tables = $this->db->fetchAll("SHOW TABLES");
+
         // Drop each table
         foreach ($tables as $table) {
             echo "Dropping table: $table\n";
-            $this->db->exec("DROP TABLE IF EXISTS `$table`");
+            $this->db->execRaw("DROP TABLE IF EXISTS `$table`");
         }
-        
+
         // Re-enable foreign key checks
-        $this->db->exec("SET FOREIGN_KEY_CHECKS = 1");
+        $this->db->execRaw("SET FOREIGN_KEY_CHECKS = 1");
     }
 }

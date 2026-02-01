@@ -9,6 +9,9 @@
  * - Redirect
  * - Query string manipulation
  * - รับข้อมูล URL ปัจจุบัน
+ * - ตรวจสอบความปลอดภัยของ URL
+ * - ฟังก์ชันเสริมอื่นๆ ที่เกี่ยวข้องกับ URL
+ * 
  */
 
 namespace App\Helpers;
@@ -19,6 +22,15 @@ class UrlHelper
 {
     /**
      * รับ base URL ของแอปพลิเคชัน
+     * จุดประสงค์: ใช้เพื่อรับ base URL ของแอปพลิเคชัน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $baseUrl = UrlHelper::base();
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า base URL เช่น http://example.com
+     * 
+     * returns string base URL
      * 
      * @return string
      */
@@ -32,6 +44,15 @@ class UrlHelper
 
     /**
      * สร้าง URL เต็ม
+     * จุดประสงค์: ใช้เพื่อสร้าง URL เต็มจาก path และ query parameters
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $url = UrlHelper::to('posts/view', ['id' => 123]);
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL เช่น http://example.com/posts/view?id=123
+     * 
+     * returns string URL เต็ม
      * 
      * @param string $path
      * @param array $params
@@ -52,6 +73,15 @@ class UrlHelper
 
     /**
      * รับ URL ปัจจุบัน
+     * จุดประสงค์: ใช้เพื่อรับ URL ปัจจุบันของคำขอ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $currentUrl = UrlHelper::current();
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL ปัจจุบัน เช่น http://example.com/current/path?query=string
+     * 
+     * returns string URL ปัจจุบัน
      * 
      * @param bool $withQueryString
      * @return string
@@ -71,6 +101,15 @@ class UrlHelper
 
     /**
      * รับ URL ก่อนหน้า (referrer)
+     * จุดประสงค์: ใช้เพื่อรับ URL ก่อนหน้าของคำขอ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $previousUrl = UrlHelper::previous();
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL ก่อนหน้า หรือ null ถ้าไม่มี
+     * 
+     * returns string|null URL ก่อนหน้า หรือ null ถ้าไม่มี
      * 
      * @param string|null $default
      * @return string|null
@@ -82,6 +121,15 @@ class UrlHelper
 
     /**
      * ตรวจสอบว่าเป็น HTTPS หรือไม่
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่า URL ปัจจุบันใช้โปรโตคอล HTTPS หรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isSecure = UrlHelper::isSecure();
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า true ถ้าเป็น HTTPS, false ถ้าไม่ใช่
+     * 
+     * returns bool true ถ้าเป็น HTTPS, false ถ้าไม่ใช่
      * 
      * @return bool
      */
@@ -104,6 +152,15 @@ class UrlHelper
 
     /**
      * Redirect ไปยัง URL
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ redirect ไปยัง URL ที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * UrlHelper::redirect('http://example.com');
+     * ```
+     * 
+     * ผลลัพธ์: ส่งการตอบกลับ redirect ไปยัง URL ที่ระบุ
+     * 
+     * returns Response การตอบกลับ redirect
      * 
      * @param string $url
      * @param int $statusCode
@@ -116,6 +173,15 @@ class UrlHelper
 
     /**
      * Redirect กลับไปหน้าก่อนหน้า
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ redirect กลับไปยัง URL ก่อนหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * UrlHelper::back();
+     * ```
+     * 
+     * ผลลัพธ์: ส่งการตอบกลับ redirect กลับไปยัง URL ก่อนหน้า หรือไปยัง URL เริ่มต้นถ้าไม่มี URL ก่อนหน้า
+     * 
+     * returns Response การตอบกลับ redirect
      * 
      * @param string|null $default
      * @return Response
@@ -128,6 +194,15 @@ class UrlHelper
 
     /**
      * เพิ่ม query parameters เข้า URL
+     * จุดประสงค์: ใช้เพื่อเพิ่ม query parameters เข้าไปใน URL ที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $newUrl = UrlHelper::addQuery('http://example.com', ['key' => 'value']);
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL ที่มี query parameters ที่เพิ่มเข้าไป
+     * 
+     * returns string URL ที่มี query parameters ที่เพิ่มเข้าไป
      * 
      * @param string $url
      * @param array $params
@@ -167,6 +242,15 @@ class UrlHelper
 
     /**
      * ลบ query parameters จาก URL
+     * จุดประสงค์: ใช้เพื่อลบ query parameters ออกจาก URL ที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $newUrl = UrlHelper::removeQuery('http://example.com?key=value', ['key']);
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL ที่ไม่มี query parameters ที่ถูกลบออก
+     * 
+     * returns string URL ที่ไม่มี query parameters ที่ถูกลบออก
      * 
      * @param string $url
      * @param array $keys
@@ -208,6 +292,15 @@ class UrlHelper
 
     /**
      * รับ query parameter จาก URL ปัจจุบัน
+     * จุดประสงค์: ใช้เพื่อรับค่า query parameter จาก URL ปัจจุบัน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $value = UrlHelper::query('key', 'default');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่าของ query parameter ที่ระบุ หรือค่าเริ่มต้นถ้าไม่มี
+     * 
+     * returns mixed ค่า query parameter หรือค่าเริ่มต้น
      * 
      * @param string|null $key
      * @param mixed $default
@@ -224,6 +317,14 @@ class UrlHelper
 
     /**
      * ตรวจสอบว่า URL ตรงกับ pattern หรือไม่
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่า URL ตรงกับ pattern ที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isMatch = UrlHelper::is('/posts/*');
+     * ```
+     * ผลลัพธ์: คืนค่า true ถ้า URL ตรงกับ pattern, false ถ้าไม่ตรง
+     * 
+     * returns bool true ถ้า URL ตรงกับ pattern, false ถ้าไม่ตรง
      * 
      * @param string $pattern
      * @param string|null $url
@@ -244,6 +345,15 @@ class UrlHelper
 
     /**
      * สร้าง URL สำหรับ asset (css, js, images)
+     * จุดประสงค์: ใช้เพื่อสร้าง URL สำหรับไฟล์ asset เช่น CSS, JavaScript, หรือรูปภาพ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $assetUrl = UrlHelper::asset('css/style.css');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL ของ asset เช่น http://example.com/css/style.css
+     * 
+     * returns string URL ของ asset
      * 
      * @param string $path
      * @return string
@@ -256,6 +366,15 @@ class UrlHelper
 
     /**
      * Encode URL
+     * จุดประสงค์: ใช้เพื่อเข้ารหัส URL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $encodedUrl = UrlHelper::encode('http://example.com?key=value');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL ที่ถูกเข้ารหัส ตัวอย่าง: http%3A%2F%2Fexample.com%3Fkey%3Dvalue
+     * 
+     * returns string URL ที่ถูกเข้ารหัส
      * 
      * @param string $url
      * @return string
@@ -267,6 +386,15 @@ class UrlHelper
 
     /**
      * Decode URL
+     * จุดประสงค์: ใช้เพื่อถอดรหัส URL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $decodedUrl = UrlHelper::decode('http%3A%2F%2Fexample.com%3Fkey%3Dvalue');
+     * ```  
+     * 
+     * ผลลัพธ์: คืนค่า URL ที่ถูกถอดรหัส เช่น http://example.com?key=value
+     * 
+     * returns string URL ที่ถูกถอดรหัส
      * 
      * @param string $url
      * @return string
@@ -278,6 +406,15 @@ class UrlHelper
 
     /**
      * ตรวจสอบว่า URL ถูกต้องหรือไม่
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่า URL ที่ระบุเป็น URL ที่ถูกต้องตามรูปแบบหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isValid = UrlHelper::isValid('http://example.com');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า true ถ้า URL ถูกต้อง, false ถ้าไม่ถูกต้อง
+     * 
+     * returns bool true ถ้า URL ถูกต้อง, false ถ้าไม่ถูกต้อง
      * 
      * @param string $url
      * @return bool
@@ -289,6 +426,15 @@ class UrlHelper
 
     /**
      * Parse URL เป็น components
+     * จุดประสงค์: ใช้เพื่อแยก URL เป็นส่วนประกอบต่างๆ เช่น scheme, host, path, query, fragment
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $components = UrlHelper::parse('http://example.com:8080/path?query=string#fragment');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่าอาร์เรย์ที่มีส่วนประกอบของ URL
+     * 
+     * returns array ส่วนประกอบของ URL
      * 
      * @param string $url
      * @return array
@@ -311,6 +457,15 @@ class UrlHelper
 
     /**
      * รับ domain จาก URL
+     * จุดประสงค์: ใช้เพื่อรับ domain จาก URL ที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $domain = UrlHelper::domain('http://example.com/path');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า domain เช่น example.com
+     * 
+     * returns string|null domain หรือ null ถ้าไม่พบ
      * 
      * @param string|null $url
      * @return string|null
@@ -327,6 +482,15 @@ class UrlHelper
 
     /**
      * รับ path จาก URL
+     * จุดประสงค์: ใช้เพื่อรับ path จาก URL ที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $path = UrlHelper::path('http://example.com/path?query=string');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า path เช่น /path
+     * 
+     * returns string path
      * 
      * @param string|null $url
      * @return string
@@ -344,6 +508,15 @@ class UrlHelper
 
     /**
      * สร้าง URL พร้อม timestamp (สำหรับ cache busting)
+     * จุดประสงค์: ใช้เพื่อสร้าง URL ที่มี timestamp ต่อท้ายเพื่อป้องกันการแคช
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cacheBustedUrl = UrlHelper::cacheBust('http://example.com/asset.js');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL ที่มี timestamp ต่อท้าย เช่น http://example.com/asset.js?v=1627890123
+     * 
+     * returns string URL ที่มี timestamp ต่อท้าย
      * 
      * @param string $url
      * @return string
@@ -356,6 +529,15 @@ class UrlHelper
 
     /**
      * สร้าง URL สำหรับ pagination
+     * จุดประสงค์: ใช้เพื่อสร้าง URL สำหรับหน้าต่างๆ ในการแบ่งหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $pageUrl = UrlHelper::page(2);
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL สำหรับหน้าที่ระบุ เช่น /current/path?page=2
+     * 
+     * returns string URL สำหรับ pagination
      * 
      * @param int $page
      * @param array $additionalParams
@@ -371,6 +553,15 @@ class UrlHelper
 
     /**
      * ลบ slash ท้าย URL
+     * จุดประสงค์: ใช้เพื่อลบ slash (/) ที่ท้าย URL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanUrl = UrlHelper::removeTrailingSlash('http://example.com/path/');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL ที่ไม่มี slash ท้าย เช่น http://example.com/path
+     * 
+     * returns string URL ที่ไม่มี slash ท้าย
      * 
      * @param string $url
      * @return string
@@ -382,6 +573,15 @@ class UrlHelper
 
     /**
      * เพิ่ม slash ท้าย URL
+     * จุดประสงค์: ใช้เพื่อเพิ่ม slash (/) ที่ท้าย URL หากยังไม่มี
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $urlWithSlash = UrlHelper::addTrailingSlash('http://example.com/path');
+     * ```  
+     * 
+     * ผลลัพธ์: คืนค่า URL ที่มี slash ท้าย เช่น http://example.com/path/
+     * 
+     * returns string URL ที่มี slash ท้าย
      * 
      * @param string $url
      * @return string
@@ -393,6 +593,16 @@ class UrlHelper
 
     /**
      * สร้าง signed URL (URL ที่มี signature)
+     * จุดประสงค์: ใช้เพื่อสร้าง signed URL ที่มี signature สำหรับความปลอดภัย   
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $signedUrl = UrlHelper::signed('http://example.com/resource', 'secret_key', time() + 3600);
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า signed URL ที่มี signature และ expiration timestamp 
+     * ต่อท้าย เช่น http://example.com/resource?expires=1627890123&signature=abcdef123456
+     * 
+     * returns string signed URL
      * 
      * @param string $url
      * @param string $secret
@@ -414,6 +624,15 @@ class UrlHelper
 
     /**
      * ตรวจสอบ signed URL
+     * จุดประสงค์: ใช้เพื่อตรวจสอบความถูกต้องของ signed URL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isValid = UrlHelper::verifySignature($signedUrl, 'secret_key');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า true ถ้า signed URL ถูกต้องและไม่หมดอายุ, false ถ้าไม่ถูกต้องหรือหมดอายุ
+     * 
+     * returns bool true ถ้า signed URL ถูกต้องและไม่หมดอายุ, false ถ้าไม่ถูกต้องหรือหมดอายุ
      * 
      * @param string $url
      * @param string $secret
@@ -450,20 +669,37 @@ class UrlHelper
 
     /**
      * สร้าง URL สำหรับ API
+     * จุดประสงค์: ใช้เพื่อสร้าง URL สำหรับเรียกใช้งาน API
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $apiUrl = UrlHelper::api('users/list', ['page' => 2]);
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL สำหรับ API เช่น http://example.com/api/users/list?page=2
+     * 
+     * returns string URL สำหรับ API
      * 
      * @param string $path
      * @param array $params
-     * @param string $version
      * @return string
      */
-    public static function api(string $path, array $params = [], string $version = 'v1'): string
+    public static function api(string $path, array $params = []): string
     {
         $path = ltrim($path, '/');
-        return self::to("api/{$version}/{$path}", $params);
+        return self::to("api/{$path}", $params);
     }
 
     /**
      * Join URL segments
+     * จุดประสงค์: ใช้เพื่อรวม segments ของ URL เข้าด้วยกันอย่างถูกต้อง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $fullUrl = UrlHelper::join('http://example.com/', '/path/', '/to/', 'resource');
+     * ```
+     * 
+     * ผลลัพธ์: คืนค่า URL ที่รวม segments เข้าด้วยกัน เช่น http://example.com/path/to/resource
+     * 
+     * returns string URL ที่รวม segments เข้าด้วยกัน
      * 
      * @param string ...$segments
      * @return string

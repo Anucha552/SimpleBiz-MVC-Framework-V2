@@ -2,6 +2,8 @@
 /**
  * MIDDLEWARE LOGGING (บันทึกคำขอ)
  * 
+ * Middleware สำหรับนระบบ หรือ Global Middleware
+ * 
  * จุดประสงค์: บันทึกข้อมูลคำขอ HTTP ทั้งหมดเพื่อการวิเคราะห์และดีบัก
  * 
  * การใช้งาน:
@@ -27,7 +29,7 @@
  * - ตั้งค่าระดับ detail
  */
 
-namespace App\Middleware;
+namespace App\Middleware\Systems;
 
 use App\Core\Middleware;
 use App\Core\Logger;

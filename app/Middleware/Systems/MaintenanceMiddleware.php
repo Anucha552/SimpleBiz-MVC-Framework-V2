@@ -2,6 +2,8 @@
 /**
  * MIDDLEWARE MAINTENANCE MODE (โหมดปิดปรุงระบบ)
  * 
+ * Middleware สำหรับนระบบ หรือ Global Middleware
+ * 
  * จุดประสงค์: ปิดเว็บไซต์ชั่วคระว่างปรับปรุง/บำรุงรักษา
  * 
  * การใช้งาน:
@@ -28,7 +30,7 @@
  * - ข้อมูลติดต่อถ้าจำเป็น
  */
 
-namespace App\Middleware;
+namespace App\Middleware\Systems;
 
 use App\Core\Middleware;
 use App\Core\Logger;

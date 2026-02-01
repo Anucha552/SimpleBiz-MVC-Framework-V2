@@ -1,9 +1,9 @@
 <?php
 /**
- * คลาส Pagination
+ * คลาส Pagination สำหรับจัดการการแบ่งหน้าข้อมูล
  * 
  * จุดประสงค์: จัดการการแบ่งหน้าข้อมูล
- * ฟีเจอร์: คำนวณหน้า, สร้าง pagination links, รองรับ Bootstrap
+ * Pagination() ควรใช้กับอะไร: การแสดงผลรายการข้อมูลที่มีจำนวนมาก
  * 
  * ฟีเจอร์หลัก:
  * - คำนวณจำนวนหน้า
@@ -13,7 +13,7 @@
  * 
  * ตัวอย่างการใช้งาน:
  * ```php
- * // คำนวณ offset
+ * // คำนวณ offset จากหน้าปัจจุบัน
  * $page = $_GET['page'] ?? 1;
  * $perPage = 10;
  * $totalItems = 100;
@@ -95,11 +95,16 @@ class Pagination
 
     /**
      * สร้างอินสแตนซ์ Pagination ใหม่
+     * จุดประสงค์: กำหนดค่าพื้นฐานสำหรับการแบ่งหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $pagination = new Pagination(100, 10, 1, '/products');
+     * ```
      * 
-     * @param int $totalItems จำนวนรายการทั้งหมด
-     * @param int $perPage จำนวนรายการต่อหน้า
-     * @param int $currentPage หน้าปัจจุบัน
-     * @param string|null $baseUrl URL base (ถ้าไม่ระบุจะใช้ URL ปัจจุบัน)
+     * @param int $totalItems กำหนดจำนวนรายการทั้งหมด
+     * @param int $perPage กำหนดจำนวนรายการต่อหน้า
+     * @param int $currentPage กำหนดหน้าปัจจุบัน
+     * @param string|null $baseUrl กำหนด URL base (ถ้าไม่ระบุจะใช้ URL ปัจจุบัน)
      */
     public function __construct(
         int $totalItems, 
@@ -126,8 +131,14 @@ class Pagination
 
     /**
      * รับ offset สำหรับ SQL query
+     * จุดประสงค์: คำนวณ offset สำหรับการดึงข้อมูลจากฐานข้อมูล
+     * getOffset() ควรใช้กับอะไร: เมื่อคุณต้องการดึงข้อมูลสำหรับหน้าปัจจุบัน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $offset = $pagination->getOffset();
+     * ```
      * 
-     * @return int
+     * @return int คืนค่า offset ของหน้าปัจจุบัน
      */
     public function getOffset(): int
     {
@@ -136,8 +147,14 @@ class Pagination
 
     /**
      * รับจำนวนรายการต่อหน้า
+     * จุดประสงค์: ดึงค่าจำนวนรายการที่แสดงต่อหน้า
+     * getPerPage() ควรใช้กับอะไร: เมื่อคุณต้องการทราบจำนวนรายการต่อหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $perPage = $pagination->getPerPage();
+     * ```
      * 
-     * @return int
+     * @return int คืนค่าจำนวนรายการต่อหน้า
      */
     public function getPerPage(): int
     {
@@ -146,8 +163,14 @@ class Pagination
 
     /**
      * รับหน้าปัจจุบัน
+     * จุดประสงค์: ดึงหมายเลขหน้าปัจจุบัน
+     * getCurrentPage() ควรใช้กับอะไร: เมื่อคุณต้องการทราบหมายเลขหน้าปัจจุบัน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $currentPage = $pagination->getCurrentPage();
+     * ```
      * 
-     * @return int
+     * @return int คืนค่าหมายเลขหน้าปัจจุบัน
      */
     public function getCurrentPage(): int
     {
@@ -156,8 +179,14 @@ class Pagination
 
     /**
      * รับจำนวนหน้าทั้งหมด
+     * จุดประสงค์: ดึงค่าจำนวนหน้าทั้งหมด
+     * getTotalPages() ควรใช้กับอะไร: เมื่อคุณต้องการทราบจำนวนหน้าทั้งหมด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $totalPages = $pagination->getTotalPages();
+     * ```
      * 
-     * @return int
+     * @return int คืนค่าจำนวนหน้าทั้งหมด
      */
     public function getTotalPages(): int
     {
@@ -166,8 +195,14 @@ class Pagination
 
     /**
      * รับจำนวนรายการทั้งหมด
+     * จุดประสงค์: ดึงค่าจำนวนรายการทั้งหมด
+     * getTotalItems() ควรใช้กับอะไร: เมื่อคุณต้องการทราบจำนวนรายการทั้งหมด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $totalItems = $pagination->getTotalItems();
+     * ```
      * 
-     * @return int
+     * @return int คืนค่าจำนวนรายการทั้งหมด
      */
     public function getTotalItems(): int
     {
@@ -176,6 +211,12 @@ class Pagination
 
     /**
      * ตรวจสอบว่ามีหน้าก่อนหน้าหรือไม่
+     * จุดประสงค์: ตรวจสอบว่ามีหน้าก่อนหน้าหรือไม่
+     * hasPrevious() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่ามีหน้าก่อนหน้าหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $hasPrevious = $pagination->hasPrevious();
+     * ```
      * 
      * @return bool
      */
@@ -186,8 +227,14 @@ class Pagination
 
     /**
      * ตรวจสอบว่ามีหน้าถัดไปหรือไม่
+     * จุดประสงค์: ตรวจสอบว่ามีหน้าถัดไปหรือไม่
+     * hasNext() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่ามีหน้าถัดไปหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $hasNext = $pagination->hasNext();
+     * ```
      * 
-     * @return bool
+     * @return bool คืนค่าความเป็นไปได้ว่ามีหน้าถัดไปหรือไม่
      */
     public function hasNext(): bool
     {
@@ -196,8 +243,14 @@ class Pagination
 
     /**
      * รับหมายเลขหน้าก่อนหน้า
+     * จุดประสงค์: ดึงหมายเลขหน้าก่อนหน้า
+     * getPreviousPage() ควรใช้กับอะไร: เมื่อคุณต้องการดึงหมายเลขหน้าก่อนหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $previousPage = $pagination->getPreviousPage();
+     * ```
      * 
-     * @return int
+     * @return int คืนค่าหมายเลขหน้าก่อนหน้า
      */
     public function getPreviousPage(): int
     {
@@ -206,6 +259,12 @@ class Pagination
 
     /**
      * รับหมายเลขหน้าถัดไป
+     * จุดประสงค์: ดึงหมายเลขหน้าถัดไป
+     * getNextPage() ควรใช้กับอะไร: เมื่อคุณต้องการดึงหมายเลขหน้าถัดไป
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $nextPage = $pagination->getNextPage();
+     * ```
      * 
      * @return int
      */
@@ -216,9 +275,15 @@ class Pagination
 
     /**
      * ตั้งค่าจำนวน page links ที่จะแสดง
+     * จุดประสงค์: กำหนดจำนวนลิงก์หน้าที่จะแสดงใน pagination
+     * setLinksCount() ควรใช้กับอะไร: เมื่อคุณต้องการกำหนดจำนวนลิงก์หน้าที่จะแสดง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $pagination->setLinksCount(5);
+     * ```
      * 
-     * @param int $count
-     * @return self
+     * @param int $count กำหนดจำนวนลิงก์หน้าที่จะแสดง
+     * @return self คืนค่าอินสแตนซ์ของคลาสปัจจุบัน
      */
     public function setLinksCount(int $count): self
     {
@@ -228,11 +293,17 @@ class Pagination
 
     /**
      * ตั้งค่า CSS classes
+     * จุดประสงค์: กำหนด CSS classes สำหรับ container, active, และ disabled states
+     * setClasses() ควรใช้กับอะไร: เมื่อคุณต้องการกำหนด CSS classes สำหรับการแสดงผลข้อมูลแบบแบ่งหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $pagination->setClasses('pagination', 'active', 'disabled');
+     * ```
      * 
-     * @param string $container
-     * @param string $active
-     * @param string $disabled
-     * @return self
+     * @param string $container กำหนด CSS class สำหรับ container
+     * @param string $active กำหนด CSS class สำหรับ active state
+     * @param string $disabled กำหนด CSS class สำหรับ disabled state
+     * @return self คืนค่าอินสแตนซ์ของคลาสปัจจุบัน
      */
     public function setClasses(string $container, string $active, string $disabled): self
     {
@@ -244,10 +315,16 @@ class Pagination
 
     /**
      * ตั้งค่าข้อความปุ่ม
+     * จุดประสงค์: กำหนดข้อความสำหรับปุ่ม Previous และ Next
+     * setButtonTexts() ควรใช้กับอะไร: เมื่อคุณต้องการกำหนดข้อความสำหรับปุ่ม Previous และ Next
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $pagination->setButtonTexts('Previous', 'Next');
+     * ```
      * 
-     * @param string $previous
-     * @param string $next
-     * @return self
+     * @param string $previous กำหนดข้อความสำหรับปุ่ม Previous
+     * @param string $next กำหนดข้อความสำหรับปุ่ม Next
+     * @return self คืนค่าอินสแตนซ์ของคลาสปัจจุบัน
      */
     public function setButtonTexts(string $previous, string $next): self
     {
@@ -258,9 +335,15 @@ class Pagination
 
     /**
      * สร้าง URL สำหรับหน้าที่ระบุ
+     * จุดประสงค์: สร้าง URL สำหรับหน้าที่ระบุ
+     * getUrl() ควรใช้กับอะไร: เมื่อคุณต้องการสร้าง URL สำหรับหน้าที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $url = $pagination->getUrl(2);
+     * ```
      * 
-     * @param int $page
-     * @return string
+     * @param int $page กำหนดหมายเลขหน้าที่ต้องการสร้าง URL
+     * @return string คืนค่า URL สำหรับหน้าที่ระบุ
      */
     public function getUrl(int $page): string
     {
@@ -272,8 +355,14 @@ class Pagination
 
     /**
      * สร้าง pagination HTML (Bootstrap style)
+     * จุดประสงค์: สร้าง HTML สำหรับการแบ่งหน้าแบบ Bootstrap
+     * render() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลข้อมูลแบบแบ่งหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * echo $pagination->render();
+     * ```
      * 
-     * @return string
+     * @return string คืนค่า HTML สำหรับ pagination
      */
     public function render(): string
     {
@@ -301,8 +390,14 @@ class Pagination
 
     /**
      * สร้างปุ่ม Previous
+     * จุดประสงค์: สร้าง HTML สำหรับปุ่ม Previous
+     * renderPreviousButton() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลปุ่ม Previous ในการแบ่งหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * echo $pagination->renderPreviousButton();
+     * ```
      * 
-     * @return string
+     * @return string คืนค่า HTML สำหรับปุ่ม Previous
      */
     private function renderPreviousButton(): string
     {
@@ -327,8 +422,14 @@ class Pagination
 
     /**
      * สร้างปุ่ม Next
+     * จุดประสงค์: สร้าง HTML สำหรับปุ่ม Next
+     * renderNextButton() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลปุ่ม Next ในการแบ่งหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * echo $pagination->renderNextButton();
+     * ```
      * 
-     * @return string
+     * @return string คืนค่า HTML สำหรับปุ่ม Next
      */
     private function renderNextButton(): string
     {
@@ -353,8 +454,14 @@ class Pagination
 
     /**
      * สร้างหมายเลขหน้า
+     * จุดประสงค์: สร้าง HTML สำหรับหมายเลขหน้า
+     * renderPageNumbers() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลหมายเลขหน้าในการแบ่งหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * echo $pagination->renderPageNumbers();
+     * ```
      * 
-     * @return string
+     * @return string คืนค่า HTML สำหรับหมายเลขหน้า
      */
     private function renderPageNumbers(): string
     {
@@ -387,9 +494,15 @@ class Pagination
 
     /**
      * สร้าง link สำหรับหน้าเดียว
+     * จุดประสงค์: สร้าง HTML สำหรับ link หน้าเดียว
+     * renderPageLink() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลลิงก์สำหรับหน้าเดียวในการแบ่งหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * echo $pagination->renderPageLink(1);
+     * ```
      * 
-     * @param int $page
-     * @return string
+     * @param int $page หมายเลขหน้าที่ต้องการสร้าง link
+     * @return string คืนค่า HTML สำหรับ link หน้าเดียว
      */
     private function renderPageLink(int $page): string
     {
@@ -414,8 +527,14 @@ class Pagination
 
     /**
      * คำนวณช่วงหน้าที่จะแสดง
+     * จุดประสงค์: คำนวณช่วงหมายเลขหน้าที่จะแสดงใน pagination
+     * calculatePageRange() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลหมายเลขหน้าในการแบ่งหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $pages = $pagination->calculatePageRange();
+     * ```
      * 
-     * @return array
+     * @return array คืนค่าช่วงหมายเลขหน้าที่จะแสดง
      */
     private function calculatePageRange(): array
     {
@@ -433,8 +552,14 @@ class Pagination
 
     /**
      * สร้างข้อมูลสรุปการแบ่งหน้า
+     * จุดประสงค์: สร้างข้อความสรุปการแบ่งหน้า
+     * summary() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลข้อมูลแบบแบ่งหน้า
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * echo $pagination->summary();
+     * ```
      * 
-     * @return string
+     * @return string คืนค่าข้อความสรุปการแบ่งหน้า
      */
     public function summary(): string
     {
@@ -450,8 +575,14 @@ class Pagination
 
     /**
      * สร้าง pagination แบบง่าย (เฉพาะ Previous/Next)
+     * จุดประสงค์: สร้าง HTML สำหรับการแบ่งหน้าแบบง่าย
+     * renderSimple() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลข้อมูลแบบแบ่งหน้าแบบง่าย
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * echo $pagination->renderSimple();
      * 
-     * @return string
+     * 
+     * @return string คืนค่า HTML สำหรับ pagination แบบง่าย
      */
     public function renderSimple(): string
     {
@@ -477,8 +608,14 @@ class Pagination
 
     /**
      * แปลงเป็น array
+     * จุดประสงค์: แปลงข้อมูล pagination เป็น array
+     * toArray() ควรใช้กับอะไร: การแปลงข้อมูลเพื่อใช้งานในรูปแบบอื่น เช่น JSON
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $array = $pagination->toArray();
+     * ```
      * 
-     * @return array
+     * @return array คืนค่าข้อมูล pagination ในรูปแบบ array
      */
     public function toArray(): array
     {
@@ -497,8 +634,14 @@ class Pagination
 
     /**
      * แปลงเป็น JSON
+     * จุดประสงค์: แปลงข้อมูล pagination เป็น JSON
+     * toJson() ควรใช้กับอะไร: การแปลงข้อมูลเพื่อใช้งานในรูปแบบอื่น เช่น API response
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $json = $pagination->toJson();
+     * ```
      * 
-     * @return string
+     * @return string คืนค่าข้อมูล pagination ในรูปแบบ JSON
      */
     public function toJson(): string
     {

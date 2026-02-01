@@ -2,6 +2,8 @@
 /**
  * MIDDLEWARE RATE LIMITING
  * 
+ * Middleware สำหรับนระบบ หรือ API Global Middleware
+ * 
  * จุดประสงค์: จำกัดจำนวนคำขอเพื่อป้องกัน abuse และ DDoS attacks
  * 
  * การใช้งาน:
@@ -25,7 +27,7 @@
  * - windowSeconds: ระยะเวลา window ในวินาที
  */
 
-namespace App\Middleware;
+namespace App\Middleware\Systems;
 
 use App\Core\Middleware;
 use App\Core\Logger;

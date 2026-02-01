@@ -10,6 +10,8 @@
  * - สร้าง string สุ่ม
  * - แปลงเป็น camelCase, snake_case
  * - ตรวจสอบว่าขึ้นต้นหรือลงท้ายด้วย string
+ * - แทนที่ครั้งแรก/ครั้งสุดท้าย
+ * - ลบ HTML tags
  */
 
 namespace App\Helpers;
@@ -18,6 +20,15 @@ class StringHelper
 {
     /**
      * สร้าง slug จาก string (เหมาะสำหรับ URL)
+     * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นรูปแบบ slug ที่เหมาะสำหรับ URL
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $slug = StringHelper::slug('Hello World! This is a Test.');
+     * ```
+     * 
+     * ผลลัพธ์: hello-world-this-is-a-test
+     * 
+     * returns string รูปแบบ slug
      * 
      * @param string $text
      * @param string $separator
@@ -42,6 +53,16 @@ class StringHelper
 
     /**
      * ตัดข้อความให้เหลือความยาวที่กำหนด
+     * จุดประสงค์: ใช้เพื่อตัดข้อความให้มีความยาวไม่เกินที่กำหนด โดยเพิ่ม suffix เมื่อถูกตัด
+     * ภาษาที่รองรับ: ไทยและอังกฤษ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $truncated = StringHelper::truncate('This is a long text that needs to be truncated.', 20);
+     * ```
+     * 
+     * ผลลัพธ์: This is a long...
+     * 
+     * returns string ข้อความที่ถูกตัด
      * 
      * @param string $text
      * @param int $length
@@ -67,6 +88,16 @@ class StringHelper
 
     /**
      * ตัดข้อความตามจำนวนคำ
+     * จุดประสงค์: ใช้เพื่อตัดข้อความให้เหลือจำนวนคำที่กำหนด โดยเพิ่ม suffix เมื่อถูกตัด
+     * ภาษาที่รองรับ: ไทยและอังกฤษ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $truncated = StringHelper::words('This is a long text that needs to be truncated by words.', 5);
+     * ```
+     * 
+     * ผลลัพธ์: This is a long text...
+     * 
+     * returns string ข้อความที่ถูกตัด
      * 
      * @param string $text
      * @param int $words
@@ -86,6 +117,15 @@ class StringHelper
 
     /**
      * สร้าง string สุ่ม
+     * จุดประสงค์: ใช้เพื่อสร้าง string สุ่มที่ประกอบด้วยตัวอักษรและตัวเลข
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $randomString = StringHelper::random(16);
+     * ```
+     * 
+     * ผลลัพธ์: string สุ่มที่มีความยาวตามที่กำหนด
+     * 
+     * returns string string สุ่ม
      * 
      * @param int $length
      * @return string
@@ -105,6 +145,15 @@ class StringHelper
 
     /**
      * แปลงเป็น camelCase
+     * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นรูปแบบ camelCase
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $camelCase = StringHelper::camelCase('hello world this is a test');
+     * ```
+     * 
+     * ผลลัพธ์: helloWorldThisIsATest
+     * 
+     * returns string รูปแบบ camelCase
      * 
      * @param string $text
      * @return string
@@ -117,6 +166,15 @@ class StringHelper
 
     /**
      * แปลงเป็น StudlyCase (PascalCase)
+     * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นรูปแบบ StudlyCase หรือ PascalCase
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $studlyCase = StringHelper::studlyCase('hello world this is a test');
+     * ```
+     * 
+     * ผลลัพธ์: HelloWorldThisIsATest
+     * 
+     * returns string รูปแบบ StudlyCase
      * 
      * @param string $text
      * @return string
@@ -130,6 +188,15 @@ class StringHelper
 
     /**
      * แปลงเป็น snake_case
+     * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นรูปแบบ snake_case
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $snakeCase = StringHelper::snakeCase('hello world this is a test');
+     * ```
+     * 
+     * ผลลัพธ์: hello_world_this_is_a_test
+     * 
+     * returns string รูปแบบ snake_case
      * 
      * @param string $text
      * @return string
@@ -142,6 +209,15 @@ class StringHelper
 
     /**
      * แปลงเป็น kebab-case
+     * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นรูปแบบ kebab-case
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $kebabCase = StringHelper::kebabCase('hello world this is a test');
+     * ```
+     * 
+     * ผลลัพธ์: hello-world-this-is-a-test
+     * 
+     * returns string รูปแบบ kebab-case
      * 
      * @param string $text
      * @return string
@@ -153,6 +229,15 @@ class StringHelper
 
     /**
      * ตรวจสอบว่าขึ้นต้นด้วย string ที่กำหนด
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่า string ขึ้นต้นด้วยข้อความที่กำหนดหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $startsWithHello = StringHelper::startsWith('hello world', 'hello');
+     * ```
+     * 
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบ
      * 
      * @param string $haystack
      * @param string|array $needles
@@ -171,6 +256,15 @@ class StringHelper
 
     /**
      * ตรวจสอบว่าลงท้ายด้วย string ที่กำหนด
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่า string ลงท้ายด้วยข้อความที่กำหนดหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $endsWithTxt = StringHelper::endsWith('hello world', 'world');
+     * ```
+     * 
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบ
      * 
      * @param string $haystack
      * @param string|array $needles
@@ -189,6 +283,15 @@ class StringHelper
 
     /**
      * ตรวจสอบว่ามี string อยู่ข้างใน
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่ามีข้อความที่กำหนดอยู่ภายใน string หรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $containsHello = StringHelper::contains('hello world', 'hello');
+     * ```
+     * 
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบ
      * 
      * @param string $haystack
      * @param string|array $needles
@@ -207,6 +310,15 @@ class StringHelper
 
     /**
      * แทนที่ครั้งแรกเท่านั้น
+     * จุดประสงค์: ใช้เพื่อแทนที่ข้อความครั้งแรกที่พบในสตริง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $result = StringHelper::replaceFirst('world', 'there', 'hello world world');
+     * ```
+     * 
+     * ผลลัพธ์: hello there world
+     * 
+     * returns string สตริงที่ถูกแทนที่ครั้งแรก
      * 
      * @param string $search
      * @param string $replace
@@ -226,6 +338,15 @@ class StringHelper
 
     /**
      * แทนที่ครั้งสุดท้ายเท่านั้น
+     * จุดประสงค์: ใช้เพื่อแทนที่ข้อความครั้งสุดท้ายที่พบในสตริง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $result = StringHelper::replaceLast('world', 'there', 'hello world world');
+     * ```
+     * 
+     * ผลลัพธ์: hello world there
+     * 
+     * returns string สตริงที่ถูกแทนที่ครั้งสุดท้าย
      * 
      * @param string $search
      * @param string $replace
@@ -245,6 +366,15 @@ class StringHelper
 
     /**
      * ลบ HTML tags
+     * จุดประสงค์: ใช้เพื่อลบ HTML tags ออกจากข้อความ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanText = StringHelper::stripTags('<p>Hello <strong>World</strong></p>');
+     * ```
+     * 
+     * ผลลัพธ์: Hello World
+     * 
+     * returns string ข้อความที่ถูกลบ HTML tags
      * 
      * @param string $text
      * @param string|array $allowedTags
@@ -261,6 +391,15 @@ class StringHelper
 
     /**
      * แปลงเป็นตัวพิมพ์ใหญ่
+     * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นตัวพิมพ์ใหญ่ทั้งหมด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $upperText = StringHelper::upper('hello world');
+     * ```
+     * 
+     * ผลลัพธ์: HELLO WORLD
+     * 
+     * returns string ข้อความที่แปลงเป็นตัวพิมพ์ใหญ่
      * 
      * @param string $text
      * @return string
@@ -272,6 +411,15 @@ class StringHelper
 
     /**
      * แปลงเป็นตัวพิมพ์เล็ก
+     * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นตัวพิมพ์เล็กทั้งหมด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $lowerText = StringHelper::lower('HELLO WORLD');
+     * ```
+     * 
+     * ผลลัพธ์: hello world
+     * 
+     * returns string ข้อความที่แปลงเป็นตัวพิมพ์เล็ก
      * 
      * @param string $text
      * @return string
@@ -283,6 +431,15 @@ class StringHelper
 
     /**
      * แปลงตัวอักษรแรกของแต่ละคำเป็นตัวพิมพ์ใหญ่
+     * จุดประสงค์: ใช้เพื่อแปลงตัวอักษรแรกของแต่ละคำเป็นตัวพิมพ์ใหญ่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $titleText = StringHelper::title('hello world');
+     * ```
+     * 
+     * ผลลัพธ์: Hello World
+     * 
+     * returns string ข้อความที่แปลงตัวอักษรแรกของแต่ละคำเป็นตัวพิมพ์ใหญ่
      * 
      * @param string $text
      * @return string
@@ -294,6 +451,15 @@ class StringHelper
 
     /**
      * ตรวจสอบว่าเป็น JSON string หรือไม่
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่าสตริงที่กำหนดเป็น JSON ที่ถูกต้องหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isJson = StringHelper::isJson('{"name":"John","age":30}');
+     * ```
+     * 
+     * ผลลัพธ์: true
+     * 
+     * returns bool ผลลัพธ์การตรวจสอบว่าเป็น JSON หรือไม่
      * 
      * @param string $text
      * @return bool
@@ -306,6 +472,15 @@ class StringHelper
 
     /**
      * แปลงตัวเลขเป็นตัวหนังสือไทย (สำหรับเช็ค)
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขเป็นตัวหนังสือไทยสำหรับเช็ค
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $bahtText = StringHelper::bahtText(1234.56);
+     * ```
+     * 
+     * ผลลัพธ์: หนึ่งพันสองร้อยสามสิบสี่บาทห้าสิบหกสตางค์
+     * 
+     * returns string ข้อความที่แปลงตัวเลขเป็นตัวหนังสือไทย
      * 
      * @param float $number
      * @return string
@@ -330,45 +505,89 @@ class StringHelper
 
     /**
      * ฟังก์ชันช่วยแปลงตัวเลขเป็นตัวหนังสือไทย
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขเป็นตัวหนังสือไทย
+     * $textNum คือ array ของตัวหนังสือไทยสำหรับตัวเลข 0-9
+     * $textDigit คือ array ของตัวหนังสือไทยสำหรับหลักต่างๆ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $thaiText = StringHelper::convertNumberToThai('1234567', $txtNum, $txtDigit);
+     * ```
+     * 
+     * ผลลัพธ์: หนึ่งล้านสองแสนสามหมื่นสี่พันห้าร้อยหกสิบเจ็ด
+     * 
+     * returns string ข้อความที่แปลงตัวเลขเป็นตัวหนังสือไทย
      * 
      * @param string $number
      * @param array $txtNum
      * @param array $txtDigit
      * @return string
      */
-    private static function convertNumberToThai(string $number, array $txtNum, array $txtDigit): string
+    public static function convertNumberToThai(string $number, array $txtNum, array $txtDigit): string
     {
-        $length = strlen($number);
+        $number = ltrim($number, '0');
+        if ($number === '') {
+            return 'ศูนย์';
+        }
+
         $result = '';
-        
-        for ($i = 0; $i < $length; $i++) {
-            $digit = (int)$number[$i];
-            $position = $length - $i - 1;
-            
-            if ($digit == 0) {
-                continue;
+
+        // แยกเลขเป็นกลุ่มละ 6 หลักจากขวา
+        $groups = str_split(strrev($number), 6);
+        $groups = array_reverse($groups);
+        $groupCount = count($groups);
+
+        foreach ($groups as $gIndex => $group) {
+            $group = strrev($group);
+            $length = strlen($group);
+
+            for ($i = 0; $i < $length; $i++) {
+                $digit = (int)$group[$i];
+                $position = $length - $i - 1;
+
+                if ($digit == 0) {
+                    continue;
+                }
+
+                $isSpecialTens = false;
+
+                if ($position == 1 && $digit == 1) {
+                    $result .= 'สิบ';
+                    $isSpecialTens = true;
+                } elseif ($position == 1 && $digit == 2) {
+                    $result .= 'ยี่สิบ';
+                    $isSpecialTens = true;
+                } elseif ($position == 0 && $digit == 1 && $length > 1) {
+                    $result .= 'เอ็ด';
+                } else {
+                    $result .= $txtNum[$digit];
+                }
+
+                // เติมชื่อหลัก ยกเว้นกรณีหลักสิบที่จัดการไปแล้ว
+                if ($position > 0 && !$isSpecialTens) {
+                    $result .= $txtDigit[$position];
+                }
             }
-            
-            if ($position == 1 && $digit == 1) {
-                $result .= 'สิบ';
-            } elseif ($position == 1 && $digit == 2) {
-                $result .= 'ยี่สิบ';
-            } elseif ($position == 0 && $digit == 1 && $length > 1) {
-                $result .= 'เอ็ด';
-            } else {
-                $result .= $txtNum[$digit];
-            }
-            
-            if ($position > 0 && $digit != 0) {
-                $result .= $txtDigit[$position];
+
+            // เติม "ล้าน" ระหว่างกลุ่ม
+            if ($gIndex < $groupCount - 1 && trim($result) !== '') {
+                $result .= 'ล้าน';
             }
         }
-        
+
         return $result ?: 'ศูนย์';
     }
 
     /**
      * ลบช่องว่างซ้ำ
+     * จุดประสงค์: ใช้เพื่อลบช่องว่างที่ซ้ำกันในข้อความ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cleanText = StringHelper::collapseWhitespace('This   is   a    test.');
+     * ```
+     * 
+     * ผลลัพธ์: This is a test.
+     * 
+     * returns string ข้อความที่ลบช่องว่างซ้ำ
      * 
      * @param string $text
      * @return string
@@ -380,6 +599,17 @@ class StringHelper
 
     /**
      * แทนที่หลายค่าพร้อมกัน
+     * จุดประสงค์: ใช้เพื่อแทนที่หลายค่าพร้อมกันในข้อความ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $replacements = ['apple' => 'orange', 'banana' => 'grape'];
+     * $text = "I like apple and banana.";
+     * $newText = StringHelper::replaceArray($replacements, $text);
+     * ```
+     * 
+     * ผลลัพธ์: I like orange and grape.
+     * 
+     * returns string ข้อความที่ถูกแทนที่
      * 
      * @param array $replacements
      * @param string $subject
@@ -392,6 +622,15 @@ class StringHelper
 
     /**
      * จำกัดความยาว string
+     * จุดประสงค์: ใช้เพื่อจำกัดความยาวของข้อความตามที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $limitedText = StringHelper::limit('This is a long text that needs to be limited.', 20, '...');
+     * ```
+     * 
+     * ผลลัพธ์: This is a long text...
+     * 
+     * returns string ข้อความที่ถูกจำกัดความยาว
      * 
      * @param string $text
      * @param int $limit
@@ -409,6 +648,15 @@ class StringHelper
 
     /**
      * Mask string (เช่น email, เบอร์โทร)
+     * จุดประสงค์: ใช้เพื่อมาสก์ส่วนหนึ่งของข้อความด้วยอักขระที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $maskedEmail = StringHelper::mask('example@example.com', 2, 6);
+     * ```
+     * 
+     * ผลลัพธ์: ex******ple.com
+     * 
+     * returns string ข้อความที่ถูกมาสก์
      * 
      * @param string $text
      * @param int $start

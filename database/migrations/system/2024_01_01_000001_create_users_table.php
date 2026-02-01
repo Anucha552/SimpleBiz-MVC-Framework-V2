@@ -9,31 +9,27 @@ class CreateUsersTable extends Migration
      */
     public function up(): void
     {
-        $sql = "
-        CREATE TABLE IF NOT EXISTS users (
-            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'รหัสผู้ใช้',
-            username VARCHAR(50) NOT NULL UNIQUE COMMENT 'ชื่อผู้ใช้',
-            email VARCHAR(100) NOT NULL UNIQUE COMMENT 'อีเมล',
-            password VARCHAR(255) NOT NULL COMMENT 'รหัสผ่าน (Hashed)',
-            first_name VARCHAR(100) NULL COMMENT 'ชื่อจริง',
-            last_name VARCHAR(100) NULL COMMENT 'นามสกุล',
-            phone VARCHAR(20) NULL COMMENT 'เบอร์โทรศัพท์',
-            status ENUM('active', 'inactive', 'banned') DEFAULT 'active' COMMENT 'สถานะ: active=ใช้งาน, inactive=ปิดใช้งาน, banned=ระงับ',
-            email_verified_at TIMESTAMP NULL COMMENT 'วันที่ยืนยันอีเมล',
-            remember_token VARCHAR(100) NULL COMMENT 'Token จดจำการเข้าสู่ระบบ',
-            last_login_at TIMESTAMP NULL COMMENT 'วันที่เข้าสู่ระบบล่าสุด',
-            last_login_ip VARCHAR(45) NULL COMMENT 'IP Address ล่าสุด',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'วันที่สร้าง',
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'วันที่แก้ไข',
-            deleted_at TIMESTAMP NULL COMMENT 'วันที่ลบ (Soft Delete)',
-            
-            INDEX idx_username (username),
-            INDEX idx_email (email),
-            INDEX idx_status (status)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ตารางผู้ใช้งานระบบ'
-        ";
+        $this->createTable('users', function($table) {
+            $table->increments('id')->comment('รหัสผู้ใช้');
+            $table->string('username', 50)->comment('ชื่อผู้ใช้')->unique();
+            $table->string('email', 100)->comment('อีเมล')->unique();
+            $table->string('password', 255)->comment('รหัสผ่าน (Hashed)');
+            $table->string('first_name', 100)->nullable()->comment('ชื่อจริง');
+            $table->string('last_name', 100)->nullable()->comment('นามสกุล');
+            $table->string('phone', 20)->nullable()->comment('เบอร์โทรศัพท์');
+            $table->string('status', 20)->default('active')->comment('สถานะ: active=ใช้งาน, inactive=ปิดใช้งาน, banned=ระงับ');
+            $table->timestamp('email_verified_at')->nullable()->comment('วันที่ยืนยันอีเมล');
+            $table->string('remember_token', 100)->nullable()->comment('Token จดจำการเข้าสู่ระบบ');
+            $table->timestamp('last_login_at')->nullable()->comment('วันที่เข้าสู่ระบบล่าสุด');
+            $table->string('last_login_ip', 45)->nullable()->comment('IP Address ล่าสุด');
+            $table->timestamps();
+            $table->timestamp('deleted_at')->nullable()->comment('วันที่ลบ (Soft Delete)');
 
-        $this->execute($sql);
+            // additional indexes
+            $table->index('username');
+            $table->index('email');
+            $table->index('status');
+        });
     }
 
     /**

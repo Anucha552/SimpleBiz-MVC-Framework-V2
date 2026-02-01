@@ -29,8 +29,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ตรวจสอบว่า Composer dependencies ถูกติดตั้งแล้วหรือไม่
+// เส้นทางไปยัง Composer autoloader
 $autoloadPath = __DIR__ . '/../vendor/autoload.php';
+
+// ตรวจสอบว่า Composer dependencies ถูกติดตั้งแล้วหรือไม่
 if (!file_exists($autoloadPath)) {
     // แสดงข้อความแนะนำที่เป็นมิตรสำหรับนักพัฒนา
     http_response_code(500);
@@ -233,7 +235,7 @@ if (file_exists($envPath)) {
     // Prefer vlucas/phpdotenv (รองรับ quotes/spacing ได้ดีกว่า)
     if (class_exists(\Dotenv\Dotenv::class)) { 
         $dotenv = \Dotenv\Dotenv::createImmutable(dirname(__DIR__));
-        $dotenv->safeLoad();
+        $dotenv->safeLoad(); // โหลดตัวแปรสภาพแวดล้อม (ถ้ามี)
     } else {
         // Fallback loader แบบง่าย
         $lines = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -260,11 +262,11 @@ $config = require __DIR__ . '/../config/app.php';
 
 // ตั้งค่าการรายงานข้อผิดพลาดตามสภาพแวดล้อม
 if ($config['env'] === 'production') {
-    error_reporting(0);
-    ini_set('display_errors', '0');
+    error_reporting(0); // ปิดการรายงานข้อผิดพลาดทั้งหมด
+    ini_set('display_errors', '0'); // ไม่แสดงข้อผิดพลาดบนหน้าจอ
 } else {
-    error_reporting(E_ALL);
-    ini_set('display_errors', '1');
+    error_reporting(E_ALL); // รายงานข้อผิดพลาดทั้งหมด
+    ini_set('display_errors', '1'); // แสดงข้อผิดพลาดบนหน้าจอ
 }
 
 // ตั้งค่า timezone
@@ -344,11 +346,12 @@ require __DIR__ . '/../routes/api.php';
 // ===== Global middleware (ก่อน routing) =====
 $request = new App\Core\Request();
 
-// กำหนด middleware ทั่วไป
+// กำหนด middleware ทั่วไป (ลำดับ: Logging → Maintenance → SecurityHeaders)
+// (ใช้กับทุกคำขอ)
 $globalMiddleware = [
-    App\Middleware\SecurityHeadersMiddleware::class, // ตั้งค่า HTTP security headers
-    App\Middleware\MaintenanceMiddleware::class, // ตรวจสอบสถานะการปิดปรับปรุงระบบ
-    App\Middleware\LoggingMiddleware::class, // บันทึกคำขอเข้า
+    App\Middleware\Systems\LoggingMiddleware::class, // บันทึกคำขอเข้า (บันทึกทุกคำขอก่อนการบล็อค)
+    App\Middleware\Systems\MaintenanceMiddleware::class, // ตรวจสอบสถานะการปิดปรับปรุงระบบ
+    App\Middleware\Systems\SecurityHeadersMiddleware::class, // ตั้งค่า HTTP security headers
 ];
 
 // เพิ่ม middleware เฉพาะสำหรับคำขอ API
@@ -357,9 +360,11 @@ $isApiRequest = strpos($uri, '/api/') === 0;
 
 // ตรวจสอบถ้าเป็นคำขอ API
 if ($isApiRequest) {
-    // API defaults
-    array_unshift($globalMiddleware, App\Middleware\CorsMiddleware::class); // ตั้งค่า CORS สำหรับ API
-    $globalMiddleware[] = App\Middleware\RateLimitMiddleware::class; // จำกัดอัตราคำขอ API
+    // API defaults middleware: ให้ CORS/RateLimit ทำงานหลังจาก Logging แต่ก่อน Maintenance/Security
+    array_splice($globalMiddleware, 1, 0, [
+        App\Middleware\Systems\CorsMiddleware::class, // ตั้งค่า CORS สำหรับ API (preflight handling)
+        App\Middleware\Systems\RateLimitMiddleware::class, // จำกัดอัตราคำขอ API
+    ]);
 }
 
 // เรียกใช้ global middleware

@@ -2,6 +2,8 @@
 /**
  * MIDDLEWARE CORS (Cross-Origin Resource Sharing)
  * 
+ * Middleware สำหรับนระบบ หรือ API Global Middleware
+ * 
  * จุดประสงค์: จัดการ CORS headers สำหรับ API requests ข้าม origin
  * 
  * การใช้งาน:
@@ -26,7 +28,7 @@
  * - maxAge: เวลา cache สำหรับ preflight
  */
 
-namespace App\Middleware;
+namespace App\Middleware\Systems;
 
 use App\Core\Middleware;
 use App\Core\Logger;

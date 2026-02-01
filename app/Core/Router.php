@@ -1,9 +1,10 @@
 <?php
 /**
- * คลาสเราเตอร์
+ * คลาสเราเตอร์ สำหรับจัดการเส้นทางของแอปพลิเคชัน
  * 
  * จุดประสงค์: จัดเส้นทางคำขอ HTTP ไปยังตัวควบคุมและเมธอดที่เหมาะสม
  * ฟีเจอร์: รองรับ middleware, พารามิเตอร์แบบไดนามิก, เมธอด HTTP หลายแบบ
+ * Router() ควรใช้กับอะไร: คำขอ HTTP ที่เข้ามาในแอปพลิเคชัน
  * 
  * วิธีการทำงาน:
  * 1. เส้นทางถูกลงทะเบียนพร้อมเมธอด HTTP และรูปแบบ
@@ -14,7 +15,7 @@
  * ตัวอย่างรูปแบบเส้นทาง:
  * - /products → เส้นทางแบบคงที่
  * - /products/{id} → พารามิเตอร์แบบไดนามิก
- * - /api/v1/products/{id} → แบบซ้อนพร้อมพารามิเตอร์
+ * - /api/products/{id} → แบบซ้อนพร้อมพารามิเตอร์
  */
 
 namespace App\Core;
@@ -34,10 +35,17 @@ class Router
 
     /**
      * ลงทะเบียนเส้นทาง GET
+     * จุดประสงค์: ลงทะเบียนเส้นทางสำหรับคำขอ GET
+     * get() ควรใช้กับอะไร: เมื่อต้องการเพิ่มเส้นทาง GET ใหม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $router->get('/products', 'ProductController@index');
+     * ```
      * 
      * @param string $path รูปแบบเส้นทาง
      * @param string $controller รูปแบบ Controller@method
      * @param array $middleware คลาส middleware (ไม่บังคับ)
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     public function get(string $path, string $controller, array $middleware = []): void
     {
@@ -46,10 +54,17 @@ class Router
 
     /**
      * ลงทะเบียนเส้นทาง POST
+     * จุดประสงค์: ลงทะเบียนเส้นทางสำหรับคำขอ POST
+     * post() ควรใช้กับอะไร: เมื่อต้องการเพิ่มเส้นทาง POST ใหม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $router->post('/products', 'ProductController@store');
+     * ```
      * 
      * @param string $path รูปแบบเส้นทาง
      * @param string $controller รูปแบบ Controller@method
      * @param array $middleware คลาส middleware (ไม่บังคับ)
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     public function post(string $path, string $controller, array $middleware = []): void
     {
@@ -58,10 +73,17 @@ class Router
 
     /**
      * ลงทะเบียนเส้นทาง PUT
+     * จุดประสงค์: ลงทะเบียนเส้นทางสำหรับคำขอ PUT
+     * put() ควรใช้กับอะไร: เมื่อต้องการเพิ่มเส้นทาง PUT ใหม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $router->put('/products/{id}', 'ProductController@update');
+     * ```
      * 
      * @param string $path รูปแบบเส้นทาง
      * @param string $controller รูปแบบ Controller@method
      * @param array $middleware คลาส middleware (ไม่บังคับ)
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     public function put(string $path, string $controller, array $middleware = []): void
     {
@@ -70,10 +92,17 @@ class Router
 
     /**
      * ลงทะเบียนเส้นทาง DELETE
+     * จุดประสงค์: ลงทะเบียนเส้นทางสำหรับคำขอ DELETE
+     * delete() ควรใช้กับอะไร: เมื่อต้องการเพิ่มเส้นทาง DELETE ใหม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $router->delete('/products/{id}', 'ProductController@destroy');
+     * ```
      * 
      * @param string $path รูปแบบเส้นทาง
      * @param string $controller รูปแบบ Controller@method
      * @param array $middleware คลาส middleware (ไม่บังคับ)
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     public function delete(string $path, string $controller, array $middleware = []): void
     {
@@ -82,11 +111,18 @@ class Router
 
     /**
      * เพิ่มเส้นทางลงในอาร์เรย์เส้นทาง
+     * จุดประสงค์: เพิ่มเส้นทางใหม่ลงในอาร์เรย์เส้นทาง
+     * addRoute() ควรใช้กับอะไร: เมื่อคุณต้องการเพิ่มเส้นทางใหม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->addRoute('GET', '/products', 'ProductController@index');
+     * ```
      * 
      * @param string $method เมธอด HTTP
      * @param string $path รูปแบบเส้นทาง
      * @param string $controller รูปแบบ Controller@method
      * @param array $middleware คลาส middleware
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     private function addRoute(string $method, string $path, string $controller, array $middleware): void
     {
@@ -98,6 +134,12 @@ class Router
 
     /**
      * ส่งคำขอที่เข้ามาไปยังตัวควบคุมที่เหมาะสม
+     * จุดประสงค์: ส่งคำขอที่เข้ามาไปยังตัวควบคุมที่เหมาะสม
+     * dispatch() ควรใช้กับอะไร: เมื่อคุณต้องการจัดการคำขอและส่งไปยังตัวควบคุมที่เหมาะสม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $router->dispatch();
+     * ```
      * 
      * กระบวนการ:
      * 1. รับเมธอดคำขอและ URI
@@ -105,6 +147,7 @@ class Router
      * 3. เรียกใช้ลูกโซ่ middleware
      * 4. เรียกเมธอดของตัวควบคุมพร้อมพารามิเตอร์
      * 
+     * @param Request|null $request คำขอที่ส่งเข้ามา (ถ้ามี)
      * @throws \Exception ถ้าไม่พบเส้นทางหรือตัวควบคุมไม่ถูกต้อง
      */
     public function dispatch(?Request $request = null): void
@@ -206,6 +249,12 @@ class Router
      * 
      * แปลงรูปแบบเส้นทางเช่น /products/{id} เป็น regex
      * แยกค่าพารามิเตอร์จาก URI
+     * จุดประสงค์: จับคู่ URI ที่เข้ามากับเส้นทางที่ลงทะเบียนไว้
+     * matchRoute() ควรใช้กับอะไร: เมธอด HTTP และ URI ที่ต้องการจับคู่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $route = $this->matchRoute('GET', '/products/123');
+     * ```
      * 
      * @param string $method เมธอด HTTP
      * @param string $uri URI ของคำขอ
@@ -244,8 +293,15 @@ class Router
     /**
      * หาเมธอดทั้งหมดที่รองรับสำหรับ URI เดียวกัน (เพื่อใช้ตอบ 405)
      *
-     * @param string $uri
-     * @return array
+     * จุดประสงค์: หาเมธอด HTTP ที่รองรับสำหรับ URI ที่กำหนด
+     * getAllowedMethodsForUri() ควรใช้กับอะไร: URI ที่ต้องการตรวจสอบเมธอดที่รองรับ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $methods = $this->getAllowedMethodsForUri('/products/123');
+     * ```
+     * 
+     * @param string $uri URI ของคำขอ
+     * @return array รายการเมธอด HTTP ที่รองรับ
      */
     private function getAllowedMethodsForUri(string $uri): array
     {
@@ -270,6 +326,12 @@ class Router
      * ดึง URI ที่สะอาดจากคำขอ
      * 
      * ลบสตริงคิวรีและเครื่องหมายทับนำและท้าย
+     * จุดประสงค์: ดึง URI ที่สะอาดจากคำขอ
+     * getUri() ควรใช้กับอะไร: เมื่อคุณต้องการดึง URI ที่สะอาดจากคำขอ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $uri = $this->getUri();
+     * ```
      * 
      * @return string เส้นทาง URI ที่สะอาด
      */
@@ -296,6 +358,13 @@ class Router
 
     /**
      * จัดการ 404 ไม่พบหน้า
+     * 
+     * จุดประสงค์: แสดงหน้าข้อผิดพลาด 404 เมื่อไม่พบเส้นทางที่ตรงกัน
+     * notFound() ควรใช้กับอะไร: เมื่อไม่พบเส้นทางที่ตรงกับคำขอ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $this->notFound();
+     * ```
      */
     private function notFound(): void
     {

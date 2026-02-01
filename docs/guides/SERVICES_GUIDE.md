@@ -140,18 +140,33 @@ $logger->error('DB.failed', ['error' => $e->getMessage()]);
 
 - **ไฟล์:** [app/Core/Database.php](app/Core/Database.php#L1)
 - **จุดประสงค์:** จัดการการเชื่อมต่อ PDO แบบ singleton, ตั้งค่า PDO option เพื่อความปลอดภัย (prepared statements)
-- **เมธอดสำคัญ:** `getInstance()`, `getConnection()` (คืนค่า PDO instance)
+ - **เมธอดสำคัญ:** `getInstance()` และเมธอด wrapper ที่ควรใช้: `query()`, `fetch()`, `fetchAll()`, `fetchColumn()`, `fetchList()`, `fetchPairs()`, `execute()`, `prepare()`, `transaction()` (หลีกเลี่ยงการเรียก `getConnection()` โดยตรง)
 
-ตัวอย่างการใช้งาน:
+ ตัวอย่างการใช้งานที่แนะนำ (ใช้เมธอดของ `Database` โดยตรง):
 
-```php
-use App\Core\Database;
+ ```php
+ use App\Core\Database;
 
-$db = Database::getInstance()->getConnection();
-$stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-$stmt->execute(['id' => $id]);
-$user = $stmt->fetch();
-```
+ $db = Database::getInstance();
+
+ // ดึงแถวเดียว
+ $user = $db->fetch('SELECT * FROM users WHERE id = :id', ['id' => $id]);
+
+ // ดึงหลายแถว
+ $rows = $db->fetchAll('SELECT * FROM posts WHERE user_id = :id', ['id' => $id]);
+
+ // รันคำสั่งที่ไม่คืนค่า
+ $db->execute('UPDATE users SET last_login = NOW() WHERE id = :id', ['id' => $id]);
+
+ // ตัวช่วยสำหรับคอลัมน์เดี่ยว / คู่
+ $emails = $db->fetchList('SELECT email FROM users WHERE active = 1');
+ $map = $db->fetchPairs('SELECT id, username FROM users');
+
+ // เตรียม statement หากต้องการใช้ PDOStatement โดยตรง
+ $stmt = $db->prepare('SELECT * FROM sessions WHERE user_id = :id');
+ $stmt->execute(['id' => $id]);
+ $sessions = $stmt->fetchAll();
+ ```
 
 ---
 
@@ -200,7 +215,7 @@ echo $v->layout('main')->render();
 - ตรวจสอบและ sanitize ไฟล์ก่อนบันทึก (FileUpload)
 - ตั้ง TTL สำหรับ cache ตามชนิดข้อมูล และใช้ `remember()` สำหรับ expensive queries
 - บันทึกเหตุการณ์ความปลอดภัยแยกเป็น `security` level ใน `Logger`
-- ใช้ prepared statements ผ่าน `Database::getInstance()->getConnection()` เสมอ
+- ใช้ prepared statements ผ่านเมธอดของ `Database` (เช่น `prepare()`, `fetch()`, `execute()`) เสมอ
 
 ---
 

@@ -32,6 +32,23 @@ class ResponseHelper
 {
     /**
      * ส่งการตอบกลับ JSON สำเร็จ
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ JSON ที่แสดงถึงความสำเร็จของคำขอ API
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * ResponseHelper::success($data, 'Data retrieved successfully', ['page' => 1]);
+     * ```
+     * 
+     * ผลลัพธ์:
+     * {
+     *   "success": true,
+     *   "data": {...},
+     *   "message": "Data retrieved successfully",
+     *   "meta": {
+     *     "page": 1
+     *   }
+     * }
+     * 
+     * returns Response การตอบกลับ JSON สำเร็จ
      * 
      * @param mixed $data ข้อมูลการตอบกลับ
      * @param string $message ข้อความสำเร็จ
@@ -45,6 +62,22 @@ class ResponseHelper
 
     /**
      * ส่งการตอบกลับ JSON ข้อผิดพลาด
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ JSON ที่แสดงถึงความล้มเหลวของคำขอ API
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * ResponseHelper::error('Validation failed', ['email' => 'Invalid email address'], 422);
+     * ```
+     * 
+     * ผมลลัพธ์:
+     * {
+     *   "success": false,
+     *   "message": "Validation failed",
+     *   "errors": {
+     *     "email": "Invalid email address"
+     *   }
+     * }
+     * 
+     * returns Response การตอบกลับ JSON ข้อผิดพลาด
      * 
      * @param string $message ข้อความข้อผิดพลาด
      * @param array $errors อาร์เรย์รายละเอียดข้อผิดพลาด
@@ -57,6 +90,20 @@ class ResponseHelper
 
     /**
      * ส่งการตอบกลับสร้างสำเร็จ (201)
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ JSON ที่แสดงถึงการสร้างทรัพยากรใหม่สำเร็จ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * ResponseHelper::created($newResourceData, 'Resource created successfully');
+     * ```
+     * 
+     * ผลลัพธ์:
+     * {
+     *   "success": true,
+     *   "data": {...},
+     *   "message": "Resource created successfully"
+     * }
+     * 
+     * returns Response การตอบกลับ JSON สร้างสำเร็จ
      * 
      * @param mixed $data ข้อมูลทรัพยากรที่สร้างขึ้น
      * @param string $message ข้อความสำเร็จ
@@ -68,6 +115,15 @@ class ResponseHelper
 
     /**
      * ส่งการตอบกลับไม่มีเนื้อหา (204)
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับที่ไม่มีเนื้อหาเมื่อคำขอสำเร็จแต่ไม่มีข้อมูลที่จะส่งกลับ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * ResponseHelper::noContent();
+     * ```
+     * 
+     * ผลลัพธ์: การตอบกลับ HTTP 204 ไม่มีเนื้อหา
+     * 
+     * returns Response การตอบกลับไม่มีเนื้อหา
      */
     public static function noContent(): Response
     {
@@ -76,6 +132,21 @@ class ResponseHelper
 
     /**
      * ส่งการตอบกลับไม่พบทรัพยากร (404)
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ JSON ที่แสดงถึงการไม่พบทรัพยากรที่ร้องขอ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * ResponseHelper::notFound('Resource not found');
+     * ```
+     * 
+     * ผลลัพธ์:
+     * {
+     *   "success": false,
+     *   "message": "Resource not found"
+     * }
+     * 
+     * ผลลัพธ์: การตอบกลับ JSON ไม่พบทรัพยากร
+     * 
+     * returns Response การตอบกลับ JSON ไม่พบทรัพยากร
      * 
      * @param string $message ข้อความข้อผิดพลาด
      */
@@ -86,6 +157,21 @@ class ResponseHelper
 
     /**
      * ส่งการตอบกลับไม่ได้รับอนุญาต (401)
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ JSON ที่แสดงถึงการไม่ได้รับอนุญาต
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * ResponseHelper::unauthorized('Authentication required');
+     * ```
+     * 
+     * ผลลัพธ์:
+     * {
+     *   "success": false,
+     *   "message": "Authentication required"
+     * }
+     * 
+     * ผลลัพธ์: การตอบกลับ JSON ไม่ได้รับอนุญาต
+     * 
+     * returns Response การตอบกลับ JSON ไม่ได้รับอนุญาต
      * 
      * @param string $message ข้อความข้อผิดพลาด
      */
@@ -96,6 +182,18 @@ class ResponseHelper
 
     /**
      * ส่งการตอบกลับถูกห้าม (403)
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ JSON ที่แสดงถึงการถูกห้ามเข้าถึงทรัพยากร
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * ResponseHelper::forbidden('Access denied');
+     * ```
+     * ผลลัพธ์:
+     * {
+     *   "success": false,
+     *   "message": "Access denied"
+     * }
+     * 
+     * ผลลัพธ์: การตอบกลับ JSON ถูกห้าม
      * 
      * @param string $message ข้อความข้อผิดพลาด
      */
@@ -106,6 +204,23 @@ class ResponseHelper
 
     /**
      * ส่งการตอบกลับข้อผิดพลาดการตรวจสอบ (422)
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ JSON ที่แสดงถึงข้อผิดพลาดการตรวจสอบข้อมูลที่ผู้ใช้ป้อน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $errors = ['email' => 'Invalid email address'];
+     * ResponseHelper::validationError($errors, 'Validation failed');
+     * ```
+     * 
+     * ผลลัพธ์:
+     * {
+     *   "success": false,
+     *   "message": "Validation failed",
+     *   "errors": {
+     *     "email": "Invalid email address"
+     *   }
+     * }
+     * 
+     * returns Response การตอบกลับ JSON ข้อผิดพลาดการตรวจสอบ
      * 
      * @param array $errors ข้อผิดพลาดการตรวจสอบ
      * @param string $message ข้อความข้อผิดพลาด
@@ -117,6 +232,19 @@ class ResponseHelper
 
     /**
      * ส่งการตอบกลับข้อผิดพลาดเซิร์ฟเวอร์ภายใน (500)
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ JSON ที่แสดงถึงข้อผิดพลาดภายในเซิร์ฟเวอร์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * ResponseHelper::serverError('Internal server error');
+     * ```
+     * 
+     * ผลลัพธ์:
+     * {
+     *   "success": false,
+     *   "message": "Internal server error"
+     * }
+     * 
+     * returns Response การตอบกลับ JSON ข้อผิดพลาดเซิร์ฟเวอร์ภายใน
      * 
      * @param string $message ข้อความข้อผิดพลาด
      */
@@ -139,6 +267,30 @@ class ResponseHelper
 
     /**
      * ส่งการตอบกลับแบบแบ่งหน้า
+     * จุดประสงค์: ใช้เพื่อส่งการตอบกลับ JSON ที่มีข้อมูลแบบแบ่งหน้า (pagination)
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $data = [...]; // ข้อมูลรายการ
+     * ResponseHelper::paginated($data, $page, $perPage, $total, 'Data retrieved');
+     * ```
+     * 
+     * ผลลัพธ์:
+     * {
+     *   "success": true,
+     *   "data": [...],
+     *   "message": "Data retrieved",
+     *   "meta": {
+     *     "pagination": {
+     *       "current_page": 1,
+     *       "per_page": 10,
+     *       "total": 50,
+     *      "total_pages": 5,
+     *      "has_more": true
+     *    }
+     *  }
+     * }
+     * 
+     * returns Response การตอบกลับ JSON แบบแบ่งหน้า
      * 
      * @param array $data อาร์เรย์ข้อมูล
      * @param int $page หน้าปัจจุบัน

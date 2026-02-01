@@ -28,3 +28,4 @@ $webBasePath = 'App\\Controllers\\Web\\';
 // ===================================
 
 $router->get('/', $webBasePath . 'WebController@index');
+$router->get('/debug', $webBasePath . 'WebController@debug');

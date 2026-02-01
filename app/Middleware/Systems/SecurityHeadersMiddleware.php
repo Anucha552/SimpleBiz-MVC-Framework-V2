@@ -1,6 +1,8 @@
 <?php
 /**
  * MIDDLEWARE SECURITY HEADERS
+ * 
+ * Middleware สำหรับนระบบ หรือ Global Middleware
  *
  * จุดประสงค์: ใส่ HTTP security headers พื้นฐานให้ทั้งเว็บและ API
  * เพื่อยกระดับความปลอดภัยแบบค่าเริ่มต้น (secure-by-default)
@@ -10,7 +12,7 @@
  * - HSTS ควรเปิดเฉพาะตอนใช้ HTTPS จริง
  */
 
-namespace App\Middleware;
+namespace App\Middleware\Systems;
 
 use App\Core\Middleware;
 use App\Core\Request;

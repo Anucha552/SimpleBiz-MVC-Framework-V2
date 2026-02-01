@@ -8,6 +8,8 @@
  * - จัดรูปแบบตัวเลข
  * - แปลงเงิน, เปอร์เซ็นต์
  * - ตัวเลขไทย
+ * - คำนวณทางคณิตศาสตร์พื้นฐาน
+ * - ฟังก์ชันช่วยเหลือสำหรับการจัดการตัวเลขทั่วไป
  */
 
 namespace App\Helpers;
@@ -16,6 +18,13 @@ class NumberHelper
 {
     /**
      * จัดรูปแบบเงิน
+     * จุดประสงค์: ใช้เพื่อจัดรูปแบบตัวเลขเป็นสกุลเงินที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $money = NumberHelper::money(1234.56); // ผลลัพธ์: '฿1,234.56'
+     * ```
+     * 
+     * returns string ตัวเลขที่จัดรูปแบบเป็นสกุลเงิน
      * 
      * @param float $number
      * @param int $decimals
@@ -29,6 +38,13 @@ class NumberHelper
 
     /**
      * จัดรูปแบบเงินบาท
+     * จุดประสงค์: ใช้เพื่อจัดรูปแบบตัวเลขเป็นเงินบาท
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $baht = NumberHelper::baht(1234.56); // ผลลัพธ์: '1,234.56 บาท'
+     * ```
+     * 
+     * returns string ตัวเลขที่จัดรูปแบบเป็นเงินบาท
      * 
      * @param float $number
      * @param int $decimals
@@ -41,6 +57,13 @@ class NumberHelper
 
     /**
      * จัดรูปแบบตัวเลข
+     * จุดประสงค์: ใช้เพื่อจัดรูปแบบตัวเลขตามที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $formatted = NumberHelper::format(1234.56, 2, '.', ','); // ผลลัพธ์: '1,234.56'
+     * ```
+     * 
+     * returns string ตัวเลขที่จัดรูปแบบตามที่กำหนด
      * 
      * @param float $number
      * @param int $decimals
@@ -59,6 +82,13 @@ class NumberHelper
 
     /**
      * จัดรูปแบบเปอร์เซ็นต์
+     * จุดประสงค์: ใช้เพื่อจัดรูปแบบตัวเลขเป็นเปอร์เซ็นต์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $percent = NumberHelper::percent(85.5); // ผลลัพธ์: '85.50%'
+     * ```
+     * 
+     * returns string ตัวเลขที่จัดรูปแบบเป็นเปอร์เซ็นต์
      * 
      * @param float $number
      * @param int $decimals
@@ -71,6 +101,13 @@ class NumberHelper
 
     /**
      * คำนวณเปอร์เซ็นต์
+     * จุดประสงค์: ใช้เพื่อคำนวณเปอร์เซ็นต์จากค่าที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $percentage = NumberHelper::percentage(50, 200); // ผลลัพธ์: 25.00
+     * ```
+     * 
+     * returns float ค่าเปอร์เซ็นต์ที่คำนวณได้
      * 
      * @param float $value
      * @param float $total
@@ -88,6 +125,13 @@ class NumberHelper
 
     /**
      * จัดรูปแบบขนาดไฟล์
+     * จุดประสงค์: ใช้เพื่อจัดรูปแบบขนาดไฟล์ให้อ่านง่าย
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $fileSize = NumberHelper::fileSize(2048); // ผลลัพธ์: '2 KB'
+     * ```
+     * 
+     * returns string ขนาดไฟล์ที่จัดรูปแบบ
      * 
      * @param int $bytes
      * @param int $decimals
@@ -106,6 +150,13 @@ class NumberHelper
 
     /**
      * จัดรูปแบบตัวเลขขนาดใหญ่ (1K, 1M, 1B)
+     * จุดประสงค์: ใช้เพื่อจัดรูปแบบตัวเลขขนาดใหญ่ให้อ่านง่าย
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $abbreviated = NumberHelper::abbreviate(1500); // ผลลัพธ์: '1.5K'
+     * ```
+     * 
+     * returns string ตัวเลขที่จัดรูปแบบขนาดใหญ่
      * 
      * @param float $number
      * @param int $decimals
@@ -124,6 +175,13 @@ class NumberHelper
 
     /**
      * แปลงเป็นลำดับที่ (1st, 2nd, 3rd)
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขเป็นลำดับที่ในภาษาอังกฤษ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $ordinal = NumberHelper::ordinal(1); // ผลลัพธ์: '1st'
+     * ```
+     * 
+     * returns string ลำดับที่ในรูปแบบภาษาอังกฤษ
      * 
      * @param int $number
      * @return string
@@ -141,6 +199,13 @@ class NumberHelper
 
     /**
      * แปลงเป็นลำดับที่ภาษาไทย
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขเป็นลำดับที่ในภาษาไทย
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $ordinalThai = NumberHelper::ordinalThai(1); // ผลลัพธ์: 'ที่ ๑'
+     * ```
+     * 
+     * returns string ลำดับที่ในรูปแบบภาษาไทย
      * 
      * @param int $number
      * @return string
@@ -152,6 +217,13 @@ class NumberHelper
 
     /**
      * แปลงตัวเลขเป็นภาษาไทย
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขอารบิกเป็นตัวเลขไทย
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $thaiNumber = NumberHelper::toThai(123); // ผลลัพธ์: '๑๒๓'
+     * ```
+     * 
+     * returns string ตัวเลขในรูปแบบภาษาไทย
      * 
      * @param int $number
      * @return string
@@ -169,6 +241,13 @@ class NumberHelper
 
     /**
      * แปลงตัวเลขไทยเป็นตัวเลขอารบิก
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขไทยเป็นตัวเลขอารบิก
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $arabicNumber = NumberHelper::fromThai('๑๒๓'); // ผลลัพธ์: '123'
+     * ```
+     * 
+     * returns string ตัวเลขในรูปแบบอารบิก
      * 
      * @param string $thaiNumber
      * @return string
@@ -186,6 +265,13 @@ class NumberHelper
 
     /**
      * แปลงตัวเลขเป็นคำอ่าน (ภาษาไทย)
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขเป็นคำอ่านในภาษาไทย
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $word = NumberHelper::toWord(123.45); // ผลลัพธ์: 'หนึ่งร้อยยี่สิบสามบาทสี่สิบห้าสตางค์'
+     * ```
+     * 
+     * returns string คำอ่านของตัวเลขในภาษาไทย
      * 
      * @param float $number
      * @return string
@@ -216,6 +302,13 @@ class NumberHelper
 
     /**
      * ฟังก์ชันช่วยแปลงตัวเลข
+     * จุดประสงค์: ใช้เป็นฟังก์ชันช่วยในการแปลงตัวเลขเป็นคำอ่าน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $text = NumberHelper::convertNumber('1234567', $txtNum1, $txtNum2); // ผลลัพธ์: 'หนึ่งล้านสองแสนสามหมื่นสี่พันห้าร้อยหกสิบเจ็ด'
+     * ```  
+     * 
+     * returns string คำอ่านของตัวเลข
      * 
      * @param string $number
      * @param array $txtNum1
@@ -250,6 +343,13 @@ class NumberHelper
 
     /**
      * ปัดเศษขึ้น
+     * จุดประสงค์: ใช้เพื่อปัดเศษตัวเลขขึ้นตามจำนวนทศนิยมที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $roundedUp = NumberHelper::ceil(1.234, 2); // ผลลัพธ์: 1.24
+     * ```
+     * 
+     * returns float ตัวเลขที่ปัดเศษขึ้น
      * 
      * @param float $number
      * @param int $precision
@@ -263,6 +363,13 @@ class NumberHelper
 
     /**
      * ปัดเศษลง
+     * จุดประสงค์: ใช้เพื่อปัดเศษตัวเลขลงตามจำนวนทศนิยมที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $roundedDown = NumberHelper::floor(1.236, 2); // ผลลัพธ์: 1.23
+     * ```
+     * 
+     * returns float ตัวเลขที่ปัดเศษลง
      * 
      * @param float $number
      * @param int $precision
@@ -276,6 +383,13 @@ class NumberHelper
 
     /**
      * ปัดเศษ
+     * จุดประสงค์: ใช้เพื่อปัดเศษตัวเลขตามจำนวนทศนิยมที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $rounded = NumberHelper::round(1.235, 2); // ผลลัพธ์: 1.24
+     * ```
+     * 
+     * returns float ตัวเลขที่ปัดเศษ
      * 
      * @param float $number
      * @param int $precision
@@ -288,6 +402,13 @@ class NumberHelper
 
     /**
      * คำนวณค่าเฉลี่ย
+     * จุดประสงค์: ใช้เพื่อหาค่าเฉลี่ยของชุดตัวเลข
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $average = NumberHelper::average([1, 2, 3, 4, 5]); // ผลลัพธ์: 3.0
+     * ```
+     * 
+     * returns float ค่าเฉลี่ยของชุดตัวเลข
      * 
      * @param array $numbers
      * @return float
@@ -303,6 +424,13 @@ class NumberHelper
 
     /**
      * หาค่ามัธยฐาน
+     * จุดประสงค์: ใช้เพื่อหาค่ามัธยฐานของชุดตัวเลข
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $median = NumberHelper::median([1, 2, 3, 4, 5]); // ผลลัพธ์: 3
+     * ```
+     * 
+     * returns float ค่ามัธยฐานของชุดตัวเลข
      * 
      * @param array $numbers
      * @return float
@@ -326,6 +454,13 @@ class NumberHelper
 
     /**
      * หาค่าต่ำสุด
+     * จุดประสงค์: ใช้เพื่อหาค่าต่ำสุดของชุดตัวเลข
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $min = NumberHelper::min([1, 2, 3, 4, 5]); // ผลลัพธ์: 1
+     * ```
+     * 
+     * returns float|null ค่าต่ำสุดของชุดตัวเลข หรือ null หากไม่มีตัวเลข
      * 
      * @param array $numbers
      * @return float|null
@@ -337,6 +472,13 @@ class NumberHelper
 
     /**
      * หาค่าสูงสุด
+     * จุดประสงค์: ใช้เพื่อหาค่าสูงสุดของชุดตัวเลข
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $max = NumberHelper::max([1, 2, 3, 4, 5]); // ผลลัพธ์: 5
+     * ```
+     * 
+     * returns float|null ค่าสูงสุดของชุดตัวเลข หรือ null หากไม่มีตัวเลข
      * 
      * @param array $numbers
      * @return float|null
@@ -348,6 +490,13 @@ class NumberHelper
 
     /**
      * หาผลรวม
+     * จุดประสงค์: ใช้เพื่อหาผลรวมของชุดตัวเลข
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $sum = NumberHelper::sum([1, 2, 3, 4, 5]); // ผลลัพธ์: 15
+     * ```
+     * 
+     * returns float ผลรวมของชุดตัวเลข
      * 
      * @param array $numbers
      * @return float
@@ -359,6 +508,12 @@ class NumberHelper
 
     /**
      * ตรวจสอบว่าเป็นเลขคู่
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่าตัวเลขที่กำหนดเป็นเลขคู่หรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isEven = NumberHelper::isEven(4); // ผลลัพธ์: true
+     * ```
+     * returns bool ผลลัพธ์ว่าเป็นเลขคู่หรือไม่
      * 
      * @param int $number
      * @return bool
@@ -370,6 +525,12 @@ class NumberHelper
 
     /**
      * ตรวจสอบว่าเป็นเลขคี่
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่าตัวเลขที่กำหนดเป็นเลขคี่หรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isOdd = NumberHelper::isOdd(3); // ผลลัพธ์: true
+     * ```
+     * returns bool ผลลัพธ์ว่าเป็นเลขคี่หรือไม่
      * 
      * @param int $number
      * @return bool
@@ -381,6 +542,13 @@ class NumberHelper
 
     /**
      * ตรวจสอบว่าอยู่ในช่วง
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่าตัวเลขที่กำหนดอยู่ในช่วงที่ระบุหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $inRange = NumberHelper::inRange(5, 1, 10); // ผลลัพธ์: true
+     * ```
+     * 
+     * returns bool ผลลัพธ์ว่าอยู่ในช่วงหรือไม่
      * 
      * @param float $number
      * @param float $min
@@ -394,6 +562,13 @@ class NumberHelper
 
     /**
      * จำกัดค่าให้อยู่ในช่วง
+     * จุดประสงค์: ใช้เพื่อจำกัดค่าตัวเลขให้อยู่ในช่วงที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $clamped = NumberHelper::clamp(15, 0, 10); // ผลลัพธ์: 10
+     * ```
+     * 
+     * returns float ตัวเลขที่ถูกจำกัดให้อยู่ในช่วง
      * 
      * @param float $number
      * @param float $min
@@ -407,6 +582,13 @@ class NumberHelper
 
     /**
      * แปลงเป็นเลขโรมัน
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขอารบิกเป็นเลขโรมัน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $roman = NumberHelper::toRoman(1990); // ผลลัพธ์: MCMXC
+     * ```
+     * 
+     * returns string ตัวเลขในรูปแบบโรมัน
      * 
      * @param int $number
      * @return string
@@ -432,6 +614,13 @@ class NumberHelper
 
     /**
      * สร้างตัวเลขสุ่ม
+     * จุดประสงค์: ใช้เพื่อสร้างตัวเลขสุ่มในช่วงที่ระบุ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $randomNumber = NumberHelper::random(1, 10); // ผลลัพธ์: ตัวเลขสุ่มระหว่าง 1 ถึง 10
+     * ```
+     * 
+     * returns int ตัวเลขสุ่มที่ถูกสร้างขึ้น
      * 
      * @param int $min
      * @param int $max
@@ -444,6 +633,13 @@ class NumberHelper
 
     /**
      * คำนวณ VAT
+     * จุดประสงค์: ใช้เพื่อคำนวณภาษีมูลค่าเพิ่ม (VAT) จากราคาที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $vat = NumberHelper::vat(1000, 7); // ผลลัพธ์: 70
+     * ```
+     * 
+     * returns float จำนวน VAT ที่คำนวณได้
      * 
      * @param float $price
      * @param float $vatRate
@@ -456,6 +652,13 @@ class NumberHelper
 
     /**
      * คำนวณราคารวม VAT
+     * จุดประสงค์: ใช้เพื่อคำนวณราคารวมภาษีมูลค่าเพิ่ม (VAT) จากราคาที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $priceWithVat = NumberHelper::priceWithVat(1000, 7); // ผลลัพธ์: 1070
+     * ```
+     * 
+     * returns float ราคารวม VAT
      * 
      * @param float $price
      * @param float $vatRate
@@ -468,6 +671,13 @@ class NumberHelper
 
     /**
      * คำนวณราคาก่อน VAT
+     * จุดประสงค์: ใช้เพื่อคำนวณราคาก่อนภาษีมูลค่าเพิ่ม (VAT) จากราคารวม VAT ที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $priceBeforeVat = NumberHelper::priceBeforeVat(1070, 7); // ผลลัพธ์: 1000
+     * ```
+     * 
+     * returns float ราคาก่อน VAT
      * 
      * @param float $priceWithVat
      * @param float $vatRate
@@ -480,6 +690,13 @@ class NumberHelper
 
     /**
      * คำนวณส่วนลด
+     * จุดประสงค์: ใช้เพื่อคำนวณจำนวนเงินส่วนลดจากราคาที่กำหนดและอัตราส่วนลด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $discountAmount = NumberHelper::discount(1000, 10); // ผลลัพธ์: 100
+     * ```
+     * 
+     * returns float จำนวนเงินส่วนลด
      * 
      * @param float $price
      * @param float $discount
@@ -492,6 +709,13 @@ class NumberHelper
 
     /**
      * คำนวณราคาหลังส่วนลด
+     * จุดประสงค์: ใช้เพื่อคำนวณราคาหลังจากหักส่วนลดจากราคาที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $priceAfterDiscount = NumberHelper::priceAfterDiscount(1000, 10); // ผลลัพธ์: 900
+     * ```
+     * 
+     * returns float ราคาหลังส่วนลด
      * 
      * @param float $price
      * @param float $discount
@@ -504,6 +728,13 @@ class NumberHelper
 
     /**
      * แปลงเป็น Binary
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขจำนวนเต็มเป็นเลขฐานสอง (Binary)
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $binary = NumberHelper::toBinary(10); // ผลลัพธ์: "1010"
+     * ```
+     * 
+     * returns string ตัวเลขในรูปแบบ Binary
      * 
      * @param int $number
      * @return string
@@ -515,6 +746,13 @@ class NumberHelper
 
     /**
      * แปลงเป็น Hexadecimal
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขจำนวนเต็มเป็นเลขฐานสิบหก (Hexadecimal)
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $hex = NumberHelper::toHex(255); // ผลลัพธ์: "ff"
+     * ```
+     * 
+     * returns string ตัวเลขในรูปแบบ Hexadecimal
      * 
      * @param int $number
      * @return string
@@ -526,6 +764,13 @@ class NumberHelper
 
     /**
      * แปลงเป็น Octal
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขจำนวนเต็มเป็นเลขฐานแปด (Octal)
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $octal = NumberHelper::toOctal(64); // ผลลัพธ์: "100"
+     * ```
+     * 
+     * returns string ตัวเลขในรูปแบบ Octal
      * 
      * @param int $number
      * @return string
@@ -537,6 +782,13 @@ class NumberHelper
 
     /**
      * แปลงจาก Binary
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขในรูปแบบเลขฐานสอง (Binary) เป็นจำนวนเต็ม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $number = NumberHelper::fromBinary("1010"); // ผลลัพธ์: 10
+     * ```
+     * 
+     * returns int จำนวนเต็มที่แปลงจาก Binary
      * 
      * @param string $binary
      * @return int
@@ -548,6 +800,13 @@ class NumberHelper
 
     /**
      * แปลงจาก Hexadecimal
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขในรูปแบบเลขฐานสิบหก (Hexadecimal) เป็นจำนวนเต็ม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $number = NumberHelper::fromHex("ff"); // ผลลัพธ์: 255
+     * ```
+     * 
+     * returns int จำนวนเต็มที่แปลงจาก Hexadecimal
      * 
      * @param string $hex
      * @return int
@@ -559,6 +818,13 @@ class NumberHelper
 
     /**
      * แปลงจาก Octal
+     * จุดประสงค์: ใช้เพื่อแปลงตัวเลขในรูปแบบเลขฐานแปด (Octal) เป็นจำนวนเต็ม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $number = NumberHelper::fromOctal("100"); // ผลลัพธ์: 64
+     * ```
+     * 
+     * returns int จำนวนเต็มที่แปลงจาก Octal
      * 
      * @param string $octal
      * @return int

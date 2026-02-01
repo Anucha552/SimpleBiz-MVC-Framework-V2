@@ -1,13 +1,15 @@
 <?php
+
 /**
- * MIDDLEWARE API KEY
+ * คลาสนี้เป็นมิดเดิลแวร์สำหรับการตรวจสอบ API key
  * 
  * จุดประสงค์: ตรวจสอบ API key สำหรับ API endpoints ที่ละเอียดอ่อน
+ * ApiKeyMiddleware ควรใช้กับอะไร: มิดเดิลแวร์ที่ใช้ในการป้องกันเส้นทาง API
  * 
  * การใช้งาน:
  * เส้นทาง API ที่ป้องกันต้องการ API key ที่ถูกต้อง:
- * - POST /api/v1/orders/* (การสร้างคำสั่งซื้อ)
- * - PUT /api/v1/orders/* (การอัปเดตคำสั่งซื้อ)
+ * - POST /api/* (การสร้างคำสั่งซื้อ)
+ * - PUT /api/* (การอัปเดตคำสั่งซื้อ)
  * 
  * วิธีการทำงาน:
  * 1. ตรวจสอบ API key ใน header (X-API-Key) หรือ query string
@@ -32,11 +34,15 @@
 namespace App\Middleware;
 
 use App\Core\Middleware;
+use App\Core\Request;
 use App\Core\Logger;
 use App\Core\Response;
 
 class ApiKeyMiddleware extends Middleware
 {
+    /**
+     * ตัวบันทึกเหตุการณ์ (Logger)
+     */
     private Logger $logger;
 
     /**
@@ -46,6 +52,15 @@ class ApiKeyMiddleware extends Middleware
      */
     private array $validKeys = [];
 
+    /**
+     * สร้างอินสแตนซ์ ApiKeyMiddleware ใหม่
+     * จุดประสงค์: เตรียมรายการ API keys ที่ถูกต้อง
+     * __construct() ควรใช้กับอะไร: เมื่อสร้างมิดเดิลแวร์สำหรับตรวจสอบ API key
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $middleware = new ApiKeyMiddleware();
+     * ```
+     */
     public function __construct()
     {
         $this->logger = new Logger();
@@ -54,6 +69,8 @@ class ApiKeyMiddleware extends Middleware
         // รองรับทั้งชื่อเดียว (`API_KEY`) หรือรายการคีย์คั่นด้วย comma (`API_KEYS`)
         $keys = [];
         $envList = \env('API_KEYS');
+
+        // ถ้ามีรายการคีย์ ให้แยกเป็นอาร์เรย์
         if ($envList) {
             if (is_array($envList)) {
                 $keys = $envList;
@@ -63,6 +80,8 @@ class ApiKeyMiddleware extends Middleware
         }
 
         $envKey = \env('API_KEY');
+
+        // ถ้ามีคีย์เดี่ยว ให้เพิ่มลงในรายการ
         if ($envKey) {
             $keys[] = $envKey;
         }
@@ -73,14 +92,22 @@ class ApiKeyMiddleware extends Middleware
 
     /**
      * จัดการการตรวจสอบ API key
+     * จุดประสงค์: ตรวจสอบว่า API key ที่ให้มาถูกต้องหรือไม่
+     * handle() ควรใช้กับอะไร: เมื่อมีคำขอเข้ามาที่ต้องการการตรวจสอบ API key
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $response = $middleware->handle($request);
+     * ```
      * 
-        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
+     * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
+     * @return bool|Response True ถ้าคีย์ถูกต้อง, Response 401 ถ้าไม่ถูกต้อง
      */
-        public function handle(?\App\Core\Request $request = null): bool|Response
+    public function handle(?Request $request = null): bool|Response
     {
-            // รับ API key จาก header หรือ query string (รองรับ Request wrapper ถ้ามี)
-            $apiKey = $this->getApiKey($request);
-
+        // รับ API key จาก header หรือ query string (รองรับ Request wrapper ถ้ามี)
+        $apiKey = $this->getApiKey($request);
+        
+        // ถ้าไม่มีคีย์ ให้บันทึกและส่งกลับ 401 Unauthorized
         if (!$apiKey) {
             $this->logger->security('api.missing_key', [
                 'route' => $_SERVER['REQUEST_URI'] ?? 'unknown',
@@ -109,6 +136,12 @@ class ApiKeyMiddleware extends Middleware
 
     /**
      * รับ API key จากคำขอ
+     * จุดประสงค์: ดึง API key จาก header หรือ query string
+     * getApiKey() ควรใช้กับอะไร: เมื่อมีคำขอเข้ามาที่ต้องการตรวจสอบ API key
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $key = $middleware->getApiKey($request);
+     * ```
      * 
      * ตรวจสอบ:
      * 1. X-API-Key header
@@ -119,11 +152,11 @@ class ApiKeyMiddleware extends Middleware
      */
     private function getApiKey(?\App\Core\Request $request = null): ?string
     {
-        // Prefer Request wrapper if provided
+        // ตรวจสอบ Request wrapper ก่อน (ถ้ามี)
         if ($request !== null) {
             $headerKey = $request->header('X-API-Key');
             if ($headerKey) {
-                return trim($headerKey);
+                return trim($headerKey); // คืนค่า key
             }
 
             $bearer = $request->bearerToken();
@@ -137,22 +170,26 @@ class ApiKeyMiddleware extends Middleware
             }
         }
 
-        // Fallback to server globals
+        // ตรวจสอบ headers โดยตรง
         if (function_exists('getallheaders')) {
+
+            // ตรวจสอบ X-API-Key header
             $headers = getallheaders();
             if (isset($headers['X-API-Key'])) {
-                return trim($headers['X-API-Key']);
+                return trim($headers['X-API-Key']); // คืนค่า key
             }
             if (isset($headers['Authorization'])) {
                 $auth = $headers['Authorization'];
+
+                // ตรวจสอบรูปแบบ Bearer token
                 if (preg_match('/^Bearer\s+(.+)$/i', $auth, $matches)) {
-                    return trim($matches[1]);
+                    return trim($matches[1]); // คืนค่า token
                 }
             }
         }
 
-        // Do NOT accept API key from query string (avoid leaking via Referer/logs)
-        // No API key found
+        // ไม่รับ API key จาก query string (เพื่อหลีกเลี่ยงการรั่วไหลผ่าน Referer/logs)
+        // ไม่พบ API key
         return null;
     }
 
@@ -188,7 +225,7 @@ class ApiKeyMiddleware extends Middleware
      */
     public function removeKey(string $key): void
     {
-        $this->validKeys = array_filter($this->validKeys, function($k) use ($key) {
+        $this->validKeys = array_filter($this->validKeys, function ($k) use ($key) {
             return $k !== $key;
         });
     }
