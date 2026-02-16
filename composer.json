@@ -1,6 +1,6 @@
 {
-    "name": "simplebiz/mvc-framework-v2",
-    "description": "SimpleBiz MVC Framework V2 - เฟรมเวิร์ก MVC ที่สะอาด ปลอดภัย และขยายได้ง่าย พร้อมโครงสร้างพื้นฐานสำหรับระบบอีคอมเมิร์ซ",
+    "name": "simplebiz/simplebiz-mvc-framework-v2",
+    "description": "Test project",
     "type": "project",
     "license": "MIT",
     "keywords": [

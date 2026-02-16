@@ -58,6 +58,30 @@ class Logger
     private int $retentionDays;
 
     /**
+     * @var string[] keys that are allowed to be logged without redaction
+     */
+    private array $redactionAllowList = [];
+
+    /**
+     * @var string[] keys that must be redacted
+     */
+    private array $redactionDenyList = [
+        'password',
+        'pass',
+        'pwd',
+        'secret',
+        'token',
+        'access_token',
+        'refresh_token',
+        'authorization',
+        'auth',
+        'cookie',
+        'set-cookie',
+        'api_key',
+        'apikey',
+    ];
+
+    /**
      * สร้างอินสแตนซ์ logger
      * จุดประสงค์: กำหนดค่าเริ่มต้นสำหรับ logger รวมถึงไฟล์ล็อก ขนาดสูงสุด และการเก็บรักษา
      * ตัวอย่างการใช้งาน:
@@ -70,14 +94,7 @@ class Logger
     public function __construct(?string $logFile = null)
     {
         $provided = $logFile ?? __DIR__ . '/../../storage/logs/';
-
-        // ตรวจสอบว่าพารามิเตอร์เป็นไดเรกทอรีหรือไฟล์
-        if (preg_match('#[\\/]$#', $provided) || is_dir($provided)) {
-            $logDir = rtrim($provided, '/\\');
-            $this->logFile = $logDir . '/' . date('Y-m-d') . '.log';
-        } else {
-            $this->logFile = $provided;
-        }
+        $this->logFile = $this->normalizeLogPath($provided);
         // ค่าเริ่มต้นจาก env ถ้ามี (หน่วยเป็น bytes สำหรับ MAX_LOG_SIZE)
         $this->maxFileSize = (int) (getenv('MAX_LOG_SIZE') ?: 0); // 0 = ไม่ตรวจขนาด
         // จำนวนวันที่เก็บไฟล์ก่อนลบ (days) สำหรับการทำความสะอาดไฟล์เก่า
@@ -192,16 +209,23 @@ class Logger
     {
         $timestamp = date('Y-m-d H:i:s');
         
-        // รับบริบทคำขอ
-        Session::start();
-        $userId = Session::get('user_id', 'guest');
+        // รับบริบทคำขอ (หลีกเลี่ยงการ start session ใน logger)
+        $userId = 'guest';
+        if (Session::isStarted()) {
+            $userId = Session::get('user_id', 'guest');
+        } elseif (isset($_SESSION) && is_array($_SESSION) && isset($_SESSION['user_id'])) {
+            $userId = $_SESSION['user_id'];
+        }
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $route = $_SERVER['REQUEST_URI'] ?? 'unknown';
         $method = $_SERVER['REQUEST_METHOD'] ?? 'unknown';
         $requestId = $_SERVER['HTTP_X_REQUEST_ID'] ?? 'unknown';
 
         // สร้างข้อความล็อก
-        $contextJson = !empty($context) ? json_encode($context) : '{}';
+        $safeContext = $this->redactContext($context);
+        $contextJson = !empty($safeContext)
+            ? json_encode($safeContext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            : '{}';
         
         $logMessage = sprintf(
             "[%s] [%s] %s %s user_id=%s ip=%s method=%s route=%s request_id=%s\n",
@@ -449,5 +473,126 @@ class Logger
                 @file_put_contents($file, '', LOCK_EX);
             }
         }
+    }
+
+    /**
+     * @param string[] $keys
+     */
+    public function setRedactionAllowList(array $keys): void
+    {
+        $this->redactionAllowList = $this->normalizeKeyList($keys);
+    }
+
+    /**
+     * @param string[] $keys
+     */
+    public function setRedactionDenyList(array $keys): void
+    {
+        $this->redactionDenyList = $this->normalizeKeyList($keys);
+    }
+
+    /**
+     * @param string[] $keys
+     */
+    public function addRedactionAllowKeys(array $keys): void
+    {
+        $this->redactionAllowList = $this->mergeKeyList($this->redactionAllowList, $keys);
+    }
+
+    /**
+     * @param string[] $keys
+     */
+    public function addRedactionDenyKeys(array $keys): void
+    {
+        $this->redactionDenyList = $this->mergeKeyList($this->redactionDenyList, $keys);
+    }
+
+    private function normalizeLogPath(string $provided): string
+    {
+        $path = $this->makeAbsolutePath($provided);
+
+        if (preg_match('#[\/]$#', $path) || is_dir($path)) {
+            $logDir = rtrim($path, '/\\');
+            return $logDir . '/' . date('Y-m-d') . '.log';
+        }
+
+        return $path;
+    }
+
+    private function makeAbsolutePath(string $path): string
+    {
+        if ($this->isAbsolutePath($path)) {
+            return $path;
+        }
+
+        $root = realpath(__DIR__ . '/../../') ?: (__DIR__ . '/../../');
+        return rtrim($root, '/\\') . DIRECTORY_SEPARATOR . ltrim($path, '/\\');
+    }
+
+    private function isAbsolutePath(string $path): bool
+    {
+        if ($path === '') {
+            return false;
+        }
+
+        if (preg_match('#^[A-Za-z]:[\\/]#', $path)) {
+            return true;
+        }
+
+        return ($path[0] === '/' || $path[0] === '\\');
+    }
+
+    private function redactContext(array $context): array
+    {
+        $redacted = [];
+        foreach ($context as $key => $value) {
+            $keyLower = is_string($key) ? strtolower($key) : null;
+            if ($keyLower !== null && !empty($this->redactionAllowList) && !in_array($keyLower, $this->redactionAllowList, true)) {
+                $redacted[$key] = '[REDACTED]';
+                continue;
+            }
+
+            if ($keyLower !== null && in_array($keyLower, $this->redactionDenyList, true)) {
+                $redacted[$key] = '[REDACTED]';
+                continue;
+            }
+
+            if (is_array($value)) {
+                $redacted[$key] = $this->redactContext($value);
+                continue;
+            }
+
+            $redacted[$key] = $value;
+        }
+
+        return $redacted;
+    }
+
+    /**
+     * @param string[] $keys
+     * @return string[]
+     */
+    private function normalizeKeyList(array $keys): array
+    {
+        $normalized = [];
+        foreach ($keys as $key) {
+            if (!is_string($key)) {
+                continue;
+            }
+            $normalized[] = strtolower($key);
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    /**
+     * @param string[] $current
+     * @param string[] $keys
+     * @return string[]
+     */
+    private function mergeKeyList(array $current, array $keys): array
+    {
+        $merged = array_merge($current, $this->normalizeKeyList($keys));
+        return array_values(array_unique($merged));
     }
 }

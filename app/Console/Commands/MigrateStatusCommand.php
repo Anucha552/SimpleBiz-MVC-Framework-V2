@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Console\Commands;
+
+use App\Console\ConsoleColor;
+use App\Core\MigrationRunner;
+
+class MigrateStatusCommand extends BaseCommand
+{
+    public function name(): string
+    {
+        return 'migrate:status';
+    }
+
+    public function aliases(): array
+    {
+        return ['m:s'];
+    }
+
+    protected function execute(array $args): void
+    {
+        try {
+            $runner = new MigrationRunner();
+
+            echo ConsoleColor::CYAN . ConsoleColor::BOLD . "สถานะ Migrations" . ConsoleColor::RESET . "\n";
+            echo ConsoleColor::CYAN . "================" . ConsoleColor::RESET . "\n\n";
+
+            $status = $runner->status();
+
+            if (empty($status)) {
+                $this->warning("ไม่พบ migrations");
+                return;
+            }
+
+            foreach ($status as $migration) {
+                $ran = $migration['ran'] ? ConsoleColor::GREEN . '[OK]' . ConsoleColor::RESET : ConsoleColor::RED . '[X]' . ConsoleColor::RESET;
+                $batch = $migration['batch'] ? ConsoleColor::YELLOW . " (batch {$migration['batch']})" . ConsoleColor::RESET : '';
+                echo "{$ran} {$migration['migration']}{$batch}\n";
+            }
+        } catch (\Exception $e) {
+            $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            exit(1);
+        }
+    }
+}
