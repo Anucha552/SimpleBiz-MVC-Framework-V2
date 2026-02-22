@@ -22,6 +22,10 @@
 
 namespace App\Core;
 
+use App\Helpers\UrlHelper;
+use App\Helpers\FormHelper;
+use App\Helpers\ArrayHelper;
+
 class Controller
 {
     /**
@@ -273,5 +277,318 @@ class Controller
     {
         // Delegate authentication check to Auth
         return Auth::check();
+    }
+
+    /**
+     * คืนค่า Request object (wrapper)
+     */
+    protected function request(): Request
+    {
+        return new Request();
+    }
+
+    /**
+     * ย่อการเรียก input จาก Request
+     */
+    protected function input(?string $key = null, $default = null)
+    {
+        return $this->request()->input($key, $default);
+    }
+
+    /**
+     * ย่อการเรียก only จาก Request
+     */
+    protected function only(array $keys): array
+    {
+        return $this->request()->only($keys);
+    }
+
+    /**
+     * ย่อการเรียก all จาก Request
+     */
+    protected function all(): array
+    {
+        return $this->request()->all();
+    }
+
+    /**
+     * Redirect กลับไปหน้าที่แล้ว (wrapper)
+     */
+    protected function back(?string $default = null): Response
+    {
+        return UrlHelper::back($default);
+    }
+
+    /**
+     * ตั้ง flash message (wrapper)
+     */
+    protected function flash(string $key, $value): void
+    {
+        // Session::flash จะจัดการ start() เอง
+        \App\Core\Session::flash($key, $value);
+    }
+
+    /**
+     * ดึงค่า old input ผ่าน FormHelper
+     */
+    protected function old(string $key, $default = '', bool $escape = true): string
+    {
+        return FormHelper::old($key, $default, $escape);
+    }
+
+    /**
+     * เบื้องต้น: สร้าง Validator และคืน Validator instance
+     * ไม่ทำ redirect อัตโนมัติ เพื่อให้ caller ควบคุมการไหลได้
+     */
+    protected function validate(array $data, array $rules, array $customMessages = []): Validator
+    {
+        $validator = new Validator($data, $rules, $customMessages);
+        $validator->validate();
+        return $validator;
+    }
+
+    /**
+     * ตรวจสอบสิทธิ์อย่างง่าย: ถ้าไม่ผ่าน คืน Response redirect ตามที่ระบุ
+     */
+    protected function authorize(bool $allowed, string $redirect = '/login'): ?Response
+    {
+        if ($allowed) {
+            return null;
+        }
+
+        return $this->redirect($redirect);
+    }
+
+    /**
+     * คืนข้อมูลผู้ใช้แบบเต็ม (wrapper)
+     */
+    protected function currentUser()
+    {
+        return Auth::user();
+    }
+
+    /**
+     * ดึง flash message (wrapper)
+     */
+    protected function getFlash(string $key, $default = null)
+    {
+        return FormHelper::flash($key, $default);
+    }
+
+    /**
+     * ตรวจสอบว่ามี flash message หรือไม่
+     */
+    protected function hasFlash(string $key): bool
+    {
+        return FormHelper::hasFlash($key);
+    }
+
+    /**
+     * ดึง flash messages ทั้งหมด
+     */
+    protected function allFlash(): array
+    {
+        return FormHelper::allFlash();
+    }
+
+    /**
+     * แฟลช input เพื่อใช้กับ old() ในคำขอถัดไป
+     */
+    protected function flashInput(array $input): void
+    {
+        \App\Core\Session::flashInput($input);
+    }
+
+    /**
+     * ดึงค่า old input แบบดิบ
+     */
+    protected function oldRaw(?string $key = null, $default = null)
+    {
+        return FormHelper::oldRaw($key, $default);
+    }
+
+    /**
+     * Validate และถ้าล้มเหลวให้ flash errors + old input แล้ว redirect back/ไปที่ $redirect
+     * คืนค่า Response เมื่อ redirect เกิดขึ้น หรือ null เมื่อผ่าน
+     */
+    protected function validateOrRedirect(array $data, array $rules, array $customMessages = [], ?string $redirect = null): ?Response
+    {
+        $validator = $this->validate($data, $rules, $customMessages);
+
+        if ($validator->fails()) {
+            \App\Core\Session::flash('validation_errors', $validator->errors());
+            \App\Core\Session::flashInput($data);
+
+            if ($redirect !== null) {
+                return $this->redirect($redirect);
+            }
+
+            return $this->back();
+        }
+
+        return null;
+    }
+
+    /**
+     * ส่ง JSON success response (wrapper)
+     */
+    protected function jsonSuccess($data = null, string $message = 'Success', int $statusCode = 200): Response
+    {
+        return $this->responseJson(true, $data, $message, [], $statusCode);
+    }
+
+    /**
+     * ส่ง JSON error response (wrapper)
+     */
+    protected function jsonError(string $message = 'Error', array $errors = [], int $statusCode = 400): Response
+    {
+        return $this->responseJson(false, null, $message, $errors, $statusCode);
+    }
+
+    /**
+     * สร้าง CSRF hidden field (wrapper)
+     */
+    protected function csrfField(): string
+    {
+        return FormHelper::csrfField();
+    }
+
+    /**
+     * สร้าง CSRF meta tag (wrapper)
+     */
+    protected function csrfMeta(): string
+    {
+        return FormHelper::csrfMeta();
+    }
+
+    /**
+     * สร้าง URL สะดวก ๆ
+     */
+    protected function url(string $path = '', array $params = []): string
+    {
+        return UrlHelper::to($path, $params);
+    }
+
+    /**
+     * สร้าง asset URL
+     */
+    protected function asset(string $path): string
+    {
+        return UrlHelper::asset($path);
+    }
+
+    /**
+     * รับไฟล์อัปโหลดจากคำขอ
+     */
+    protected function file(?string $key = null)
+    {
+        return $this->request()->file($key);
+    }
+
+    /**
+     * สร้าง URL โดยใช้ path/route-like string
+     */
+    protected function route(string $path = '', array $params = []): string
+    {
+        return UrlHelper::to($path, $params);
+    }
+
+    /**
+     * โหลด/instantiate model โดยคาดว่าอยู่ใน App\Models namespace
+     */
+    protected function model(string $name)
+    {
+        $candidates = [
+            'App\\Models\\' . $name,
+            'App\\Models\\' . ucfirst($name),
+        ];
+
+        foreach ($candidates as $fqcn) {
+            if (class_exists($fqcn)) {
+                return new $fqcn();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Paginate an array (wrapper to ArrayHelper)
+     */
+    protected function paginate(array $items, int $page = 1, int $perPage = 15): array
+    {
+        return ArrayHelper::paginate($items, $page, $perPage);
+    }
+
+    /**
+     * ส่ง JSON 201 Created
+     */
+    protected function respondCreated($data = null, string $message = 'Created'): Response
+    {
+        return $this->responseJson(true, $data, $message, [], 201);
+    }
+
+    /**
+     * คืนค่า 204 No Content
+     */
+    protected function noContent(): Response
+    {
+        return Response::noContent();
+    }
+
+    /**
+     * ตรวจสอบว่ามี old input หรือไม่ (wrapper)
+     */
+    protected function hasOld(string $key): bool
+    {
+        return FormHelper::hasOld($key);
+    }
+
+    /**
+     * ดึงข้อผิดพลาดสำหรับฟิลด์หรือทั้งหมด (wrapper)
+     */
+    protected function errors(?string $field = null): array
+    {
+        return FormHelper::errors($field);
+    }
+
+    /**
+     * ตรวจสอบว่ามีข้อผิดพลาดสำหรับฟิลด์หรือไม่ (wrapper)
+     */
+    protected function hasError(string $field): bool
+    {
+        return FormHelper::hasError($field);
+    }
+
+    /**
+     * ดึงข้อความข้อผิดพลาดแรกสำหรับฟิลด์ (wrapper)
+     */
+    protected function firstError(string $field, ?string $default = null, bool $escape = true): ?string
+    {
+        return FormHelper::firstError($field, $default, $escape);
+    }
+
+    /**
+     * คืนคลาส CSS เมื่อตรวจพบข้อผิดพลาด (wrapper)
+     */
+    protected function invalidClass(string $field, string $class = 'is-invalid'): string
+    {
+        return FormHelper::invalidClass($field, $class);
+    }
+
+    /**
+     * แชร์ข้อมูลให้ทุกวิว (wrapper)
+     */
+    protected function share($key, $value = null): void
+    {
+        View::share($key, $value);
+    }
+
+    /**
+     * อ่านข้อมูลที่แชร์ไว้ (wrapper)
+     */
+    protected function shared(?string $key = null, $default = null)
+    {
+        return View::shared($key, $default);
     }
 }
