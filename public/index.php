@@ -356,7 +356,7 @@ $globalMiddleware = [
 
 // เพิ่ม middleware เฉพาะสำหรับคำขอ API
 $uri = $_SERVER['REQUEST_URI'] ?? '';
-$isApiRequest = strpos($uri, '/api/') === 0;
+$isApiRequest = preg_match('#^/api(/|$)#', $uri);
 
 // ตรวจสอบถ้าเป็นคำขอ API
 if ($isApiRequest) {

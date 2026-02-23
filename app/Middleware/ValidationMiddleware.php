@@ -37,6 +37,9 @@ use App\Core\Validator;
 
 class ValidationMiddleware extends Middleware
 {
+    /**
+     * ตัวบันทึกเหตุการณ์ (Logger) สำหรับบันทึกความล้มเหลวในการตรวจสอบและเหตุการณ์ที่เกี่ยวข้องกับการตรวจสอบข้อมูล
+     */
     private Logger $logger;
     
     /**
@@ -51,9 +54,21 @@ class ValidationMiddleware extends Middleware
 
     /**
      * Constructor
+     * จุดประสงค์: สร้างอินสแตนซ์ ValidationMiddleware ใหม่และเตรียมตัวบันทึกเหตุการณ์สำหรับการตรวจสอบข้อมูล
+     * คัวอย่างการใช้งาน:
+     * $validation = new ValidationMiddleware([
+     *   'email' => 'required|email',
+     *   'password' => 'required|min:6',
+     *   ], 
+     *   [
+     *   'email.required' => 'Email is required',
+     *   'email.email' => 'Email is not valid',
+     *   'password.required' => 'Password is required',
+     *   'password.min' => 'Password must be at least 6 characters',
+     * ]);
      * 
-     * @param array $rules กฎการตรวจสอบ
-     * @param array $messages ข้อความ error แบบกำหนดเอง
+     * @param array $rules กฎการตรวจสอบในรูปแบบ associative array เช่น ['email' => 'required|email', 'password' => 'required|min:6']
+     * @param array $messages ข้อความ error แบบกำหนดเองในรูปแบบ associative array เช่น ['email.required' => 'Email is required', 'email.email' => 'Email is not valid']
      */
     public function __construct(array $rules = [], array $messages = [])
     {
@@ -64,8 +79,10 @@ class ValidationMiddleware extends Middleware
 
     /**
      * จัดการการตรวจสอบข้อมูล
+     * จุดประสงค์: ตรวจสอบข้อมูลที่ส่งเข้ามาตามกฎที่กำหนดไว้ และจัดการผลลัพธ์ของการตรวจสอบ โดยจะคืนค่าข้อผิดพลาดในรูปแบบ JSON สำหรับ API requests หรือเก็บข้อผิดพลาดใน session และเปลี่ยนเส้นทางกลับสำหรับ web requests
      * 
-        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
+     * @param \App\Core\Request|null $request คำขอที่ส่งเข้ามา (สามารถเป็น null ได้ถ้าไม่ต้องการใช้ข้อมูลจากคำขอ)
+     * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
         public function handle(?\App\Core\Request $request = null): bool|Response
     {
@@ -80,6 +97,7 @@ class ValidationMiddleware extends Middleware
         // สร้าง Validator และตรวจสอบข้อมูล
         $validator = new Validator($data, $this->rules, $this->messages);
         
+        // ถ้าตรวจสอบไม่ผ่าน
         if ($validator->fails()) {
             $errors = $validator->errors();
 
@@ -90,7 +108,7 @@ class ValidationMiddleware extends Middleware
 
             // กำหนดว่าเป็นคำขอ API หรือไม่
             $uri = $_SERVER['REQUEST_URI'] ?? '';
-            $isApiRequest = strpos($uri, '/api/') === 0;
+            $isApiRequest = preg_match('#^/api(/|$)#', $uri);
 
             if ($isApiRequest) {
                 // คืนค่า JSON error
@@ -107,8 +125,9 @@ class ValidationMiddleware extends Middleware
 
     /**
      * รับข้อมูลจากคำขอ
+     * จุดประสงค์: ดึงข้อมูลจากคำขอ HTTP ตาม HTTP method และ content type เพื่อใช้ในการตรวจสอบข้อมูล โดยรองรับทั้ง GET, POST, PUT, PATCH, DELETE และสามารถจัดการกับ JSON payload ได้
      * 
-     * @return array
+     * @return array ข้อมูลที่ดึงมาจากคำขอในรูปแบบ associative array
      */
     private function getRequestData(): array
     {
@@ -134,8 +153,10 @@ class ValidationMiddleware extends Middleware
 
     /**
      * ส่งข้อผิดพลาด JSON พร้อม validation errors
+     * ฃจุดประสงค์: สร้างการตอบกลับในรูปแบบ JSON ที่มีข้อมูลข้อผิดพลาดและสถานะ HTTP 422 Unprocessable Entity เพื่อให้ API clients สามารถรับรู้และจัดการกับข้อผิดพลาดการตรวจสอบข้อมูลได้อย่างเหมาะสม
      * 
-     * @param array $errors
+     * @param array $errors ข้อผิดพลาดการตรวจสอบข้อมูล
+     * @return \App\Core\Response การตอบกลับในรูปแบบ JSON ที่มีข้อมูลข้อผิดพลาดและสถานะ HTTP 422 Unprocessable Entity
      */
     private function jsonErrorWithValidation(array $errors): Response
     {
@@ -144,9 +165,11 @@ class ValidationMiddleware extends Middleware
 
     /**
      * จัดการข้อผิดพลาดการตรวจสอบสำหรับ web
+     * จุดประสงค์: จัดการข้อผิดพลาดการตรวจสอบข้อมูลสำหรับคำขอ web โดยเก็บข้อผิดพลาดและข้อมูลเดิมใน session แบบ flash และเปลี่ยนเส้นทางกลับไปหน้าเดิม เพื่อให้ผู้ใช้สามารถเห็นข้อผิดพลาดและแก้ไขข้อมูลได้อย่างสะดวก
      * 
-     * @param array $errors
-     * @param array $oldInput
+     * @param array $errors ข้อผิดพลาดการตรวจสอบข้อมูล
+     * @param array $oldInput ข้อมูลเดิมที่ผู้ใช้กรอก
+     * @return \App\Core\Response การตอบกลับที่เหมาะสมสำหรับกรณีข้อผิดพลาดการตรวจสอบข้อมูล
      */
     private function handleWebValidationError(array $errors, array $oldInput): Response
     {
@@ -162,9 +185,10 @@ class ValidationMiddleware extends Middleware
 
     /**
      * ทำความสะอาด old input (ลบข้อมูลละเอียดอ่อน)
+     * จุดประสงค์: ลบข้อมูลที่ละเอียดอ่อนออกจาก old input ก่อนที่จะเก็บใน session เพื่อป้องกันการเปิดเผยข้อมูลที่ไม่ควรเปิดเผย เช่น รหัสผ่าน โทเค็น หรือข้อมูลสำคัญอื่นๆ ที่อาจถูกนำไปใช้ในทางที่ผิดได้
      * 
-     * @param array $input
-     * @return array
+     * @param array $input ข้อมูลเดิมที่ผู้ใช้กรอก
+     * @return array ข้อมูลเดิมที่ถูกทำความสะอาดแล้ว
      */
     private function sanitizeOldInput(array $input): array
     {
@@ -185,8 +209,9 @@ class ValidationMiddleware extends Middleware
 
     /**
      * ตั้งค่ากฎการตรวจสอบ
-     * 
-     * @param array $rules
+     * จุดประสงค์: กำหนดกฎการตรวจสอบข้อมูลสำหรับฟิลด์ต่างๆ ในคำขอ HTTP โดยสามารถใช้กฎที่มีอยู่แล้วหรือเพิ่มกฎใหม่ได้ตามต้องการ เพื่อให้การตรวจสอบข้อมูลมีความยืดหยุ่นและสามารถปรับแต่งได้ตามความต้องการของแต่ละ endpoint หรือฟอร์ม
+     *
+     *  @param array $rules กฎการตรวจสอบข้อมูลในรูปแบบ associative array เช่น ['email' => 'required|email', 'password' => 'required|min:6']
      */
     public function setRules(array $rules): void
     {
@@ -195,9 +220,10 @@ class ValidationMiddleware extends Middleware
 
     /**
      * เพิ่มกฎการตรวจสอบ
+     * จุดประสงค์: เพิ่มกฎการตรวจสอบข้อมูลสำหรับฟิลด์ใหม่หรือเพิ่มกฎเพิ่มเติมให้กับฟิลด์ที่มีอยู่แล้ว โดยไม่ต้องเขียนกฎทั้งหมดใหม่ ซึ่งช่วยให้การจัดการกฎการตรวจสอบมีความยืดหยุ่นและง่ายต่อการปรับแต่งตามความต้องการของแต่ละ endpoint หรือฟอร์ม
      * 
-     * @param string $field
-     * @param string|array $rules
+     * @param string $field ชื่อฟิลด์ที่ต้องการเพิ่มกฎการตรวจสอบ
+     * @param string|array $rules กฎการตรวจสอบข้อมูลสำหรับฟิลด์นั้นในรูปแบบ string เช่น 'required|email' หรือในรูปแบบ array เช่น ['required', 'email']
      */
     public function addRule(string $field, $rules): void
     {
@@ -206,8 +232,10 @@ class ValidationMiddleware extends Middleware
 
     /**
      * ตั้งค่าข้อความ error
+     * จุดประสงค์: กำหนดข้อความ error แบบกำหนดเองสำหรับกฎการตรวจสอบข้อมูลต่างๆ เพื่อให้สามารถแสดงข้อความที่เหมาะสมและเข้าใจง่ายสำหรับผู้ใช้เมื่อเกิดข้อผิดพลาดในการตรวจสอบข้อมูล
      * 
-     * @param array $messages
+     * @param array $messages ข้อความ error แบบกำหนดเองสำหรับกฎการตรวจสอบข้อมูลในรูปแบบ associative array เช่น ['email.required' => 'Email is required', 'email.email' => 'Email is not valid']
+     * @return void ไม่มีค่าที่ส่งกลับ แต่จะตั้งค่าข้อความ error ในตัวแปร $messages
      */
     public function setMessages(array $messages): void
     {
@@ -216,8 +244,9 @@ class ValidationMiddleware extends Middleware
 
     /**
      * รับ validation errors จาก session (สำหรับแสดงในฟอร์ม)
+     * จุดประสงค์: ดึงข้อผิดพลาดการตรวจสอบข้อมูลที่ถูกเก็บไว้ใน session แบบ flash ภายใต้คีย์ 'validation_errors' เพื่อให้สามารถแสดงข้อผิดพลาดเหล่านี้ในฟอร์มได้อย่างสะดวกและช่วยให้ผู้ใช้สามารถแก้ไขข้อมูลได้อย่างถูกต้อง
      * 
-     * @return array
+     * @return array ข้อความ error สำหรับฟิลด์ต่างๆ ที่ถูกเก็บไว้ใน session แบบ flash ภายใต้คีย์ 'validation_errors'
      */
     public static function getErrors(): array
     {
@@ -227,10 +256,11 @@ class ValidationMiddleware extends Middleware
 
     /**
      * รับ old input จาก session (สำหรับแสดงในฟอร์ม)
+     * จุดประสงค์: ดึงข้อมูลเดิมที่ผู้ใช้กรอกไว้ในฟอร์มจาก session แบบ flash ภายใต้คีย์ 'old_input' เพื่อให้สามารถแสดงข้อมูลเดิมในฟอร์มได้อย่างสะดวกและช่วยให้ผู้ใช้สามารถแก้ไขข้อมูลได้อย่างถูกต้อง
      * 
-     * @param string|null $field
-     * @param mixed $default
-     * @return mixed
+     * @param string|null $field ชื่อฟิลด์ที่ต้องการดึงข้อมูลเดิม หากไม่ระบุจะดึงข้อมูลเดิมทั้งหมด
+     * @param mixed $default ค่าที่จะใช้หากไม่มีข้อมูลเดิมสำหรับฟิลด์นั้น
+     * @return mixed ข้อมูลเดิมสำหรับฟิลด์ที่ระบุ หรือค่าดีฟอลต์หากไม่มีข้อมูล
      */
     public static function getOldInput(?string $field = null, $default = null)
     {
@@ -240,9 +270,10 @@ class ValidationMiddleware extends Middleware
 
     /**
      * ตรวจสอบว่ามี error สำหรับ field หรือไม่
+     * จุดประสงค์: ตรวจสอบว่ามีข้อผิดพลาดการตรวจสอบข้อมูลสำหรับฟิลด์ที่ระบุหรือไม่ โดยใช้ข้อมูลจาก session แบบ flash เพื่อช่วยให้สามารถแสดงข้อผิดพลาดเฉพาะสำหรับฟิลด์นั้นในฟอร์มได้อย่างสะดวกและช่วยให้ผู้ใช้สามารถแก้ไขข้อมูลได้อย่างถูกต้อง
      * 
-     * @param string $field
-     * @return bool
+     * @param string $field ชื่อฟิลด์ที่ต้องการตรวจสอบข้อผิดพลาด
+     * @return bool คืนค่า true หากมีข้อผิดพลาดสำหรับฟิลด์นั้น, false หากไม่มี
      */
     public static function hasError(string $field): bool
     {
@@ -252,9 +283,10 @@ class ValidationMiddleware extends Middleware
 
     /**
      * รับ error message สำหรับ field
+     * จุดประสงค์: ดึงข้อความข้อผิดพลาดการตรวจสอบข้อมูลสำหรับฟิลด์ที่ระบุจาก session แบบ flash เพื่อให้สามารถแสดงข้อความข้อผิดพลาดเฉพาะสำหรับฟิลด์นั้นในฟอร์มได้อย่างสะดวกและช่วยให้ผู้ใช้สามารถแก้ไขข้อมูลได้อย่างถูกต้อง
      * 
-     * @param string $field
-     * @return string|null
+     * @param string $field ชื่อฟิลด์ที่ต้องการดึงข้อความข้อผิดพลาด
+     * @return string|null ข้อความข้อผิดพลาดสำหรับฟิลด์ที่ระบุ หรือ null หากไม่มีข้อผิดพลาด
      */
     public static function getError(string $field): ?string
     {
@@ -264,14 +296,15 @@ class ValidationMiddleware extends Middleware
 
     /**
      * สร้าง ValidationMiddleware พร้อมกฎทั่วไป
+     * จุดประสงค์: สร้างอินสแตนซ์ของ ValidationMiddleware ที่มีการตั้งค่ากฎการตรวจสอบข้อมูลทั่วไปสำหรับการเข้าสู่ระบบ (login) หรือการสมัครสมาชิก (register) เพื่อให้สามารถนำไปใช้ได้อย่างรวดเร็วและง่ายดายในการตรวจสอบข้อมูลสำหรับฟอร์มเหล่านี้
      * 
      * @param array $additionalRules กฎเพิ่มเติม
-     * @return self
+     * @return self อินสแตนซ์ของ ValidationMiddleware ที่มีการตั้งค่ากฎการตรวจสอบข้อมูลสำหรับการเข้าสู่ระบบ (login) หรือการสมัครสมาชิก (register) พร้อมกฎเพิ่มเติมที่ระบุ
      */
     public static function login(array $additionalRules = []): self
     {
         $rules = array_merge([
-            'email' => 'required|email',
+            'login' => 'required|min:3',
             'password' => 'required|min:6',
         ], $additionalRules);
 
@@ -280,15 +313,16 @@ class ValidationMiddleware extends Middleware
 
     /**
      * สร้าง ValidationMiddleware สำหรับการสมัครสมาชิก
+     * จุดประสงค์: สร้างอินสแตนซ์ของ ValidationMiddleware ที่มีการตั้งค่ากฎการตรวจสอบข้อมูลสำหรับการสมัครสมาชิก (register) พร้อมกฎเพิ่มเติมที่ระบุ
      * 
-     * @param array $additionalRules
-     * @return self
+     * @param array $additionalRules กฎเพิ่มเติมสำหรับการสมัครสมาชิก เช่น กฎสำหรับฟิลด์อื่นๆ ที่ต้องการตรวจสอบเพิ่มเติมนอกเหนือจากกฎพื้นฐานที่มีอยู่แล้ว
+     * @return self อินสแตนซ์ของ ValidationMiddleware ที่มีการตั้งค่ากฎการตรวจสอบข้อมูลสำหรับการสมัครสมาชิก (register) พร้อมกฎเพิ่มเติมที่ระบุ
      */
     public static function register(array $additionalRules = []): self
     {
         $rules = array_merge([
-            'name' => 'required|min:2|max:100',
-            'email' => 'required|email',
+            'username' => 'required|alphanumeric|min:3|max:50|unique:users,username',
+            'email' => 'required|email|unique:users,email',
             'password' => 'required|min:8',
             'password_confirmation' => 'required|same:password',
         ], $additionalRules);

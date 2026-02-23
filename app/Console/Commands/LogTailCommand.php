@@ -1,4 +1,18 @@
 <?php
+/**
+ * LogTailCommand
+ *
+ * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับแสดงบรรทัดล่าสุดของไฟล์ log โดยสามารถระบุจำนวนบรรทัดที่ต้องการแสดงได้ และยังสามารถระบุไฟล์ log ที่ต้องการดูได้ด้วยการใช้ชื่อไฟล์หรือโฟลเดอร์ย่อยภายในโฟลเดอร์ logs เพื่อให้ผู้ใช้สามารถตรวจสอบและวิเคราะห์ข้อมูลจากไฟล์ log ได้อย่างรวดเร็วและมีประสิทธิภาพ
+ * ตัวอย่างการใช้งาน:
+ * ```
+ * php console.php log:tail
+ * php console.php log:tail 100
+ * php console.php log:tail 100 storage/logs/old_logs
+ * php console.php log:tail 100 --path=storage/logs/old_logs
+ * php console.php log:tail 100 --path=storage/logs/old_logs/app.log
+ * php console.php log:tail 100 --path=/var/logs/app.log
+ * ```
+ */
 
 declare(strict_types=1);
 
@@ -54,6 +68,7 @@ class LogTailCommand extends BaseCommand
 
         echo str_repeat("─", 80) . "\n";
         $this->success("แสดง logs เรียบร้อยแล้ว");
+        echo "\n";
     }
 
     private function resolveLogFile(string $logRoot, string $requested): string

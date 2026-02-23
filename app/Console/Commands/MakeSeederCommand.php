@@ -1,4 +1,9 @@
 <?php
+/**
+ * MakeSeederCommand
+ *
+ * จุดประสงค์: คำสั่งสำหรับสร้าง Seeder ใหม่ในโครงสร้างของแอปพลิเคชัน
+ */
 
 declare(strict_types=1);
 
@@ -35,6 +40,7 @@ class MakeSeederCommand extends BaseCommand
         file_put_contents($path, $template);
 
         $this->success("สร้าง Seeder สำเร็จ: database/seeders/{$name}.php");
+        echo "\n";
     }
 
     private function getSeederTemplate(string $name): string
@@ -68,9 +74,8 @@ class {$name} extends Seeder
             // เพิ่มข้อมูลที่นี่
         ];
 
-        foreach (\$data as \$item) {
-            \$this->insert('table_name', \$item);
-        }
+        // เพิ่มข้อมูลลงในตาราง
+        \$this->insert('employees', \$data);
 
         \$this->log('✓ Seeded successfully!');
     }

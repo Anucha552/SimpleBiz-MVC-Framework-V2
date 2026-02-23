@@ -1,4 +1,9 @@
 <?php
+/**
+ * MakeMiddlewareCommand
+ *
+ * จุดประสงค์: คำสั่งสำหรับสร้าง Middleware ใหม่ในโครงสร้างของแอปพลิเคชัน
+ */
 
 declare(strict_types=1);
 
@@ -43,6 +48,7 @@ class MakeMiddlewareCommand extends BaseCommand
             }
 
             $this->success("สร้าง Middleware สำเร็จ: app/Middleware/{$name}.php");
+            echo "\n";
         } catch (\Exception $e) {
             echo "\n";
             echo "┌─ Create Middleware Error ───────────────────────────┐\n";

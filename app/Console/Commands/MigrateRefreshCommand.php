@@ -1,4 +1,9 @@
 <?php
+/**
+ * MigrateRefreshCommand
+ *
+ * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับรีเฟรชฐานข้อมูลโดยการลบตารางทั้งหมดและรัน migrations ใหม่ทั้งหมด เพื่อให้ผู้ใช้สามารถเริ่มต้นฐานข้อมูลใหม่ได้อย่างง่ายดายผ่านทางคอนโซล
+ */
 
 declare(strict_types=1);
 
@@ -56,5 +61,6 @@ class MigrateRefreshCommand extends BaseCommand
 
         echo "\n";
         $this->success("Refresh migrations เรียบร้อยแล้ว" . ($seed ? " (รวม seeding)" : ""));
+        echo "\n";
     }
 }

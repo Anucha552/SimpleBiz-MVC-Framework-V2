@@ -6,7 +6,7 @@ namespace App\Console\Commands;
 
 use App\Console\ConsoleColor;
 use App\Core\Logger;
-use PDO;
+use App\Core\Database;
 
 class DbShowCommand extends BaseCommand
 {
@@ -20,22 +20,13 @@ class DbShowCommand extends BaseCommand
         $this->info("กำลังแสดงรายการตารางในฐานข้อมูล...");
 
         try {
-            $config = require $this->path('config/database.php');
-
-            if (isset($config['connections'])) {
-                $dbConfig = $config['connections'][$config['default']];
+            $db = Database::getInstance();
+            $driver = $db->getDriverName();
+            if ($driver === 'sqlite') {
+                $tables = $db->fetchList("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
             } else {
-                $dbConfig = $config;
+                $tables = $db->fetchList("SHOW TABLES");
             }
-
-            $pdo = new PDO(
-                "mysql:host={$dbConfig['host']};dbname={$dbConfig['database']}",
-                $dbConfig['username'],
-                $dbConfig['password']
-            );
-
-            $stmt = $pdo->query("SHOW TABLES");
-            $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
             if (empty($tables)) {
                 $this->warning("ไม่พบตารางในฐานข้อมูล");
@@ -46,8 +37,7 @@ class DbShowCommand extends BaseCommand
             echo str_repeat("─", 50) . "\n";
 
             foreach ($tables as $index => $table) {
-                $countStmt = $pdo->query("SELECT COUNT(*) FROM `{$table}`");
-                $rowCount = $countStmt->fetchColumn();
+                $rowCount = $db->fetchColumn("SELECT COUNT(*) FROM `{$table}`");
 
                 echo ConsoleColor::CYAN . sprintf("%2d. ", $index + 1) . ConsoleColor::WHITE . $table .
                      ConsoleColor::GRAY . " ({$rowCount} แถว)" . ConsoleColor::RESET . "\n";

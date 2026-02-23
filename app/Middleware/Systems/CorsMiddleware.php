@@ -33,6 +33,7 @@ namespace App\Middleware\Systems;
 use App\Core\Middleware;
 use App\Core\Logger;
 use App\Core\Response;
+use App\Core\Config;
 
 class CorsMiddleware extends Middleware
 {
@@ -46,13 +47,7 @@ class CorsMiddleware extends Middleware
      * - ไม่ใช้ '*' (อนุญาตทุก origin)
      * - โหลดจาก config หรือ .env
      */
-    private array $allowedOrigins = [
-        'http://localhost:3000',
-        'http://localhost:8080',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:8080',
-        // เพิ่ม production domains ที่นี่
-    ];
+    private array $allowedOrigins = [];
 
     /**
      * HTTP methods ที่อนุญาต
@@ -96,24 +91,42 @@ class CorsMiddleware extends Middleware
      */
     private bool $allowCredentials = true;
 
+    /**
+     * สร้าง instance ของ CorsMiddleware
+     * จุดประสงค์: โหลดการตั้งค่า allowed origins จาก config และตรวจสอบความปลอดภัยของการตั้งค่า
+      * 
+      * ในโปรดักชัน:
+      * - โหลด allowed origins จาก config หรือ .env เท่านั้น
+      * - ไม่อนุญาต wildcard origins ร่วมกับ credentials
+     */
     public function __construct()
     {
         $this->logger = new Logger();
 
-        // โหลด allowed origins จาก config ถ้ามี
-        $configOrigins = \env('CORS_ALLOWED_ORIGINS');
-        if ($configOrigins) {
-            $this->allowedOrigins = array_merge(
-                $this->allowedOrigins,
-                explode(',', $configOrigins)
-            );
+        // โหลด allowed origins จาก config เท่านั้น
+        $configOrigins = (array) Config::get('cors.allowed_origins', []);
+        $this->allowedOrigins = array_values(array_filter(array_map('trim', $configOrigins), 'strlen'));
+
+        // Guard: do not allow wildcard origins with credentials
+        if ($this->hasWildcardOrigin() && $this->allowCredentials) {
+            $this->allowCredentials = false;
+            $this->logger->warning('cors.wildcard_credentials_disabled', [
+                'reason' => 'Wildcard origin with credentials is unsafe; disabling credentials.',
+            ]);
         }
     }
 
     /**
      * จัดการ CORS headers
+     * จุดประสงค์: ตรวจสอบ origin ของคำขอและตั้งค่า CORS headers ที่เหมาะสมสำหรับคำขอ cross-origin
      * 
-        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
+     * การทำงาน:
+     * 1. ตรวจสอบว่าเป็น cross-origin request หรือไม่
+     * 2. ตรวจสอบว่า origin อนุญาตหรือไม่
+     * 3. ตั้งค่า CORS headers ที่เหมาะสม
+     * 4. จัดการ preflight requests (OPTIONS)
+     * 
+     * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
         public function handle(?\App\Core\Request $request = null): bool|Response
     {
@@ -160,14 +173,15 @@ class CorsMiddleware extends Middleware
 
     /**
      * ตรวจสอบว่า origin อนุญาตหรือไม่
+     * จุดประสงค์: ตรวจสอบว่า origin ของคำขออยู่ในรายการ allowed origins หรือไม่ เพื่อป้องกันการเข้าถึงจากโดเมนที่ไม่ได้รับอนุญาต
      * 
-     * @param string $origin
-     * @return bool
+     * @param string $origin Origin ของคำขอ
+     * @return bool ผลลัพธ์การตรวจสอบว่า origin อนุญาตหรือไม่
      */
     private function isOriginAllowed(string $origin): bool
     {
         // อนุญาตทุก origin (ไม่แนะนำในโปรดักชัน)
-        if (in_array('*', $this->allowedOrigins)) {
+        if ($this->hasWildcardOrigin()) {
             return true;
         }
 
@@ -177,13 +191,20 @@ class CorsMiddleware extends Middleware
 
     /**
      * ตั้งค่า CORS headers
+     * จุดประสงค์: ตั้งค่า CORS headers ที่เหมาะสมสำหรับคำขอ cross-origin เพื่อให้เบราว์เซอร์สามารถจัดการคำขอได้อย่างถูกต้องและปลอดภัย
      * 
-     * @param string $origin
+     * @param \App\Core\Request $request
+     * @param string $origin Origin ของคำขอ
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     private function setCorsHeaders(\App\Core\Request $request, string $origin): void
     {
         // Origin ที่อนุญาต
-        $request->setResponseHeader('Access-Control-Allow-Origin', $origin);
+        if ($this->hasWildcardOrigin() && $this->allowCredentials === false) {
+            $request->setResponseHeader('Access-Control-Allow-Origin', '*');
+        } else {
+            $request->setResponseHeader('Access-Control-Allow-Origin', $origin);
+        }
 
         // Methods ที่อนุญาต
         $request->setResponseHeader('Access-Control-Allow-Methods', implode(', ', $this->allowedMethods));
@@ -206,9 +227,26 @@ class CorsMiddleware extends Middleware
     }
 
     /**
-     * เพิ่ม origin ที่อนุญาต
+     * ตรวจสอบว่ามี wildcard origin หรือไม่
+     * จุดประสงค์: ตรวจสอบว่ารายการ allowed origins มี wildcard ('*') หรือไม่ เพื่อใช้ในการตัดสินใจเกี่ยวกับการตั้งค่า CORS headers และความปลอดภัย
      * 
-     * @param string|array $origins
+     * @return bool ผลลัพธ์การตรวจสอบว่ามี wildcard origin หรือไม่
+     */
+    private function hasWildcardOrigin(): bool
+    {
+        return in_array('*', $this->allowedOrigins, true);
+    }
+
+    /**
+     * เพิ่ม origin ที่อนุญาต
+     * จุดประสงค์: เพิ่ม origin ใหม่ลงในรายการ allowed origins เพื่อให้สามารถเข้าถึงได้จากโดเมนที่ระบุ
+     * 
+     * ในโปรดักชัน:
+     * - ควรใช้วิธีนี้ร่วมกับการโหลดค่าเริ่มต้นจาก config เท่านั้น
+     * - ไม่ควรอนุญาต wildcard origins ร่วมกับ credentials
+     * 
+     * @param string|array $origins Origin หรือรายการ origin ที่ต้องการเพิ่ม
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     public function addAllowedOrigins($origins): void
     {
@@ -221,8 +259,10 @@ class CorsMiddleware extends Middleware
 
     /**
      * ตั้งค่า allowed methods
+     * จุดประสงค์: กำหนดรายการ HTTP methods ที่อนุญาตสำหรับคำขอ cross-origin
      * 
-     * @param array $methods
+     * @param array $methods รายการ HTTP methods ที่อนุญาต (เช่น ['GET', 'POST'])
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     public function setAllowedMethods(array $methods): void
     {
@@ -231,8 +271,10 @@ class CorsMiddleware extends Middleware
 
     /**
      * ตั้งค่า allowed headers
+     * จุดประสงค์: กำหนดรายการ headers ที่อนุญาตสำหรับคำขอ cross-origin เพื่อให้เบราว์เซอร์สามารถส่งคำขอได้อย่างถูกต้องและปลอดภัย
      * 
-     * @param array $headers
+     * @param array $headers รายการ headers ที่อนุญาต (เช่น ['Content-Type', 'Authorization'])
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     public function setAllowedHeaders(array $headers): void
     {
@@ -241,8 +283,10 @@ class CorsMiddleware extends Middleware
 
     /**
      * เปิด/ปิด credentials
+     * จุดประสงค์: กำหนดว่าคำขอ cross-origin สามารถส่ง credentials (เช่น cookies, HTTP authentication) ได้หรือไม่
      * 
-     * @param bool $allow
+     * @param bool $allow กำหนดว่าควรอนุญาต credentials หรือไม่
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     public function setAllowCredentials(bool $allow): void
     {

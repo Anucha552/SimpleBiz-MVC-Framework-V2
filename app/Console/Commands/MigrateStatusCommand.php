@@ -1,4 +1,9 @@
 <?php
+/**
+ * MigrateStatusCommand
+ *
+ * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับแสดงสถานะของ migrations ในโปรเจกต์ โดยจะแสดงรายการ migrations ทั้งหมดพร้อมกับสถานะว่าแต่ละ migration ได้ถูกรันไปแล้วหรือยัง และถ้าถูกรันไปแล้วจะแสดงหมายเลข batch ที่เกี่ยวข้อง เพื่อให้ผู้ใช้สามารถตรวจสอบและจัดการกับ migrations ได้อย่างง่ายดายผ่านทางคอนโซล
+ */
 
 declare(strict_types=1);
 
@@ -43,5 +48,7 @@ class MigrateStatusCommand extends BaseCommand
             $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
             exit(1);
         }
+        
+        echo "\n";
     }
 }

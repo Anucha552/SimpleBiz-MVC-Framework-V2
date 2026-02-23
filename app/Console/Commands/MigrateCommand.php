@@ -1,4 +1,9 @@
 <?php
+/**
+ * MigrateCommand
+ *
+ * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับรัน migrations ทั้งหมดในโปรเจกต์ เพื่อให้ผู้ใช้สามารถจัดการกับฐานข้อมูลและโครงสร้างของตารางได้อย่างง่ายดายผ่านทางคอนโซล
+ */
 
 declare(strict_types=1);
 
@@ -43,6 +48,7 @@ class MigrateCommand extends BaseCommand
             $result = $runner->run();
             echo "\n";
             $this->success($result['message'] . "\n");
+            echo "\n";
         } catch (\Exception $e) {
             echo "\n";
             echo "┌─ Console Error ─────────────────────────────────────┐\n";

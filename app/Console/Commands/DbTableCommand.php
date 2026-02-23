@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Console\ConsoleColor;
-use PDO;
+use App\Core\Database;
 
 class DbTableCommand extends BaseCommand
 {
@@ -26,34 +26,48 @@ class DbTableCommand extends BaseCommand
         $this->info("กำลังแสดงโครงสร้างของตาราง '{$tableName}'...");
 
         try {
-            $config = require $this->path('config/database.php');
+            $db = Database::getInstance();
+            $driver = $db->getDriverName();
+            if ($driver === 'sqlite') {
+                $exists = $db->fetchColumn(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name = :name",
+                    ['name' => $tableName]
+                );
+                if ($exists === false) {
+                    $this->error("ไม่พบตาราง '{$tableName}'");
+                    return;
+                }
 
-            if (isset($config['connections'])) {
-                $dbConfig = $config['connections'][$config['default']];
+                $columns = $db->fetchAll("PRAGMA table_info(`{$tableName}`)");
+                $indexList = $db->fetchAll("PRAGMA index_list(`{$tableName}`)");
+
+                $indexes = [];
+                foreach ($indexList as $index) {
+                    $indexName = $index['name'] ?? '';
+                    if ($indexName === '') {
+                        continue;
+                    }
+                    $idxCols = $db->fetchAll("PRAGMA index_info(`{$indexName}`)");
+                    foreach ($idxCols as $col) {
+                        $indexes[] = [
+                            'Key_name' => $indexName,
+                            'Column_name' => $col['name'] ?? '',
+                        ];
+                    }
+                }
+
+                $rowCount = $db->fetchColumn("SELECT COUNT(*) FROM `{$tableName}`");
             } else {
-                $dbConfig = $config;
+                $exists = $db->fetchColumn("SHOW TABLES LIKE :name", ['name' => $tableName]);
+                if ($exists === false) {
+                    $this->error("ไม่พบตาราง '{$tableName}'");
+                    return;
+                }
+
+                $columns = $db->fetchAll("DESCRIBE `{$tableName}`");
+                $indexes = $db->fetchAll("SHOW INDEX FROM `{$tableName}`");
+                $rowCount = $db->fetchColumn("SELECT COUNT(*) FROM `{$tableName}`");
             }
-
-            $pdo = new PDO(
-                "mysql:host={$dbConfig['host']};dbname={$dbConfig['database']}",
-                $dbConfig['username'],
-                $dbConfig['password']
-            );
-
-            $stmt = $pdo->query("SHOW TABLES LIKE '{$tableName}'");
-            if ($stmt->rowCount() === 0) {
-                $this->error("ไม่พบตาราง '{$tableName}'");
-                return;
-            }
-
-            $stmt = $pdo->query("DESCRIBE `{$tableName}`");
-            $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $stmt = $pdo->query("SHOW INDEX FROM `{$tableName}`");
-            $indexes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $stmt = $pdo->query("SELECT COUNT(*) FROM `{$tableName}`");
-            $rowCount = $stmt->fetchColumn();
 
             echo "\n" . ConsoleColor::GREEN . "[TABLE] {$tableName}" . ConsoleColor::RESET . "\n";
             echo ConsoleColor::GRAY . "จำนวนแถว: {$rowCount}" . ConsoleColor::RESET . "\n\n";
@@ -64,13 +78,17 @@ class DbTableCommand extends BaseCommand
             echo str_repeat("─", 90) . "\n";
 
             foreach ($columns as $column) {
-                $field = strlen($column['Field']) > 24 ? substr($column['Field'], 0, 21) . '...' : $column['Field'];
-                $type = strlen($column['Type']) > 24 ? substr($column['Type'], 0, 21) . '...' : $column['Type'];
-                $default = $column['Default'] ?? 'NULL';
+                $fieldName = $column['Field'] ?? $column['name'] ?? '';
+                $field = strlen($fieldName) > 24 ? substr($fieldName, 0, 21) . '...' : $fieldName;
+                $typeName = $column['Type'] ?? $column['type'] ?? '';
+                $type = strlen($typeName) > 24 ? substr($typeName, 0, 21) . '...' : $typeName;
+                $defaultValue = $column['Default'] ?? $column['dflt_value'] ?? 'NULL';
+                $default = $defaultValue ?? 'NULL';
                 $default = strlen($default) > 20 ? substr($default, 0, 17) . '...' : $default;
-                $key = $column['Key'] ?: '-';
+                $nullValue = $column['Null'] ?? (($column['notnull'] ?? 0) ? 'NO' : 'YES');
+                $key = $column['Key'] ?? '-';
 
-                echo str_pad($field, 25) . str_pad($type, 25) . str_pad($column['Null'], 8) . str_pad($key, 8) . $default . "\n";
+                echo str_pad($field, 25) . str_pad($type, 25) . str_pad($nullValue, 8) . str_pad($key, 8) . $default . "\n";
             }
 
             echo str_repeat("─", 90) . "\n";

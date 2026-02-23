@@ -93,12 +93,17 @@ class Logger
      */
     public function __construct(?string $logFile = null)
     {
-        $provided = $logFile ?? __DIR__ . '/../../storage/logs/';
-        $this->logFile = $this->normalizeLogPath($provided);
-        // ค่าเริ่มต้นจาก env ถ้ามี (หน่วยเป็น bytes สำหรับ MAX_LOG_SIZE)
-        $this->maxFileSize = (int) (getenv('MAX_LOG_SIZE') ?: 0); // 0 = ไม่ตรวจขนาด
+        if ($logFile === null) {
+            $root = realpath(__DIR__ . '/../../') ?: (__DIR__ . '/../../');
+            $logDir = rtrim($root, '/\\') . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'logs';
+            $this->logFile = rtrim($logDir, '/\\') . '/' . date('Y-m-d') . '.log';
+        } else {
+            $this->logFile = $this->normalizeLogPath($logFile);
+        }
+        // ค่าเริ่มต้นจาก config ถ้ามี (หน่วยเป็น bytes สำหรับ max_log_size)
+        $this->maxFileSize = (int) Config::get('logging.max_log_size', 0); // 0 = ไม่ตรวจขนาด
         // จำนวนวันที่เก็บไฟล์ก่อนลบ (days) สำหรับการทำความสะอาดไฟล์เก่า
-        $this->retentionDays = (int) (getenv('LOG_RETENTION_DAYS') ?: 7);
+        $this->retentionDays = (int) Config::get('logging.retention_days', 7);
         
         // ตรวจสอบว่ามีไดเรกทอรีล็อกหรือไม่ — สร้างและตรวจสอบสิทธิ์
         $logDir = dirname($this->logFile);
@@ -227,12 +232,15 @@ class Logger
             ? json_encode($safeContext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
             : '{}';
         
+        $appName = (string) Config::get('app.name', 'app');
+
         $logMessage = sprintf(
-            "[%s] [%s] %s %s user_id=%s ip=%s method=%s route=%s request_id=%s\n",
+            "[%s] [%s] %s %s app=%s user_id=%s ip=%s method=%s route=%s request_id=%s\n",
             $timestamp,
             $level,
             $event,
             $contextJson,
+            $appName,
             $userId,
             $ip,
             $method,
@@ -323,27 +331,30 @@ class Logger
      * $logger->cleanupOldLogs('/path/to/logs');
      * ```
      * 
-     * @param string $logDir กำหนดไดเรกทอรีล็อก
-     * @return void ไม่คืนค่าอะไร
+    * @param string $logDir กำหนดไดเรกทอรีล็อก
+    * @return int จำนวนไฟล์ที่ลบสำเร็จ
      */
-    private function cleanupOldLogs(string $logDir): void
+    private function cleanupOldLogs(string $logDir): int
     {
         // ป้องกัน loop ถ้าโฟลเดอร์ไม่มี
         if (!is_dir($logDir)) {
-            return;
+            return 0;
         }
         $files = glob($logDir . '/*.log*');
         if (!$files) {
-            return;
+            return 0;
         }
 
-        $now = time();
-        // Treat non-positive retention as immediate cleanup (delete anything older than now)
-        $days = max(0, (int) $this->retentionDays);
-        $cutoff = $now - ($days * 86400);
+        // Keep N calendar days (1 = keep today only). Non-positive = delete anything before today.
+        $days = (int) $this->retentionDays;
+        $keepDays = $days > 0 ? $days : 1;
+        $cutoffDate = (new \DateTimeImmutable('today'))->modify('-' . ($keepDays - 1) . ' days');
+        $cutoffDateStr = $cutoffDate->format('Y-m-d');
 
         // Normalize current log path for safe comparison (realpath may return false if file missing)
         $currentReal = realpath($this->logFile) ?: $this->logFile;
+
+        $deleted = 0;
 
         foreach ($files as $file) {
             $fileReal = realpath($file) ?: $file;
@@ -353,15 +364,54 @@ class Logger
                 continue;
             }
 
+            $base = basename($file);
+            if (preg_match('/(\d{4}-\d{2}-\d{2})/', $base, $matches)) {
+                $fileDate = $matches[1];
+                if ($fileDate < $cutoffDateStr) {
+                    if (@unlink($file)) {
+                        $deleted++;
+                    }
+                }
+                continue;
+            }
+
+            // Fallback to mtime when no date in filename
             $mtime = filemtime($file);
             if ($mtime === false) {
                 continue;
             }
 
-            if ($mtime < $cutoff) {
-                @unlink($file);
+            if ($mtime < $cutoffDate->getTimestamp()) {
+                if (@unlink($file)) {
+                    $deleted++;
+                }
             }
         }
+
+        return $deleted;
+    }
+
+    /**
+     * ล้างไฟล์ล็อกเก่าตาม retention days (แบบวันปฏิทิน)
+     * จุดประสงค์: ลบไฟล์ล็อกที่เก่ากว่าเวลาที่กำหนดเพื่อประหยัดพื้นที่ โดยใช้ retention days แบบวันปฏิทิน
+     * cleanup() ควรใช้กับอะไร: เมื่อคุณต้องการลบไฟล์ล็อกเก่าตาม retention days แบบวันปฏิทิน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $deletedCount = $logger->cleanup(); // ล้างไฟล์ล็อกเก่าตาม retention days แบบวันปฏิทิน
+     * echo "Deleted $deletedCount old log files.";
+     * ```
+     * 
+     * @param string|null $logDir ไดเรกทอรีล็อก ถ้าไม่ระบุจะใช้ของ logger นี้
+     * @return int จำนวนไฟล์ที่ลบสำเร็จ
+     */
+    public function cleanup(?string $logDir = null): int
+    {
+        $targetDir = $logDir ? $this->makeAbsolutePath($logDir) : dirname($this->logFile);
+        if (is_file($targetDir)) {
+            $targetDir = dirname($targetDir);
+        }
+
+        return $this->cleanupOldLogs($targetDir);
     }
 
     /**
@@ -476,7 +526,16 @@ class Logger
     }
 
     /**
-     * @param string[] $keys
+     * ตั้งรายการอนุญาตการลบข้อมูล (allow list) สำหรับคีย์ในบริบท
+     * จุดประสงค์: กำหนดคีย์ที่อนุญาตให้บันทึกโดยไม่ต้องลบข้อมูล
+     * setRedactionAllowList() ควรใช้กับอะไร: เมื่อคุณต้องการกำหนดคีย์ที่อนุญาตให้บันทึกโดยไม่ต้องลบข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $logger->setRedactionAllowList(['product_id', 'quantity']);
+     * ```
+     * 
+     * @param string[] $keys กำหนดรายการคีย์ที่อนุญาตให้บันทึกโดยไม่ต้องลบข้อมูล
+     * @return void ไม่คืนค่าอะไร
      */
     public function setRedactionAllowList(array $keys): void
     {
@@ -484,7 +543,16 @@ class Logger
     }
 
     /**
-     * @param string[] $keys
+     * ตั้งรายการห้ามการลบข้อมูล (deny list) สำหรับคีย์ในบริบท
+     * จุดประสงค์: กำหนดคีย์ที่ห้ามบันทึกโดยไม่ต้องลบข้อมูล
+     * setRedactionDenyList() ควรใช้กับอะไร: เมื่อคุณต้องการกำหนดคีย์ที่ห้ามบันทึกโดยไม่ต้องลบข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $logger->setRedactionDenyList(['password', 'credit_card']);
+     * ```
+     * 
+     * @param string[] $keys กำหนดรายการคีย์ที่ห้ามบันทึกโดยไม่ต้องลบข้อมูล
+     * @return void ไม่คืนค่าอะไร
      */
     public function setRedactionDenyList(array $keys): void
     {
@@ -492,7 +560,16 @@ class Logger
     }
 
     /**
-     * @param string[] $keys
+     * เพิ่มคีย์ลงในรายการอนุญาตการลบข้อมูล (allow list)
+     * จุดประสงค์: เพิ่มคีย์ลงในรายการอนุญาตให้
+     * addRedactionAllowKeys() ควรใช้กับอะไร: เมื่อคุณต้องการเพิ่มคีย์ลงในรายการอนุญาตให้
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $logger->addRedactionAllowKeys(['email']);
+     * ```
+     * 
+     * @param string[] $keys กำหนดรายการคีย์ที่อนุญาตให้บันทึกโดยไม่ต้องลบข้อมูล
+     * @return void ไม่คืนค่าอะไร
      */
     public function addRedactionAllowKeys(array $keys): void
     {
@@ -500,16 +577,44 @@ class Logger
     }
 
     /**
-     * @param string[] $keys
+     * เพิ่มคีย์ลงในรายการห้ามการลบข้อมูล (deny list)
+     * จุดประสงค์: เพิ่มคีย์ลงในรายการห้ามบันทึกโดยไม่ต้องลบข้อมูล
+     * addRedactionDenyKeys() ควรใช้กับอะไร: เมื่อคุณต้องการเพิ่มคีย์ลงในรายการห้ามบันทึกโดยไม่ต้องลบข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $logger->addRedactionDenyKeys(['password']);
+     * ```
+     * 
+     * @param string[] $keys กำหนดรายการคีย์ที่ห้ามบันทึกโดยไม่ต้องลบข้อมูล
+     * @return void ไม่คืนค่าอะไร
      */
     public function addRedactionDenyKeys(array $keys): void
     {
         $this->redactionDenyList = $this->mergeKeyList($this->redactionDenyList, $keys);
     }
 
+    /**
+     * ทำให้เส้นทางล็อกเป็นแบบมาตรฐาน (normalize) โดยรองรับทั้งไฟล์และไดเรกทอรี
+     * จุดประสงค์: ทำให้เส้นทางล็อกเป็นแบบมาตรฐานโดยรองรับทั้งไฟล์และไดเรกทอรี
+     * normalizeLogPath() ควรใช้กับอะไร: เมื่อคุณต้องการทำให้เส้นทางล็อกเป็นแบบมาตรฐาน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $normalizedPath = $logger->normalizeLogPath('/path/to/logs/');
+     * ```
+     * 
+     * @param string $provided กำหนดเส้นทางล็อกที่ผู้ใช้ให้มา
+     * @return string คืนเส้นทางล็อกที่ถูกปรับให้เป็นแบบมาตรฐาน
+     */
     private function normalizeLogPath(string $provided): string
     {
         $path = $this->makeAbsolutePath($provided);
+
+        if (preg_match('#[A-Za-z]:[\\/]#', $path, $matches, PREG_OFFSET_CAPTURE)) {
+            $drivePos = $matches[0][1];
+            if ($drivePos > 0) {
+                $path = substr($path, $drivePos);
+            }
+        }
 
         if (preg_match('#[\/]$#', $path) || is_dir($path)) {
             $logDir = rtrim($path, '/\\');
@@ -519,8 +624,26 @@ class Logger
         return $path;
     }
 
+    /**
+     * ทำให้เส้นทางเป็นแบบสัมบูรณ์ (absolute) โดยรองรับทั้ง Windows และ Unix
+     * จุดประสงค์: ทำให้เส้นทางเป็นแบบสัมบูรณ์โดยรองรับทั้ง Windows และ Unix
+     * makeAbsolutePath() ควรใช้กับอะไร: เมื่อคุณต้องการทำให้เส้นทางเป็นแบบสัมบูรณ์
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $absolutePath = $logger->makeAbsolutePath('logs/');
+     * ```
+     * 
+     * @param string $path กำหนดเส้นทางที่ต้องการทำให้เป็นแบบสัมบูรณ์
+     * @return string คืนเส้นทางที่ถูกปรับให้เป็นแบบสัมบูรณ์
+     */
     private function makeAbsolutePath(string $path): string
     {
+        $path = trim($path);
+
+        if (preg_match('#[A-Za-z]:[\\/]#', $path)) {
+            return $path;
+        }
+
         if ($this->isAbsolutePath($path)) {
             return $path;
         }
@@ -529,6 +652,18 @@ class Logger
         return rtrim($root, '/\\') . DIRECTORY_SEPARATOR . ltrim($path, '/\\');
     }
 
+    /**
+     * ตรวจสอบว่าเส้นทางเป็นแบบสัมบูรณ์หรือไม่ โดยรองรับทั้ง Windows และ Unix
+     * จุดประสงค์: ตรวจสอบว่าเส้นทางเป็นแบบสัมบูรณ์หรือไม่ โดยรองรับทั้ง Windows และ Unix
+     * isAbsolutePath() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าเส้นทางเป็นแบบสัมบูรณ์หรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isAbsolute = $logger->isAbsolutePath('/var/logs/');
+     * ```
+     * 
+     * @param string $path กำหนดเส้นทางที่ต้องการตรวจสอบ
+     * @return bool คืนค่า true ถ้าเป็นเส้นทางแบบสัมบูรณ์, false ถ้าไม่ใช่
+     */
     private function isAbsolutePath(string $path): bool
     {
         if ($path === '') {
@@ -542,6 +677,18 @@ class Logger
         return ($path[0] === '/' || $path[0] === '\\');
     }
 
+    /**
+     * ลบข้อมูลที่ละเอียดอ่อนจากบริบทตามรายการอนุญาตและห้าม
+     * จุดประสงค์: ลบข้อมูลที่ละเอียดอ่อนจากบริบทตามรายการอนุญาตและห้าม
+     * redactContext() ควรใช้กับอะไร: เมื่อคุณต้องการลบข้อมูลที่ละเอียดอ่อนจากบริบทก่อนบันทึก
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $safeContext = $logger->redactContext($context);
+     * ```
+     * 
+     * @param array $context กำหนดข้อมูลบริบทที่ต้องการลบข้อมูลที่ละเอียดอ่อนออก
+     * @return array คืนข้อมูลบริบทที่ถูกลบข้อมูลที่ละเอียดอ่อนออกแล้ว
+     */
     private function redactContext(array $context): array
     {
         $redacted = [];
@@ -569,8 +716,16 @@ class Logger
     }
 
     /**
-     * @param string[] $keys
-     * @return string[]
+     * ทำให้รายการคีย์เป็นแบบมาตรฐาน (normalize) โดยแปลงเป็นตัวพิมพ์เล็กและลบค่าซ้ำ
+     * จุดประสงค์: ทำให้รายการคีย์เป็นแบบมาตรฐานโดยแปลงเป็นตัวพิมพ์เล็กและลบค่าซ้ำ
+     * normalizeKeyList() ควรใช้กับอะไร: เมื่อคุณต้องการทำให้รายการคีย์เป็นแบบมาตรฐาน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $normalizedKeys = $logger->normalizeKeyList(['Password', 'USERNAME']);
+     * ```
+     * 
+     * @param string[] $keys กำหนดรายการคีย์ที่ต้องการทำให้เป็นแบบมาตรฐาน
+     * @return string[] คืนรายการคีย์ที่ถูกปรับให้เป็นแบบมาตรฐาน
      */
     private function normalizeKeyList(array $keys): array
     {
@@ -586,9 +741,17 @@ class Logger
     }
 
     /**
-     * @param string[] $current
-     * @param string[] $keys
-     * @return string[]
+     * รวมรายการคีย์ใหม่กับรายการคีย์ปัจจุบันโดยทำให้เป็นแบบมาตรฐานและลบค่าซ้ำ
+     * จุดประสงค์: รวมรายการคีย์ใหม่กับรายการคีย์ปัจจุบันโดยทำให้เป็นแบบมาตรฐานและลบค่าซ้ำ
+     * mergeKeyList() ควรใช้กับอะไร: เมื่อคุณต้องการรวมรายการคีย์ใหม่กับรายการคีย์ปัจจุบัน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $mergedKeys = $logger->mergeKeyList($currentKeys, $newKeys);
+     * ```
+     * 
+     * @param string[] $current กำหนดรายการคีย์ปัจจุบัน
+     * @param string[] $keys กำหนดรายการคีย์ใหม่ที่ต้องการรวมกับรายการคีย์ปัจจุบัน
+     * @return string[] คืนรายการคีย์ที่ถูกปรับให้เป็นแบบมาตรฐานและรวมกันแล้วโดยลบค่าซ้ำ
      */
     private function mergeKeyList(array $current, array $keys): array
     {

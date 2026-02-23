@@ -1,4 +1,9 @@
 <?php
+/**
+ * class KeyGenerateCommand
+ * 
+ * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับสร้างค่า APP_KEY ใหม่ในไฟล์ .env เพื่อเพิ่มความปลอดภัยให้กับแอปพลิเคชัน โดยจะทำการสร้างค่า APP_KEY ใหม่แบบสุ่มและอัปเดตในไฟล์ .env
+ */
 
 declare(strict_types=1);
 
@@ -41,6 +46,7 @@ class KeyGenerateCommand extends BaseCommand
             echo "\n";
             $this->success("สร้าง APP_KEY ใหม่สำเร็จ!");
             echo ConsoleColor::CYAN . "APP_KEY: " . ConsoleColor::WHITE . $key . ConsoleColor::RESET . "\n\n";
+            echo "\n";
         } catch (\Exception $e) {
             echo "\n";
             echo "┌─ Generate Key Error ────────────────────────────────┐\n";

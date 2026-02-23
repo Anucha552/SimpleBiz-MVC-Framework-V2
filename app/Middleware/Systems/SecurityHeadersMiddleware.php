@@ -17,54 +17,64 @@ namespace App\Middleware\Systems;
 use App\Core\Middleware;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Config;
 
 class SecurityHeadersMiddleware extends Middleware
 {
+    /**
+     * จัดการกับคำขอและเพิ่ม HTTP security headers พื้นฐานให้กับการตอบกลับ
+     * จุดประสงค์: เพื่อเพิ่มความปลอดภัยให้กับเว็บและ API โดยการตั้งค่า HTTP headers ที่เหมาะสม เช่น Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options, Referrer-Policy, X-Frame-Options และ Permissions-Policy
+     * 
+     * @param Request|null $request คำขอที่เข้ามา ซึ่งสามารถเป็น null ได้ในกรณีที่ middleware นี้ถูกเรียกโดยไม่มีคำขอ (เช่น ในบางสถานการณ์ของ CLI)
+     * @return bool|Response คืนค่า true หากการประมวลผลสำเร็จและสามารถดำเนินการต่อไปยัง middleware ถัดไปได้ หรือคืนค่า Response หากต้องการส่งการตอบกลับทันที
+     */
     public function handle(?Request $request = null): bool|Response
     {
         $headers = [
-            // Prevent MIME sniffing
+            // ป้องกันการตรวจสอบ MIME type ที่ไม่ปลอดภัย
             'X-Content-Type-Options' => 'nosniff',
 
-            // Reduce referrer leakage
+            // ควบคุมการส่ง referrer ในการเชื่อมโยงข้าม origin เพื่อป้องกันข้อมูลรั่วไหล
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
 
-            // Basic clickjacking protection (CSP frame-ancestors is stronger)
+            // ป้องกันการฝังหน้าเว็บใน iframe จากโดเมนอื่นเพื่อป้องกันการโจมตีแบบ clickjacking
             'X-Frame-Options' => 'SAMEORIGIN',
 
-            // Privacy / feature restrictions (modern browsers)
+            // จำกัดการเข้าถึงฟีเจอร์ของเบราว์เซอร์ เช่น geolocation, microphone, camera เพื่อป้องกันการใช้งานที่ไม่ปลอดภัย
             'Permissions-Policy' => 'geolocation=(), microphone=(), camera=()',
         ];
 
-        // Optional CSP (keep it lenient by default to avoid breaking projects)
-        $csp = \env('SECURITY_CSP');
+        // ตั้งค่า Content-Security-Policy (CSP) หากมีการกำหนดในคอนฟิก เพื่อป้องกันการโจมตีแบบ XSS และการโหลดทรัพยากรที่ไม่ปลอดภัย
+        $csp = (string) Config::get('security.csp', '');
         if ($csp) {
             $headers['Content-Security-Policy'] = $csp;
         }
 
-        // Optional HSTS (only if HTTPS)
+        // ตั้งค่า HSTS (เฉพาะเมื่อใช้ HTTPS)
         $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 
-        if ($isHttps && \env('SECURITY_HSTS') === 'true') {
-            // 6 months by default
-            $maxAge = \env('SECURITY_HSTS_MAX_AGE') ?: '15552000';
-            $includeSubDomains = \env('SECURITY_HSTS_INCLUDE_SUBDOMAINS') === 'true' ? '; includeSubDomains' : '';
-            $preload = \env('SECURITY_HSTS_PRELOAD') === 'true' ? '; preload' : '';
+        // เปิด HSTS หากกำหนดในคอนฟิกและใช้ HTTPS เพื่อบังคับให้เบราว์เซอร์เชื่อมต่อผ่าน HTTPS เท่านั้น
+        if ($isHttps && Config::get('security.hsts', false) === true) {
+            // กำหนดค่า HSTS โดยใช้ max-age, includeSubDomains และ preload ตามที่กำหนดในคอนฟิก
+            $maxAge = (string) Config::get('security.hsts_max_age', 15552000);
+            $includeSubDomains = Config::get('security.hsts_include_subdomains', false) === true ? '; includeSubDomains' : '';
+            $preload = Config::get('security.hsts_preload', false) === true ? '; preload' : '';
             $headers['Strict-Transport-Security'] = 'max-age=' . $maxAge . $includeSubDomains . $preload;
         }
 
-        // Preferred path: aggregate into Request so Router/Response send once.
+        // เพิ่ม headers ลงในคำขอหากมี Request object หรือใช้ header() โดยตรงหากไม่มี Request (เช่น ใน CLI)
         if ($request !== null) {
             $request->addResponseHeaders($headers);
             return true;
         }
 
-        // Fallback: legacy direct header() if no Request is provided.
+        // ถ้าไม่มี Request (เช่น ใน CLI) ให้ตั้งค่า headers โดยตรงผ่าน header() function
         if (headers_sent()) {
             return true;
         }
 
+        // ตั้งค่า headers โดยตรงผ่าน header() function
         foreach ($headers as $name => $value) {
             header($name . ': ' . $value);
         }

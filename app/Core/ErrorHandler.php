@@ -37,7 +37,7 @@ class ErrorHandler
     public static function response(int $code, string $message = ''): Response
     {
         // ตรวจสอบว่าเป็น API request หรือไม่
-        $isApiRequest = strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') === 0;
+        $isApiRequest = preg_match('#^/api(/|$)#', $_SERVER['REQUEST_URI'] ?? '');
 
         if ($isApiRequest) {
             return self::buildJsonError($code, $message);

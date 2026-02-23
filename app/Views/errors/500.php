@@ -72,7 +72,7 @@
             ทีมงานได้รับแจ้งและกำลังแก้ไขปัญหา
         </div>
         
-        <?php if (isset($error) && env('APP_ENV') !== 'production'): ?>
+        <?php if (isset($error) && \App\Core\Config::get('app.env', 'development') !== 'production'): ?>
         <div class="error-details">
             <strong>Error Details (Development Mode):</strong><br>
             <?= htmlspecialchars($error) ?>

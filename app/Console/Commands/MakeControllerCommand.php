@@ -1,4 +1,9 @@
 <?php
+/**
+ * MakeControllerCommand
+ *
+ * จุดประสงค์: คำสั่งสำหรับสร้าง Controller ใหม่ในโครงสร้างของแอปพลิเคชัน
+ */
 
 declare(strict_types=1);
 
@@ -67,6 +72,7 @@ class MakeControllerCommand extends BaseCommand
 
             echo "\n";
             $this->success("สร้าง Controller สำเร็จ: app/Controllers/{$apiOrWeb}/{$name}.php \n");
+ 
         } catch (\Exception $e) {
             echo "\n";
             echo "┌─ Create Controller Error ───────────────────────────┐\n";

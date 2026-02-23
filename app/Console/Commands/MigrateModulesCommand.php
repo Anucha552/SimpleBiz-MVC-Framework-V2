@@ -1,4 +1,9 @@
 <?php
+/**
+ * MigrateModulesCommand
+ *
+ * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับแสดงรายการ modules ที่มีอยู่ในโปรเจกต์ โดยจะแสดงชื่อ module และจำนวนไฟล์ migration ที่อยู่ในแต่ละ module เพื่อให้ผู้ใช้สามารถตรวจสอบและจัดการกับ modules ได้อย่างง่ายดายผ่านทางคอนโซล
+ */
 
 declare(strict_types=1);
 
@@ -36,5 +41,6 @@ class MigrateModulesCommand extends BaseCommand
 
         echo "\n";
         $this->info("วิธีใช้: php console migrate --path=<module>");
+        echo "\n";
     }
 }

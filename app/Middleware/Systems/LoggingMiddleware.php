@@ -33,9 +33,13 @@ namespace App\Middleware\Systems;
 
 use App\Core\Middleware;
 use App\Core\Logger;
+use App\Core\Config;
 
 class LoggingMiddleware extends Middleware
 {
+    /**
+     * Logger สำหรับบันทึกข้อมูลคำขอ
+     */
     private Logger $logger;
     
     /**
@@ -61,27 +65,35 @@ class LoggingMiddleware extends Middleware
      */
     private bool $logBody = false;
 
+    /**
+     * สร้าง instance ของ LoggingMiddleware
+     * 
+     * @param bool $detailed เลือกว่าจะบันทึกรายละเอียดเพิ่มเติมหรือไม่ (เช่น headers, referer)
+     * @param bool $logBody เลือกว่าจะบันทึก request body หรือไม่ (ระวัง: อย่าบันทึกข้อมูลละเอียดอ่อน)
+     */
     public function __construct(bool $detailed = false, bool $logBody = false)
     {
         $this->logger = new Logger();
         $this->startTime = microtime(true);
-        $this->detailed = $detailed;
-        $this->logBody = $logBody;
+            $this->detailed = $detailed;
+            $this->logBody = $logBody;
 
         // โหลดการตั้งค่าจาก config
-        if (\env('LOG_DETAILED') === 'true') {
+            if (Config::get('logging.detailed', false) === true) {
             $this->detailed = true;
         }
-        if (\env('LOG_REQUEST_BODY') === 'true') {
+            if (Config::get('logging.request_body', false) === true) {
             $this->logBody = true;
         }
     }
 
     /**
      * จัดการการบันทึกคำขอ
+     * จุดประสงค์: บันทึกข้อมูลคำขอ HTTP ทั้งหมดตามการตั้งค่าที่กำหนด และลงทะเบียน shutdown function เพื่อบันทึกการตอบกลับเมื่อ script จบ
      * 
-     * @return bool True เพื่อดำเนินการต่อ
-     */
+     * @param \App\Core\Request|null $request คำขอที่เข้ามา (สามารถเป็น null ได้)
+     * @return bool|Response คืนค่า true เพื่อดำเนินการต่อ, false เพื่อหยุด หรือ Response เพื่อส่งกลับทันที
+     */    
     public function handle(?\App\Core\Request $request = null): bool|\App\Core\Response
     {
         // ตรวจสอบว่าควรบันทึกหรือไม่
@@ -100,8 +112,9 @@ class LoggingMiddleware extends Middleware
 
     /**
      * ตรวจสอบว่าควรข้ามการบันทึกหรือไม่
+     * จุดประสงค์: ให้สามารถกำหนดเส้นทางที่ไม่ต้องการบันทึกข้อมูลคำขอได้ เช่น เส้นทางสำหรับ health check หรือ ping ที่มีการเรียกใช้บ่อยและไม่จำเป็นต้องบันทึก
      * 
-     * @return bool
+     * @return bool คืนค่า true หากควรข้ามการบันทึก, false หากควรบันทึก
      */
     private function shouldSkipLogging(): bool
     {
@@ -118,6 +131,9 @@ class LoggingMiddleware extends Middleware
 
     /**
      * บันทึกข้อมูลคำขอ
+     * จุดประสงค์: บันทึกข้อมูลคำขอ HTTP ทั้งหมดตามการตั้งค่าที่กำหนด เช่น method, URI, IP, user agent และข้อมูลเพิ่มเติมถ้าเปิดใช้งาน detailed logging หรือ body logging
+     * 
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     private function logRequest(): void
     {
@@ -152,6 +168,9 @@ class LoggingMiddleware extends Middleware
 
     /**
      * บันทึกการตอบกลับ (เรียกเมื่อ script จบ)
+     * จุดประสงค์: บันทึกข้อมูลการตอบกลับ HTTP ทั้งหมดตามการตั้งค่าที่กำหนด เช่น status code, execution time, memory usage และคำขอที่ช้า
+     * 
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     public function logResponse(): void
     {
@@ -183,25 +202,10 @@ class LoggingMiddleware extends Middleware
     }
 
     /**
-     * รับ IP address ของ client
-     * 
-     * @return string
-     */
-    private function getClientIP(): string
-    {
-        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        
-        if (strpos($ip, ',') !== false) {
-            $ip = explode(',', $ip)[0];
-        }
-
-        return trim($ip);
-    }
-
-    /**
      * รับ headers ที่เกี่ยวข้อง
+     * จุดประสงค์: ดึงเฉพาะ headers ที่สำคัญและเกี่ยวข้องกับการวิเคราะห์คำขอ เช่น Accept, Content-Type, Authorization และซ่อนข้อมูลละเอียดอ่อนใน headers เหล่านี้
      * 
-     * @return array
+     * @return array รายการ headers ที่เกี่ยวข้องและถูกทำความสะอาดแล้ว
      */
     private function getRelevantHeaders(): array
     {
@@ -232,9 +236,10 @@ class LoggingMiddleware extends Middleware
 
     /**
      * ทำความสะอาด request body (ซ่อนข้อมูลละเอียดอ่อน)
+     * จุดประสงค์: ป้องกันการบันทึกข้อมูลที่ละเอียดอ่อนใน request body เช่น รหัสผ่าน, token, หรือข้อมูลบัตรเครดิต โดยการแปลงข้อมูลเหล่านี้เป็นค่า ***HIDDEN*** ก่อนบันทึก
      * 
-     * @param string $body
-     * @return string
+     * @param string $body เนื้อหาของ request body ที่ต้องการทำความสะอาด
+     * @return string เนื้อหาของ request body ที่ถูกทำความสะอาดแล้ว
      */
     private function sanitizeBody(string $body): string
     {
@@ -268,9 +273,10 @@ class LoggingMiddleware extends Middleware
 
     /**
      * แปลง bytes เป็นรูปแบบที่อ่านง่าย
+     * จุดประสงค์: แปลงจำนวน bytes เป็นหน่วยที่อ่านง่าย เช่น KB, MB, GB เพื่อให้ง่ายต่อการเข้าใจและวิเคราะห์ข้อมูลการใช้หน่วยความจำ
      * 
-     * @param int $bytes
-     * @return string
+     * @param int $bytes จำนวน bytes ที่ต้องการแปลง
+     * @return string จำนวนที่ถูกแปลงเป็นรูปแบบที่อ่านง่าย เช่น 1.5 MB, 200 KB
      */
     private function formatBytes(int $bytes): string
     {
@@ -287,8 +293,10 @@ class LoggingMiddleware extends Middleware
 
     /**
      * เพิ่มเส้นทางที่ไม่ต้องบันทึก
+     * จุดประสงค์: ให้สามารถเพิ่มเส้นทางที่ไม่ต้องการบันทึกข้อมูลคำขอได้อย่างง่ายดาย โดยรับเส้นทางเป็น string หรือ array ของเส้นทาง และเพิ่มเข้าไปในรายการ exceptRoutes
      * 
-     * @param string|array $routes
+     * @param string|array $routes เส้นทางที่ต้องการยกเว้นจากการบันทึก
+     * @return void ไม่มีค่าที่ส่งกลับ แต่จะเพิ่มเส้นทางที่ระบุเข้าไปในรายการ exceptRoutes เพื่อให้ middleware ข้ามการบันทึกสำหรับเส้นทางเหล่านี้
      */
     public function addExceptRoutes($routes): void
     {
@@ -301,8 +309,10 @@ class LoggingMiddleware extends Middleware
 
     /**
      * เปิด/ปิด detailed logging
+     * จุดประสงค์: ให้สามารถเลือกได้ว่าจะบันทึกรายละเอียดเพิ่มเติมของคำขอ เช่น headers, referer, protocol หรือไม่ เพื่อให้มีข้อมูลมากขึ้นสำหรับการวิเคราะห์และดีบัก หรือเพื่อประหยัดพื้นที่จัดเก็บและลดความซับซ้อนของข้อมูลที่บันทึก
      * 
-     * @param bool $detailed
+     * @param bool $detailed กำหนดว่าจะเปิดหรือปิด detailed logging  
+     * @return void ไม่มีค่าที่ส่งกลับ แต่จะตั้งค่าการบันทึกรายละเอียดเพิ่มเติมตามที่ระบุ เพื่อให้ middleware บันทึกข้อมูลคำขออย่างละเอียดหรือไม่ตามการตั้งค่านี้
      */
     public function setDetailed(bool $detailed): void
     {
@@ -311,8 +321,10 @@ class LoggingMiddleware extends Middleware
 
     /**
      * เปิด/ปิด body logging
+     * จุดประสงค์: ให้สามารถเลือกได้ว่าจะบันทึก request body หรือไม่ เพื่อให้มีข้อมูลมากขึ้นสำหรับการวิเคราะห์และดีบักคำขอที่มีข้อมูลใน body เช่น POST, PUT, PATCH หรือเพื่อป้องกันการบันทึกข้อมูลที่ละเอียดอ่อนใน body และลดความซับซ้อนของข้อมูลที่บันทึก
      * 
-     * @param bool $logBody
+     * @param bool $logBody กำหนดว่าจะเปิดหรือปิดการบันทึก request body
+     * @return void ไม่มีค่าที่ส่งกลับ แต่จะตั้งค่าการบันทึก request body ตามที่ระบุ
      */
     public function setLogBody(bool $logBody): void
     {

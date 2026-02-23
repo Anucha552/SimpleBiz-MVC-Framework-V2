@@ -5,7 +5,17 @@
  * จุดประสงค์: กำหนดเส้นทางของเว็บแอปพลิเคชัน (การตอบกลับแบบ HTML)
  * 
  * การกำหนดเส้นทาง:
- * $router->get('/path', $webBasePath . 'Controller@method', [Middleware::class]);
+ * $router->get('/path', $webBasePath . 'Controller@method');
+ * 
+ * การกำหนดเส้นทางแบบมี Middleware:
+ * $router->get(
+ *  '/path',
+ *   $webBasePath . 'Controller@method',
+ *   [
+ *     AuthMiddleware::class,
+ *     [RoleMiddleware::class, ['admin', 'manager'], 10, true],
+ *   ]
+ * );
  * 
  * เมธอดที่ใช้ได้:
  * - get()    - คำขอ GET
@@ -28,4 +38,25 @@ $webBasePath = 'App\\Controllers\\Web\\';
 // ===================================
 
 $router->get('/', $webBasePath . 'WebController@index');
-$router->get('/debug', $webBasePath . 'WebController@debug');
+
+// แสดงรายการพนักงานทั้งหมด (หน้า List)
+$router->get('/employees',  $webBasePath . 'EmployeeController@index');
+
+// แสดงหน้า Form สำหรับเพิ่มพนักงานใหม่
+$router->get('/employees/create', $webBasePath . 'EmployeeController@create');
+
+// รับข้อมูลจาก Form แล้วบันทึกพนักงานใหม่ลงฐานข้อมูล
+$router->post('/employees', $webBasePath . 'EmployeeController@store');
+
+// แสดงรายละเอียดพนักงาน 1 คน ตาม id
+$router->get('/employees/{id}', $webBasePath . 'EmployeeController@show');
+
+// แสดงหน้า Form สำหรับแก้ไขข้อมูลพนักงาน
+$router->get('/employees/{id}/edit', $webBasePath . 'EmployeeController@edit');
+
+// รับข้อมูลที่แก้ไขแล้ว แล้วอัปเดตลงฐานข้อมูล
+$router->post('/employees/{id}/update', $webBasePath . 'EmployeeController@update');
+
+// ลบพนักงานตาม id (มาจากปุ่มลบในหน้าเว็บ)
+$router->post('/employees/{id}/delete', $webBasePath . 'EmployeeController@destroy');
+

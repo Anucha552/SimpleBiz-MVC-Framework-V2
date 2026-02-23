@@ -10,6 +10,5 @@
  */
 
 return [
-    // Modules\Auth\AuthModule::class,
-    // Modules\HelloWorld\HelloWorldModule::class,
+    //Modules\HelloWorld\HelloWorldModule::class,
 ];

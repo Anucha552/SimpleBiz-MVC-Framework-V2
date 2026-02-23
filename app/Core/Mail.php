@@ -68,17 +68,17 @@ class Mail
 
     public function __construct()
     {
-        // โหลดค่าคอนฟิกจาก environment
-        $this->from = \env('MAIL_FROM_ADDRESS') ?: 'noreply@simplebiz.local';
-        $this->fromName = \env('MAIL_FROM_NAME') ?: 'SimpleBiz MVC';
-        
+        // โหลดค่าคอนฟิกจาก config
+        $this->from = (string) Config::get('mail.from_address', 'noreply@simplebiz.local');
+        $this->fromName = (string) Config::get('mail.from_name', 'SimpleBiz MVC');
+
         // การตั้งค่า SMTP
         $this->config = [
-            'host' => \env('MAIL_HOST') ?: 'localhost',
-            'port' => \env('MAIL_PORT') ?: 587,
-            'username' => \env('MAIL_USERNAME') ?: '',
-            'password' => \env('MAIL_PASSWORD') ?: '',
-            'encryption' => \env('MAIL_ENCRYPTION') ?: 'tls',
+            'host' => (string) Config::get('mail.host', 'localhost'),
+            'port' => (int) Config::get('mail.port', 587),
+            'username' => (string) Config::get('mail.username', ''),
+            'password' => (string) Config::get('mail.password', ''),
+            'encryption' => (string) Config::get('mail.encryption', 'tls'),
         ];
     }
 

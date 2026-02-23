@@ -70,16 +70,29 @@ abstract class Seeder
         }
 
         try {
-            // สมมติว่าทุก row มีคอลัมน์เดียวกัน
-            $columns = array_keys($data[0]);
+            // รวบรวมคอลัมน์ทั้งหมดจากทุก row เพื่อให้จำนวน placeholder ตรงกันเสมอ
+            $columns = [];
+            foreach ($data as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                foreach (array_keys($row) as $column) {
+                    if (!in_array($column, $columns, true)) {
+                        $columns[] = $column;
+                    }
+                }
+            }
             $placeholders = '(' . implode(', ', array_fill(0, count($columns), '?')) . ')';
             
             $sql = "INSERT INTO {$table} (" . implode(', ', $columns) . ") VALUES ";
             $values = [];
             
             foreach ($data as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
                 $sql .= $placeholders . ', ';
-                $values = array_merge($values, array_values($row));
+                $values = array_merge($values, $this->normalizeRowValues($row, $columns));
             }
             
             $sql = rtrim($sql, ', ');
@@ -100,15 +113,15 @@ abstract class Seeder
             // แนะนำการแก้ไข
             if (strpos($e->getMessage(), 'Column not found') !== false) {
                 echo "\n";
-                $this->warning('💡 คำแนะนำ: ตรวจสอบว่าชื่อคอลัมน์ใน Seeder ตรงกับ Migration หรือไม่');
+                $this->warning('คำแนะนำ: ตรวจสอบว่าชื่อคอลัมน์ใน Seeder ตรงกับ Migration หรือไม่');
                 $this->info('   - รันคำสั่ง: php console db:table <table_name> เพื่อดูโครงสร้างตาราง');
             } elseif (strpos($e->getMessage(), 'Duplicate entry') !== false) {
                 echo "\n";
-                $this->warning('💡 คำแนะนำ: มีข้อมูลซ้ำในตาราง');
+                $this->warning('คำแนะนำ: มีข้อมูลซ้ำในตาราง');
                 $this->info('   - ลองรันคำสั่ง: php console migrate:fresh แล้วรัน seed ใหม่');
             } elseif (strpos($e->getMessage(), 'foreign key constraint') !== false) {
                 echo "\n";
-                $this->warning('💡 คำแนะนำ: ตรวจสอบความสัมพันธ์ระหว่างตาราง');
+                $this->warning('คำแนะนำ: ตรวจสอบความสัมพันธ์ระหว่างตาราง');
                 $this->info('   - ตรวจสอบว่า foreign key มีค่าที่ถูกต้องหรือไม่');
             }
             
@@ -129,6 +142,28 @@ abstract class Seeder
     }
 
     /**
+     * จัดเรียงค่าของแถวให้ตรงกับลำดับคอลัมน์ พร้อมเติม null หากคอลัมน์ไม่มีค่า
+     * จุดประสงค์: จัดเรียงค่าของแถวให้ตรงกับลำดับคอลัมน์ พร้อมเติม null หากคอลัมน์ไม่มีค่า
+     * normalizeRowValues() ควรใช้กับอะไร: เมื่อคุณต้องการให้ค่าของแถวตรงกับลำดับคอลัมน์ในฐานข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $normalizedValues = $this->normalizeRowValues($row, $columns);
+     * ```
+     *
+     * @param array $row ข้อมูลแถวที่ต้องการจัดเรียง
+     * @param array $columns รายการคอลัมน์ที่ต้องการให้ค่าตรงกับลำดับ
+     * @return array คืนค่าของแถวที่ถูกจัดเรียงให้ตรงกับลำดับคอลัมน์ พร้อมเติม null หากคอลัมน์ไม่มีค่า
+     */
+    private function normalizeRowValues(array $row, array $columns): array
+    {
+        $values = [];
+        foreach ($columns as $column) {
+            $values[] = $row[$column] ?? null;
+        }
+        return $values;
+    }
+
+    /**
      * Truncate ตาราง
      * จุดประสงค์: ลบข้อมูลทั้งหมดจากตารางอย่างรวดเร็ว
      * truncate() ควรใช้กับอะไร: ชื่อตารางที่ต้องการลบข้อมูล
@@ -142,9 +177,25 @@ abstract class Seeder
      */
     protected function truncate(string $table): void
     {
-        $this->db->execRaw("SET FOREIGN_KEY_CHECKS = 0");
+        $driver = $this->db->getDriverName();
+        if ($driver === 'sqlite') {
+            $this->db->execRaw('PRAGMA foreign_keys = OFF');
+            $this->db->execRaw("DELETE FROM {$table}");
+
+            $sequenceTable = $this->db->fetchColumn(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='sqlite_sequence'"
+            );
+            if ($sequenceTable) {
+                $this->db->execute('DELETE FROM sqlite_sequence WHERE name = :name', ['name' => $table]);
+            }
+
+            $this->db->execRaw('PRAGMA foreign_keys = ON');
+            return;
+        }
+
+        $this->db->execRaw('SET FOREIGN_KEY_CHECKS = 0');
         $this->db->execRaw("TRUNCATE TABLE {$table}");
-        $this->db->execRaw("SET FOREIGN_KEY_CHECKS = 1");
+        $this->db->execRaw('SET FOREIGN_KEY_CHECKS = 1');
     }
 
     /**

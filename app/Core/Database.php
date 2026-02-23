@@ -209,18 +209,14 @@ class Database
 
     /**
      * สร้างการเชื่อมต่อฐานข้อมูล
-     * จุดประสงค์: เชื่อมต่อกับฐานข้อมูล MySQL โดยใช้ PDO
-     * method: connect ตั้งเป็น private เพื่อป้องกันการเรียกใช้ภายนอก
-     * 
-     * การกำหนดค่าโหลดจาก config/database.php
-     * 
-     * ตัวเลือก PDO อธิบาย:
-     * - ATTR_ERRMODE: แสดง exceptions เมื่อเกิดข้อผิดพลาด (ดีกว่าการล้มเหลวอย่างเงียบ)
-     * - ATTR_DEFAULT_FETCH_MODE: คืนค่าอาร์เรย์แบบ associative โดยค่าเริ่มต้น
-     * - ATTR_EMULATE_PREPARES: False สำหรับ prepared statements จริง (ปลอดภัยกว่า)
-     * - ATTR_STRINGIFY_FETCHES: False เพื่อรักษาประเภทข้อมูล
-     * 
-     * @throws PDOException ถ้าการเชื่อมต่อล้มเหลว
+     * จุดประสงค์: สร้างการเชื่อมต่อฐานข้อมูล PDO โดยใช้การกำหนดค่าจากไฟล์ config/database.php
+     * connect() ควรใช้กับอะไร: ใช้ภายในคลาส Database เท่านั้นเพื่อสร้างการเชื่อมต่อฐานข้อมูล
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * // ใช้ภายในคลาส Database เท่านั้น
+     * $this->connect();
+     * ```
+     *
      * @return void ไม่คืนค่าอะไร
      */
     private function connect(): void
@@ -228,25 +224,69 @@ class Database
         // โหลดการกำหนดค่าฐานข้อมูล
         $config = require __DIR__ . '/../../config/database.php';
 
-        $host = $config['host'];
-        $port = $config['port'];
-        $dbname = $config['database'];
-        $charset = $config['charset'];
-        $username = $config['username'];
-        $password = $config['password'];
+        $driver = $config['connection'] ?? 'mysql';
+        $host = $config['host'] ?? '127.0.0.1';
+        $port = $config['port'] ?? '3306';
+        $dbname = $config['database'] ?? '';
+        $charset = $config['charset'] ?? 'utf8mb4';
+        $username = $config['username'] ?? '';
+        $password = $config['password'] ?? '';
 
-        $dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset={$charset}";
+        // สร้าง DSN สำหรับการเชื่อมต่อ PDO
+        if ($driver === 'sqlite') {
+            // สำหรับ SQLite เราจะใช้ชื่อไฟล์เป็นฐานข้อมูล
+            $path = $dbname !== '' ? $dbname : 'storage/database.sqlite';
+            
+            // ตรวจสอบและสร้างไฟล์ฐานข้อมูล SQLite ถ้ายังไม่มี
+            if (!preg_match('/^([A-Za-z]:\\|\/)/', $path)) {
+                $root = dirname(__DIR__, 2);
+                $path = $root . DIRECTORY_SEPARATOR . ltrim($path, '/\\');
+            }
+
+            // ตรวจสอบว่าไดเรกทอรีที่เก็บไฟล์ SQLite สามารถเขียนได้หรือไม่
+            $dir = dirname($path);
+
+            // สร้างไดเรกทอรีถ้ายังไม่มี และตรวจสอบสิทธิ์การเขียน
+            if (!is_dir($dir)) {
+                if (!@mkdir($dir, 0755, true) && !is_dir($dir)) {
+                    throw new PDOException("SQLite directory not writable: {$dir}");
+                }
+            }
+
+            // สร้างไฟล์ฐานข้อมูล SQLite ถ้ายังไม่มี และตรวจสอบสิทธิ์การเขียน
+            if (!file_exists($path)) {
+                @touch($path);
+            }
+
+            // ตรวจสอบว่าไฟล์ฐานข้อมูล SQLite สามารถเขียนได้หรือไม่
+            if (!is_writable($path)) {
+                throw new PDOException("SQLite database file not writable: {$path}");
+            }
+
+            // DSN สำหรับ SQLite
+            $dsn = 'sqlite:' . $path;
+            $username = '';
+            $password = '';
+        } else {
+            $dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset={$charset}";
+        }
 
         try {
+            // สร้างการเชื่อมต่อ PDO ด้วยการตั้งค่าความปลอดภัยที่เหมาะสม
             $this->connection = new PDO($dsn, $username, $password, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false, // Real prepared statements
                 PDO::ATTR_STRINGIFY_FETCHES => false, // Preserve data types
             ]);
+
+            // สำหรับ SQLite ให้เปิดใช้งาน foreign key constraints
+            if ($driver === 'sqlite') {
+                $this->connection->exec('PRAGMA foreign_keys = ON');
+            }
         } catch (PDOException $e) {
             // ในโหมดโปรดักชัน ให้บันทึกข้อผิดพลาดนี้แทนการแสดงผล
-            if (\env('APP_ENV') === 'production') {
+            if (Config::get('app.env', 'development') === 'production') {
                 error_log("Database connection failed: " . $e->getMessage());
                 throw new PDOException("Database connection failed");
             } else {
@@ -285,6 +325,22 @@ class Database
     public function getPdo(): \PDO
     {
         return $this->getConnection();
+    }
+
+    /**
+     * ดึงชื่อ driver ของ PDO (เช่น mysql, sqlite)
+     * จุดประสงค์: รับชื่อ driver ของ PDO ที่กำลังใช้งานอยู่ เพื่อใช้ในการปรับแต่งการทำงานตาม driver ที่ใช้งาน
+     * getDriverName() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบหรือปรับแต่งการทำงานตาม driver ของฐานข้อมูลที่กำลังใช้งาน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $driver = $db->getDriverName();
+     * ```
+     * 
+     * @return string คืนค่าไดรเวอร์ของ PDO ที่กำลังใช้งานอยู่ (เช่น 'mysql', 'sqlite') หรือ 'mysql' เป็นค่าเริ่มต้นถ้าไม่สามารถดึงได้
+     */
+    public function getDriverName(): string
+    {
+        return $this->connection->getAttribute(PDO::ATTR_DRIVER_NAME) ?? 'mysql';
     }
 
     /**
@@ -344,6 +400,38 @@ class Database
     public function fetchAll(string $sql, array $params = []): array
     {
         return $this->query($sql, $params)->fetchAll();
+    }
+
+    /**
+     * Fetch all rows as class instances.
+     * จุดประสงค์: ดึงข้อมูลทั้งหมดและแมปเป็นอ็อบเจ็กต์ของคลาสที่กำหนด
+     *
+     * @param string $sql กำหนดคำสั่ง SQL ที่จะดำเนินการ
+     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่จะผูกกับคำสั่ง SQL
+     * @param string $class กำหนดชื่อคลาสที่ต้องการแมปผลลัพธ์
+     * @return array คืนค่าอาร์เรย์ของอ็อบเจ็กต์คลาสที่กำหนด
+     */
+    public function fetchAllAsClass(string $sql, array $params, string $class): array
+    {
+        $stmt = $this->query($sql, $params);
+        return $stmt->fetchAll(PDO::FETCH_CLASS, $class);
+    }
+
+    /**
+     * Fetch a single row as a class instance.
+     * จุดประสงค์: ดึงข้อมูลแถวเดียวและแมปเป็นอ็อบเจ็กต์ของคลาสที่กำหนด
+     *
+     * @param string $sql กำหนดคำสั่ง SQL ที่จะดำเนินการ
+     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่จะผูกกับคำสั่ง SQL
+     * @param string $class กำหนดชื่อคลาสที่ต้องการแมปผลลัพธ์
+     * @return mixed คืนค่าอ็อบเจ็กต์คลาสที่กำหนด หรือ null หากไม่พบข้อมูล
+     */
+    public function fetchAsClass(string $sql, array $params, string $class)
+    {
+        $stmt = $this->query($sql, $params);
+        $stmt->setFetchMode(PDO::FETCH_CLASS, $class);
+        $row = $stmt->fetch();
+        return $row ?: null;
     }
 
     /**

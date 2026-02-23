@@ -99,18 +99,35 @@ class MigrationRunner
      */
     private function createMigrationsTable(): void
     {
-        $sql = "
-            CREATE TABLE IF NOT EXISTS {$this->migrationsTable} (
-                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                migration VARCHAR(255) NOT NULL UNIQUE,
-                batch INT NOT NULL,
-                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ";
+        $driver = $this->db->getDriverName();
+        if ($driver === 'sqlite') {
+            $sql = "
+                CREATE TABLE IF NOT EXISTS {$this->migrationsTable} (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    migration TEXT NOT NULL UNIQUE,
+                    batch INTEGER NOT NULL,
+                    executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ";
+        } else {
+            $sql = "
+                CREATE TABLE IF NOT EXISTS {$this->migrationsTable} (
+                    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    migration VARCHAR(255) NOT NULL UNIQUE,
+                    batch INT NOT NULL,
+                    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ";
+        }
         
         try {
             $this->db->execRaw($sql);
         } catch (PDOException $e) {
+            $this->logger->error('Error creating migrations table', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             die("Error creating migrations table: " . $e->getMessage() . "\n");
         }
     }
@@ -632,19 +649,77 @@ class MigrationRunner
      */
     private function dropAllTables(): void
     {
-        // Disable foreign key checks
-        $this->db->execRaw("SET FOREIGN_KEY_CHECKS = 0");
+        $driver = $this->db->getDriverName();
 
-        // Get all tables
-        $tables = $this->db->fetchAll("SHOW TABLES");
+        if ($driver === 'sqlite') {
+            $this->db->execRaw('PRAGMA foreign_keys = OFF');
 
-        // Drop each table
-        foreach ($tables as $table) {
-            echo "Dropping table: $table\n";
-            $this->db->execRaw("DROP TABLE IF EXISTS `$table`");
+            $tables = $this->db->fetchAll(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            );
+
+            foreach ($tables as $row) {
+                $tableName = $row['name'] ?? null;
+                if (!$tableName) {
+                    continue;
+                }
+                echo "Dropping table: {$tableName}\n";
+                $this->db->execRaw("DROP TABLE IF EXISTS \"{$tableName}\"");
+            }
+
+            $this->db->execRaw('PRAGMA foreign_keys = ON');
+            return;
+        }
+
+        // Disable foreign key checks (MySQL)
+        $this->db->execRaw('SET FOREIGN_KEY_CHECKS = 0');
+
+        $tables = $this->db->fetchAll('SHOW TABLES');
+
+        foreach ($tables as $row) {
+            $tableName = array_values($row)[0] ?? null;
+            if (!$tableName) {
+                continue;
+            }
+            echo "Dropping table: {$tableName}\n";
+            $this->db->execRaw("DROP TABLE IF EXISTS `{$tableName}`");
         }
 
         // Re-enable foreign key checks
-        $this->db->execRaw("SET FOREIGN_KEY_CHECKS = 1");
+        $this->db->execRaw('SET FOREIGN_KEY_CHECKS = 1');
+    }
+
+    /**
+     * ดึงจำนวน batch ของ migrationsที่มีอยู่
+     * จุดประสงค์: คืนค่าจำนวน batch ของ migrations ที่มีอยู่ในระบบ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $batchCount = $this->getBatchCount();
+     * ```
+     * 
+     * @return int คืนค่าจำนวน batch ของ migrations ที่มีอยู่ในระบบ
+     */
+    public function getBatchCount(): int
+    {
+        $result = $this->db->fetch("SELECT COUNT(DISTINCT batch) as count FROM {$this->migrationsTable}");
+        return (int) ($result['count'] ?? 0);
+    }
+
+    /**
+     * ตวรวจสอบ batch ทั่งหมดที่สามารถ rollback ได้
+     * จุดประสงค์: คืนค่ารายการ batch ทั้งหมดที่สามารถ rollback ได้
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $batches = $this->getRollbackableBatches();
+     * ```
+     * 
+     * @return array คืนค่ารายการ batch ทั้งหมดที่สามารถ rollback ได้
+     */
+    public function getRollbackableBatches(): array
+    {
+        $result = $this->db->fetchAll("SELECT DISTINCT batch FROM {$this->migrationsTable} ORDER BY batch DESC");
+        return array_map(function($row) {
+            return (int) ($row['batch'] ?? 0);
+        }, $result);
     }
 }

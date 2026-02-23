@@ -37,16 +37,39 @@ use App\Core\Session;
 
 class RateLimitMiddleware extends Middleware
 {
+    /**
+     * Logger สำหรับบันทึกเหตุการณ์ที่เกี่ยวข้องกับการจำกัดอัตรา เช่น การเกินขอบเขตหรือความพยายามที่น่าสงสัย
+     */
     private Logger $logger;
-    private Cache $cache;
-    private Session $session;
-    // การกำหนดค่าเริ่มต้น - สามารถปรับแต่งได้
-    private int $maxRequests = 60;      // คำขอสูงสุดต่อ window
-    private int $windowSeconds = 60;    // 1 นาที
-    private bool $useCache = true;      // ใช้ Cache แทน Session
 
     /**
-     * Constructor
+    * Cache สำหรับเก็บข้อมูลการจำกัดอัตรา เช่น จำนวนคำขอและเวลาที่จะรีเซ็ต เพื่อให้สามารถตรวจสอบและจัดการการจำกัดอัตราได้อย่างมีประสิทธิภาพ
+    */
+    private Cache $cache;
+
+    /**
+    * Session สำหรับเก็บข้อมูลการจำกัดอัตราในกรณีที่ไม่สามารถใช้ Cache ได้ เพื่อให้ยังสามารถจัดการการจำกัดอัตราได้แม้ในสภาพแวดล้อมที่ไม่มีระบบ Cache
+    */
+    private Session $session;
+    
+    /**
+    * จำนวนคำขอสูงสุดที่อนุญาตในแต่ละ window
+    */
+    private int $maxRequests = 30; 
+
+    /**
+     * ระยะเวลา window ในวินาทีที่ใช้ในการจำกัดอัตรา เช่น 60 วินาที เพื่อให้สามารถกำหนดช่วงเวลาที่จะนับคำขอและรีเซ็ตข้อมูลการจำกัดอัตราได้อย่างเหมาะสมตามความต้องการของแอปพลิเคชัน
+     */
+    private int $windowSeconds = 60;
+
+    /**
+    * ตัวแปรเพื่อระบุว่าควรใช้ Cache หรือไม่ โดยจะพยายามใช้ Cache ก่อน และถ้าไม่สามารถใช้ได้ จะใช้ Session แทน เพื่อให้การจัดการการจำกัดอัตรามีความยืดหยุ่นและสามารถทำงานได้ในสภาพแวดล้อมที่แตกต่างกัน
+    */
+    private bool $useCache = true;
+
+    /**
+     * สร้าง instance ของ RateLimitMiddleware
+     * จุดประสงค์: กำหนดค่าพื้นฐานสำหรับการจำกัดอัตรา เช่น จำนวนคำขอสูงสุดและระยะเวลา window รวมถึงการตั้งค่า Logger และการพยายามใช้ Cache เพื่อให้การจัดการการจำกัดอัตรามีประสิทธิภาพและสามารถปรับแต่งได้ตามความต้องการของแอปพลิเคชัน
      * 
      * @param int|null $maxRequests จำนวนคำขอสูงสุด (null = ใช้ค่าเริ่มต้น)
      * @param int|null $windowSeconds ระยะเวลา window (null = ใช้ค่าเริ่มต้น)
@@ -75,8 +98,10 @@ class RateLimitMiddleware extends Middleware
 
     /**
      * จัดการการจำกัดอัตรา
-     * 
-        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
+     * จุดประสงค์: ตรวจสอบจำนวนคำขอที่ผู้ใช้หรือ IP address ได้ทำในช่วงเวลาที่กำหนด และถ้าเกินขอบเขตที่อนุญาต ให้ปฏิเสธคำขอและส่งข้อความแจ้งเตือนกลับไปยังผู้ใช้ รวมถึงการบันทึกเหตุการณ์ที่เกี่ยวข้องกับการจำกัดอัตราเพื่อให้สามารถตรวจสอบและวิเคราะห์ได้ในภายหลัง
+     *
+     * @param \App\Core\Request|null $request คำขอที่เข้ามา (สามารถเป็น null ได้ในกรณีที่ไม่มีคำขอ)
+     * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
         public function handle(?\App\Core\Request $request = null): bool|Response
     {
@@ -91,7 +116,7 @@ class RateLimitMiddleware extends Middleware
         // ตรวจสอบว่าถึงเวลา reset หรือไม่
         $now = time();
         if ($now >= $resetTime) {
-            // Reset counter
+            // รีเซ็ตข้อมูลการจำกัดอัตรา
             $currentCount = 0;
             $resetTime = $now + $this->windowSeconds;
         }
@@ -107,6 +132,9 @@ class RateLimitMiddleware extends Middleware
                 'limit' => $this->maxRequests,
                 'route' => $_SERVER['REQUEST_URI'] ?? 'unknown',
             ]);
+
+            // บันทึกข้อมูลที่อัปเดตแม้เกินขอบเขต เพื่อให้รีเซ็ตถูกต้อง
+            $this->saveRateLimitData($identifier, $currentCount, $resetTime);
 
             // ส่ง headers ที่เกี่ยวข้อง
             $this->setRateLimitHeaders($request, $currentCount, $resetTime);
@@ -125,8 +153,9 @@ class RateLimitMiddleware extends Middleware
 
     /**
      * รับ identifier สำหรับผู้ใช้
+     * จุดประสงค์: สร้าง identifier ที่ไม่ซ้ำสำหรับผู้ใช้หรือ IP address เพื่อใช้ในการติดตามจำนวนคำขอที่ทำโดยแต่ละผู้ใช้หรือ IP address ในการจำกัดอัตรา โดยจะพยายามใช้ user_id ถ้าเข้าสู่ระบบแล้ว และถ้าไม่ได้เข้าสู่ระบบ จะใช้ IP address แทน เพื่อให้สามารถจัดการการจำกัดอัตราได้อย่างมีประสิทธิภาพและแม่นยำ
      * 
-     * @return string
+     * @return string identifier ที่ไม่ซ้ำสำหรับผู้ใช้หรือ IP address เพื่อใช้ในการติดตามจำนวนคำขอในระบบจำกัดอัตรา
      */
     private function getIdentifier(): string
     {
@@ -136,21 +165,17 @@ class RateLimitMiddleware extends Middleware
         }
 
         // ถ้าไม่ได้เข้าสู่ระบบ ใช้ IP address
-        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        
-        // ถ้ามีหลาย IP (proxy chain) ใช้ตัวแรก
-        if (strpos($ip, ',') !== false) {
-            $ip = explode(',', $ip)[0];
-        }
+        $ip = $this->getClientIp();
 
-        return 'ip_' . trim($ip);
+        return 'ip_' . $ip;
     }
 
     /**
      * รับข้อมูลการจำกัดอัตราสำหรับ identifier
+     * จุดประสงค์: ดึงข้อมูลการจำกัดอัตราสำหรับผู้ใช้หรือ IP address ที่ระบุ เพื่อใช้ในการตรวจสอบว่าผู้ใช้หรือ IP address นั้นได้ทำคำขอเกินขอบเขตที่กำหนดหรือไม่
      * 
-     * @param string $identifier
-     * @return array
+     * @param string $identifier identifier ที่ไม่ซ้ำสำหรับผู้ใช้หรือ IP address เพื่อใช้ในการดึงข้อมูลการจำกัดอัตรา
+     * @return array ข้อมูลการจำกัดอัตราที่ประกอบด้วยจำนวนคำขอและเวลาที่จะรีเซ็ต เพื่อใช้ในการตรวจสอบและจัดการการจำกัดอัตราได้อย่างมีประสิทธิภาพ
      */
     private function getRateLimitData(string $identifier): array
     {
@@ -158,8 +183,11 @@ class RateLimitMiddleware extends Middleware
 
         if ($this->useCache) {
             $data = $this->cache->get($key);
-            if ($data) {
-                return json_decode($data, true);
+            if (is_string($data) && $data !== '') {
+                $decoded = json_decode($data, true);
+                if (is_array($decoded) && isset($decoded['count'], $decoded['reset_time'])) {
+                    return $decoded;
+                }
             }
         } else {
             Session::start();
@@ -177,11 +205,12 @@ class RateLimitMiddleware extends Middleware
     }
 
     /**
-     * บันทึกข้อมูลการจำกัดอัตรา
+     * บันทึกข้อมูลการจำกัดอัตราสำหรับ identifier
+     * จุดประสงค์: บันทึกข้อมูลการจำกัดอัตราสำหรับผู้ใช้หรือ IP address ที่ระบุ เพื่อใช้ในการตรวจสอบและจัดการการจำกัดอัตรา
      * 
-     * @param string $identifier
-     * @param int $count
-     * @param int $resetTime
+     * @param string $identifier identifier ที่ไม่ซ้ำสำหรับผู้ใช้หรือ IP address เพื่อใช้ในการบันทึกข้อมูลการจำกัดอัตรา
+     * @param int $count จำนวนคำขอที่ทำไปแล้ว
+     * @param int $resetTime เวลาที่จะรีเซ็ตข้อมูลการจำกัดอัตรา
      */
     private function saveRateLimitData(string $identifier, int $count, int $resetTime): void
     {
@@ -192,8 +221,9 @@ class RateLimitMiddleware extends Middleware
         ];
 
         if ($this->useCache) {
-            // บันทึกใน Cache พร้อม TTL
-            $this->cache->set($key, json_encode($data), $this->windowSeconds);
+            // บันทึกใน Cache พร้อม TTL ตามเวลาที่เหลือจริง
+            $ttl = max(1, $resetTime - time());
+            $this->cache->set($key, json_encode($data), $ttl);
         } else {
             // บันทึกใน Session
             Session::start();
@@ -205,9 +235,11 @@ class RateLimitMiddleware extends Middleware
 
     /**
      * ตั้งค่า HTTP headers สำหรับการจำกัดอัตรา
+     * จุดประสงค์: ส่ง headers ให้ client ทราบสถานะการจำกัดอัตรา เช่น จำนวนคำขอที่เหลือและเวลาที่จะรีเซ็ต
      * 
-     * @param int $currentCount
-     * @param int $resetTime
+     * @param int $currentCount จำนวนคำขอที่ทำไปแล้วในช่วงเวลาปัจจุบัน
+     * @param int $resetTime เวลาที่จะรีเซ็ตข้อมูลการจำกัดอัตรา
+     * @return void ไม่มีค่าที่ส่งกลับ แต่จะตั้งค่า HTTP headers ที่เกี่ยวข้องกับการจำกัดอัตราเพื่อให้ client ทราบสถานะการจำกัดอัตรา
      */
     private function setRateLimitHeaders(?\App\Core\Request $request, int $currentCount, int $resetTime): void
     {

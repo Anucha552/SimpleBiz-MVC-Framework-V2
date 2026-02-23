@@ -172,6 +172,37 @@ class ForeignKeyDefinition
     }
 
     /**
+     * ตั้งค่า references/on แบบย่อ
+     * จุดประสงค์: ตั้งค่าคอลัมน์ที่อ้างอิงและตารางที่อ้างอิงในรูปแบบที่สั้นลง
+     * constrained() ควรใช้กับอะไร: เมื่อคุณต้องการตั้งค่าคอลัมน์ที่อ้างอิงและตารางที่อ้างอิงในรูปแบบที่สั้นลง
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $foreignKey->constrained();
+     * ```
+     * 
+     * @param string|null $table ชื่อตารางที่อ้างอิง (ถ้าไม่ระบุจะพยายามเดาจากชื่อคอลัมน์)
+     * @param string $column ชื่อคอลัมน์ที่อ้างอิง (ค่าเริ่มต้น: 'id')
+     * @return ForeignKeyDefinition คืนค่าอินสแตนซ์ของ ForeignKeyDefinition ที่มีการตั้งค่าคอลัมน์ที่อ้างอิงและตารางที่อ้างอิงในรูปแบบที่สั้นลง
+     */
+    public function constrained(?string $table = null, string $column = 'id'): self
+    {
+        if ($table === null && $this->onTable === null) {
+            $first = $this->columns[0] ?? '';
+            if (str_ends_with($first, '_id')) {
+                $table = substr($first, 0, -3) . 's';
+            } elseif ($first !== '') {
+                $table = $first . 's';
+            }
+        }
+
+        if ($table !== null) {
+            $this->on($table);
+        }
+
+        return $this->references($column);
+    }
+
+    /**
      * สร้าง SQL สำหรับคีย์ต่างประเทศ
      * จุดประสงค์: สร้างคำสั่ง SQL สำหรับการสร้างคีย์ต่างประเทศในฐานข้อมูล
      * toSql() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างคำสั่ง SQL สำหรับคีย์ต่างประเทศ

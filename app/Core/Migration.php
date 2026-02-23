@@ -27,8 +27,6 @@
 
 namespace App\Core;
 
-use PDO;
-use PDOException;
 
 abstract class Migration
 {
@@ -104,7 +102,7 @@ abstract class Migration
         try {
             $this->db->execRaw($sql);
             return true;
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             $this->logger->error('Migration SQL Error', [
                 'error' => $e->getMessage(),
                 'sql' => $sql
@@ -159,9 +157,15 @@ abstract class Migration
     protected function tableExists(string $tableName): bool
     {
         try {
-            $stmt = $this->db->query("SHOW TABLES LIKE :name", ['name' => $tableName]);
-            return $stmt->rowCount() > 0;
-        } catch (PDOException $e) {
+            $driver = $this->db->getDriverName();
+            if ($driver === 'sqlite') {
+                return (bool) $this->db->fetchColumn(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name = :name",
+                    ['name' => $tableName]
+                );
+            }
+            return (bool) $this->db->fetchColumn("SHOW TABLES LIKE :name", ['name' => $tableName]);
+        } catch (\Throwable $e) {
             return false;
         }
     }
@@ -184,9 +188,21 @@ abstract class Migration
     protected function columnExists(string $tableName, string $columnName): bool
     {
         try {
-            $stmt = $this->db->query("SHOW COLUMNS FROM `{$tableName}` LIKE :col", ['col' => $columnName]);
-            return $stmt->rowCount() > 0;
-        } catch (PDOException $e) {
+            $driver = $this->db->getDriverName();
+            if ($driver === 'sqlite') {
+                $rows = $this->db->fetchAll('PRAGMA table_info(' . $tableName . ')');
+                foreach ($rows as $row) {
+                    if (($row['name'] ?? '') === $columnName) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            return (bool) $this->db->fetchColumn(
+                "SHOW COLUMNS FROM `{$tableName}` LIKE :col",
+                ['col' => $columnName]
+            );
+        } catch (\Throwable $e) {
             return false;
         }
     }
@@ -197,7 +213,7 @@ abstract class Migration
      * createTable() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างตารางใหม่ในฐานข้อมูล
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $this->createTable('users', function($table) {
+     * $this->createTable('users', function(Blueprint $table) {
      *     $table->increments('id');
      *     $table->string('name');
      *     $table->string('email')->nullable();
@@ -226,7 +242,7 @@ abstract class Migration
      * table() ควรใช้กับอะไร: เมื่อคุณต้องการแก้ไขตารางที่มีอยู่ในฐานข้อมูล
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $this->table('users', function($table) {
+     * $this->table('users', function(Blueprint $table) {
      *     $table->string('phone')->nullable();
      * });
      * ```

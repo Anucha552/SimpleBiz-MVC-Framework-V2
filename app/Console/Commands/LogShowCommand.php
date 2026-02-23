@@ -1,4 +1,9 @@
 <?php
+/**
+ * LogShowCommand
+ *
+ * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับแสดงรายการไฟล์ log ทั้งหมดในโฟลเดอร์ logs โดยจะแสดงชื่อไฟล์ ขนาด และวันที่แก้ไขล่าสุดของแต่ละไฟล์ log เพื่อให้ผู้ใช้สามารถตรวจสอบและจัดการกับไฟล์ log ได้อย่างง่ายดาย
+ */
 
 declare(strict_types=1);
 
@@ -53,6 +58,7 @@ class LogShowCommand extends BaseCommand
 
         echo str_repeat('─', 80) . "\n";
         $this->success("เสร็จสิ้น");
+        echo "\n";
     }
 
     private function resolveLogPath(string $logRoot, string $requested): string

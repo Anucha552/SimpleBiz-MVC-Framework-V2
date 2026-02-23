@@ -34,7 +34,7 @@ class CheckCommand extends BaseCommand
             $failed++;
         }
 
-        $requiredExtensions = ['pdo', 'pdo_mysql', 'mbstring', 'json', 'openssl', 'fileinfo'];
+        $requiredExtensions = ['pdo', 'pdo_mysql', 'pdo_sqlite', 'mbstring', 'json', 'openssl', 'fileinfo'];
         $optionalExtensions = ['curl', 'gd', 'zip'];
 
         echo "\n";
@@ -167,10 +167,11 @@ class CheckCommand extends BaseCommand
                     }
                 }
 
-                if (isset($config['DB_HOST'], $config['DB_DATABASE'])) {
+                if (isset($config['DB_CONNECTION'], $config['DB_DATABASE'])) {
                     $this->info("Database Config: พบการตั้งค่า");
+                    $this->info("  Driver: " . ($config['DB_CONNECTION'] ?? 'ไม่ระบุ'));
                     $this->info("  Host: " . ($config['DB_HOST'] ?? 'ไม่ระบุ'));
-                    $this->info("  Database: " . ($config['DB_DATABASE'] ?? 'ไม่ระบุ'));
+                    $this->info("  Database/Path: " . ($config['DB_DATABASE'] ?? 'ไม่ระบุ'));
                     $passed++;
                 } else {
                     $this->warning("Database Config: ยังไม่ครบถ้วน");

@@ -32,6 +32,8 @@ final class ApiKeyMiddlewareTest extends TestCase
     public function testValidKeyInQueryPasses(): void
     {
         // Arrange: set API_KEYS via env/server and provide X-API-Key header
+        putenv('API_KEYS=test-key-67890');
+        $_ENV['API_KEYS'] = 'test-key-67890';
         $_SERVER['API_KEYS'] = 'test-key-67890';
         $_SERVER['HTTP_X_API_KEY'] = 'test-key-67890';
         $_SERVER['REQUEST_URI'] = '/api/data';

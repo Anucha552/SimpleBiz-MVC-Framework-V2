@@ -37,6 +37,7 @@ use App\Core\Middleware;
 use App\Core\Request;
 use App\Core\Logger;
 use App\Core\Response;
+use App\Core\Config;
 
 class ApiKeyMiddleware extends Middleware
 {
@@ -65,29 +66,8 @@ class ApiKeyMiddleware extends Middleware
     {
         $this->logger = new Logger();
 
-        // โหลด API keys จากสภาพแวดล้อมถ้ามี
-        // รองรับทั้งชื่อเดียว (`API_KEY`) หรือรายการคีย์คั่นด้วย comma (`API_KEYS`)
-        $keys = [];
-        $envList = \env('API_KEYS');
-
-        // ถ้ามีรายการคีย์ ให้แยกเป็นอาร์เรย์
-        if ($envList) {
-            if (is_array($envList)) {
-                $keys = $envList;
-            } else {
-                $keys = array_map('trim', explode(',', (string)$envList));
-            }
-        }
-
-        $envKey = \env('API_KEY');
-
-        // ถ้ามีคีย์เดี่ยว ให้เพิ่มลงในรายการ
-        if ($envKey) {
-            $keys[] = $envKey;
-        }
-
-        // กำจัดค่าว่างและค่าซ้ำ
-        $this->validKeys = array_values(array_filter(array_unique($keys)));
+        // โหลด API keys จาก config
+        $this->validKeys = (array) Config::get('api.keys', []);
     }
 
     /**
@@ -148,7 +128,8 @@ class ApiKeyMiddleware extends Middleware
      * 2. Authorization: Bearer {key} header
      * 3. api_key query parameter
      * 
-     * @return string|null API key หรือ null
+     * @param Request|null $request คำขอที่เข้ามา ซึ่งสามารถเป็น null ได้ในกรณีที่ middleware นี้ถูกเรียกโดยไม่มีคำขอ (เช่น ในบางสถานการณ์ของ CLI)
+     * @return string|null คืนค่า API key ที่ดึงมาได้ หรือ null หากไม่พบคีย์ในคำขอ
      */
     private function getApiKey(?\App\Core\Request $request = null): ?string
     {
@@ -195,6 +176,7 @@ class ApiKeyMiddleware extends Middleware
 
     /**
      * ตรวจสอบว่า API key ถูกต้องหรือไม่
+     * จุดประสงค์: เปรียบเทียบ API key ที่ได้รับกับรายการคีย์ที่ถูกต้องเพื่ออนุญาตหรือปฏิเสธคำขอ
      * 
      * @param string $key API key ที่จะตรวจสอบ
      * @return bool True ถ้าถูกต้อง
@@ -206,7 +188,7 @@ class ApiKeyMiddleware extends Middleware
 
     /**
      * เพิ่ม API key ลงในรายการคีย์ที่ถูกต้อง
-     * 
+     * จุดประสงค์: ให้สามารถเพิ่ม API key ใหม่ได้อย่างง่ายดายผ่านฟังก์ชันนี้
      * ใช้โดยฟังก์ชันผู้ดูแลระบบเพื่อจัดการ API keys
      * 
      * @param string $key API key ใหม่
@@ -220,6 +202,7 @@ class ApiKeyMiddleware extends Middleware
 
     /**
      * ลบ API key ออกจากรายการคีย์ที่ถูกต้อง
+     * จุดประสงค์: ให้สามารถลบ API key ที่ไม่ต้องการใช้งานอีกต่อไปได้อย่างง่ายดายผ่านฟังก์ชันนี้
      * 
      * @param string $key API key ที่จะลบ
      */

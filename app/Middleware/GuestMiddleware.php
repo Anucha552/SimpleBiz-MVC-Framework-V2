@@ -26,9 +26,13 @@ use App\Core\Middleware;
 use App\Core\Logger;
 use App\Core\Response;
 use App\Core\Session;
+use App\Core\Config;
 
 class GuestMiddleware extends Middleware
 {
+    /**
+     * ตัวบันทึกเหตุการณ์ (Logger) สำหรับบันทึกความพยายามเข้าถึงที่ไม่ได้รับอนุญาตและเหตุการณ์ที่เกี่ยวข้องกับการตรวจสอบสถานะแขก
+     */
     private Logger $logger;
     
     /**
@@ -36,6 +40,12 @@ class GuestMiddleware extends Middleware
      */
     private string $redirectTo = '/';
 
+    /**
+     * สร้างอินสแตนซ์ GuestMiddleware ใหม่
+     * จุดประสงค์: เตรียมตัวบันทึกเหตุการณ์และเริ่มต้นเซสชันเพื่อใช้ในการตรวจสอบสถานะแขก และกำหนดเส้นทางเปลี่ยนเส้นทางจาก config ถ้ามี
+     * 
+     * @param string|null $redirectTo เส้นทางสำหรับเปลี่ยนเส้นทางเมื่อผู้ใช้เข้าสู่ระบบแล้ว (ถ้าไม่กำหนดจะใช้ค่าเริ่มต้น)
+     */
     public function __construct(?string $redirectTo = null)
     {
         Session::start();
@@ -48,7 +58,7 @@ class GuestMiddleware extends Middleware
         }
 
         // โหลด redirect path จาก config ถ้ามี
-        $configRedirect = \env('GUEST_REDIRECT_TO');
+        $configRedirect = (string) Config::get('auth.guest_redirect_to', '');
         if ($configRedirect) {
             $this->redirectTo = $configRedirect;
         }
@@ -56,8 +66,10 @@ class GuestMiddleware extends Middleware
 
     /**
      * จัดการการตรวจสอบสถานะแขก
+     * จุดประสงค์: ตรวจสอบว่าผู้ใช้เข้าสู่ระบบแล้วหรือไม่ และดำเนินการตามนั้น (อนุญาตหรือปฏิเสธคำขอ)
      * 
-        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
+     * @param \App\Core\Request|null $request คำขอ HTTP ปัจจุบัน (ไม่จำเป็นต้องใช้ในกรณีนี้ แต่สามารถรับได้ถ้าต้องการ)
+     * @return bool|Response คืนค่า true เพื่ออนุญาตให้ดำเนินการต่อ, false เพื่อหยุดการดำเนินการ, หรือ Response เพื่อส่งกลับทันที
      */
         public function handle(?\App\Core\Request $request = null): bool|Response
     {
@@ -72,7 +84,7 @@ class GuestMiddleware extends Middleware
 
             // กำหนดว่าเป็นคำขอ API หรือไม่
             $uri = $_SERVER['REQUEST_URI'] ?? '';
-            $isApiRequest = strpos($uri, '/api/') === 0;
+            $isApiRequest = preg_match('#^/api(/|$)#', $uri);
 
             if ($isApiRequest) {
                 // คำขอ API - คืนค่าข้อความ
@@ -89,8 +101,9 @@ class GuestMiddleware extends Middleware
 
     /**
      * ตั้งค่าเส้นทางสำหรับเปลี่ยนเส้นทาง
+     * จุดประสงค์: ให้สามารถกำหนดเส้นทางที่ต้องการเปลี่ยนเส้นทางไปเมื่อผู้ใช้เข้าสู่ระบบแล้วได้อย่างง่ายดายผ่านฟังก์ชันนี้
      * 
-     * @param string $path
+     * @param string $path เส้นทางสำหรับเปลี่ยนเส้นทางเมื่อผู้ใช้เข้าสู่ระบบแล้ว
      */
     public function setRedirectTo(string $path): void
     {
@@ -99,8 +112,9 @@ class GuestMiddleware extends Middleware
 
     /**
      * รับเส้นทางสำหรับเปลี่ยนเส้นทาง
+     * จุดประสงค์: ให้สามารถดึงเส้นทางที่กำหนดไว้สำหรับการเปลี่ยนเส้นทางเมื่อผู้ใช้เข้าสู่ระบบแล้วได้อย่างง่ายดาย
      * 
-     * @return string
+     * @return string เส้นทางสำหรับเปลี่ยนเส้นทางเมื่อผู้ใช้เข้าสู่ระบบแล้ว
      */
     public function getRedirectTo(): string
     {

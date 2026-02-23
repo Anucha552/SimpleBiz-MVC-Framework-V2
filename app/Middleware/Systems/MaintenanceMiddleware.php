@@ -17,7 +17,7 @@
  * 1. ตรวจสอบว่าเปิดโหมดปิดปรุงหรือไม่
  * 2. ถ้าเปิด แสดงหน้า maintenance
  * 3. ยกเว้น IP addresses ที่กำหนด (admin/developer)
- * 4. ยกเว้นเส้นทางบางอ route ที่จำเป็น
+ * 4. ยกเว้นเส้นทาง route ที่จำเป็น
  * 
  * การเปิด/ปิด:
  * - สร้างไฟล์ storage/maintenance.json
@@ -35,9 +35,13 @@ namespace App\Middleware\Systems;
 use App\Core\Middleware;
 use App\Core\Logger;
 use App\Core\Response;
+use App\Core\Config;
 
 class MaintenanceMiddleware extends Middleware
 {
+    /**
+     * Logger สำหรับบันทึกข้อมูลการเข้าถึงระหว่าง maintenance
+     */
     private Logger $logger;
     
     /**
@@ -48,10 +52,7 @@ class MaintenanceMiddleware extends Middleware
     /**
      * IP addresses ที่ได้รับยกเว้น (admin/developer)
      */
-    private array $allowedIPs = [
-        '127.0.0.1',
-        '::1',
-    ];
+    private array $allowedIPs = [];
 
     /**
      * เส้นทางที่ได้รับยกเว้น
@@ -61,26 +62,29 @@ class MaintenanceMiddleware extends Middleware
         '/api/status',
     ];
 
+    /**
+     * สร้าง instance ของ MaintenanceMiddleware
+     * 
+     * จุดประสงค์: เตรียมการสำหรับ middleware โดยการกำหนด path ของไฟล์ maintenance และโหลด allowed IPs จาก config เพื่อให้สามารถตรวจสอบได้ว่าเปิด maintenance mode หรือไม่ และจัดการ exceptions ได้อย่างถูกต้อง
+     */
     public function __construct()
     {
         $this->logger = new Logger();
         
         // กำหนด path ของไฟล์ maintenance
-        $basePath = dirname(dirname(__DIR__));
+        $basePath = dirname(__DIR__, 3);
         $this->maintenanceFile = $basePath . '/storage/maintenance.json';
 
         // โหลด allowed IPs จาก config
-        $configIPs = \env('MAINTENANCE_ALLOWED_IPS');
-        if ($configIPs) {
-            $ips = explode(',', $configIPs);
-            $this->allowedIPs = array_merge($this->allowedIPs, array_map('trim', $ips));
-        }
+        $configIPs = (array) Config::get('maintenance.allowed_ips', []);
+        $this->allowedIPs = array_values(array_filter(array_map('trim', $configIPs), 'strlen'));
     }
 
     /**
      * จัดการโหมดปิดปรุงระบบ
+     * จุดประสงค์: ตรวจสอบว่าเปิด maintenance mode หรือไม่ และถ้าเปิด ให้แสดงหน้า maintenance โดยตรวจสอบ exceptions ทั้ง IP addresses และเส้นทางที่ได้รับยกเว้น และบันทึกการเข้าถึงระหว่าง maintenance เพื่อให้สามารถวิเคราะห์ได้ว่ามีใครพยายามเข้าถึงระบบในช่วงเวลาที่ปิดปรุงอยู่หรือไม่
      * 
-        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
+     * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
         public function handle(?\App\Core\Request $request = null): bool|Response
     {
@@ -88,7 +92,7 @@ class MaintenanceMiddleware extends Middleware
         if (!$this->isMaintenanceMode()) {
             return true; // ไม่ได้เปิด maintenance
         }
-
+        
         // ตรวจสอบ exceptions
         if ($this->isExcepted()) {
             return true; // อนุญาตให้เข้าถึง
@@ -106,13 +110,14 @@ class MaintenanceMiddleware extends Middleware
 
     /**
      * ตรวจสอบว่าเปิด maintenance mode หรือไม่
+     * จุดประสงค์: ตรวจสอบสถานะของระบบว่ากำลังอยู่ในโหมดปิดปรุงหรือไม่ โดยการตรวจสอบทั้ง environment variable และการมีอยู่ของไฟล์ maintenance เพื่อให้สามารถเปิด/ปิด maintenance mode ได้อย่างยืดหยุ่นและง่ายดาย
      * 
-     * @return bool
+     * @return bool true ถ้าเปิด maintenance mode, false ถ้าไม่เปิด
      */
     private function isMaintenanceMode(): bool
     {
         // ตรวจสอบจาก environment variable
-        if (\env('MAINTENANCE_MODE') === 'true') {
+        if (Config::get('maintenance.enabled', false) === true) {
             return true;
         }
 
@@ -122,17 +127,37 @@ class MaintenanceMiddleware extends Middleware
 
     /**
      * ตรวจสอบว่าควรได้รับยกเว้นหรือไม่
+     * จุดประสงค์: ตรวจสอบว่า IP address ของ client หรือเส้นทางที่เข้าถึงได้รับยกเว้นจากการแสดงหน้า maintenance หรือไม่ เพื่อให้ผู้ดูแลระบบหรือผู้พัฒนาสามารถเข้าถึงระบบได้แม้ในช่วงเวลาที่ปิดปรุงอยู่ และเพื่อให้แน่ใจว่าการบำรุงรักษาไม่ส่งผลกระทบต่อการทำงานของทีมพัฒนาและการดูแลระบบ
      * 
-     * @return bool
+     * @return bool true ถ้าควรได้รับยกเว้น, false ถ้าไม่ควรได้รับยกเว้น
      */
     private function isExcepted(): bool
     {
         // ตรวจสอบ IP address
-        $clientIP = $this->getClientIP();
-        if (in_array($clientIP, $this->allowedIPs)) {
-            return true;
+        $allowedIps = $this->allowedIPs;
+        $maintenanceData = $this->getMaintenanceData();
+        
+        // ถ้ามี allowed IPs ในไฟล์ maintenance ให้รวมกับ config
+        if (isset($maintenanceData['allowed_ips']) && is_array($maintenanceData['allowed_ips'])) {
+            $allowedIps = array_merge($allowedIps, $maintenanceData['allowed_ips']);
         }
 
+        // ทำความสะอาดรายการ IPs (trim, filter empty, unique)
+        $allowedIps = array_values(array_unique(array_filter(array_map('trim', $allowedIps), 'strlen')));
+        
+        // ตรวจสอบ IP ของ client
+        $clientIP = $this->getClientIP();
+
+        // Debug: แสดงรายการ IP ที่อนุญาตและ IP ของ client
+        // print_r($allowedIps);
+        // echo '<br>';
+        // echo $clientIP;
+        // die();
+        
+        if (in_array($clientIP, $allowedIps, true)) {
+            return true;
+        }
+        
         // ตรวจสอบเส้นทาง
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         foreach ($this->exceptRoutes as $route) {
@@ -145,24 +170,10 @@ class MaintenanceMiddleware extends Middleware
     }
 
     /**
-     * รับ IP address ของ client
-     * 
-     * @return string
-     */
-    private function getClientIP(): string
-    {
-        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        
-        // ถ้ามีหลาย IP (proxy chain) ใช้ตัวแรก
-        if (strpos($ip, ',') !== false) {
-            $ip = explode(',', $ip)[0];
-        }
-
-        return trim($ip);
-    }
-
-    /**
      * แสดงหน้า maintenance
+     * จุดประสงค์: แสดงหน้า maintenance ที่สวยงามและให้ข้อมูลที่ชัดเจนสำหรับผู้ใช้เมื่อระบบอยู่ในโหมดปิดปรุง โดยมีการแสดงข้อความแจ้งเตือน, เวลาที่คาดว่าจะกลับมา, และข้อมูลติดต่อถ้าจำเป็น รวมถึงการจัดการคำขอ API ให้คืนค่า JSON ที่เหมาะสมเพื่อให้ผู้ใช้หรือระบบอื่นๆ สามารถเข้าใจสถานะของระบบได้อย่างชัดเจน
+     * 
+     * @return Response คืนค่าหน้า maintenance ในรูปแบบ HTML สำหรับคำขอ web หรือ JSON สำหรับคำขอ API พร้อมกับสถานะ HTTP 503 และ header Retry-After เพื่อแจ้งให้ผู้ใช้ทราบว่าระบบอยู่ในระหว่างการปรับปรุงและเมื่อคาดว่าจะกลับมาให้บริการ
      */
     private function displayMaintenancePage(): Response
     {
@@ -171,7 +182,7 @@ class MaintenanceMiddleware extends Middleware
 
         // กำหนดว่าเป็นคำขอ API หรือไม่
         $uri = $_SERVER['REQUEST_URI'] ?? '';
-        $isApiRequest = strpos($uri, '/api/') === 0;
+        $isApiRequest = preg_match('#^/api(/|$)#', $uri);
 
         if ($isApiRequest) {
             // คืนค่า JSON สำหรับ API
@@ -193,14 +204,16 @@ class MaintenanceMiddleware extends Middleware
 
     /**
      * รับข้อมูล maintenance
+     * จุดประสงค์: รับข้อมูลที่เกี่ยวข้องกับสถานะ maintenance จากไฟล์หรือ config เพื่อให้สามารถแสดงข้อมูลที่ถูกต้องและเป็นปัจจุบันบนหน้า maintenance และในคำขอ API ได้อย่างเหมาะสม โดยมีการจัดการค่าเริ่มต้นและการตรวจสอบความถูกต้องของข้อมูลเพื่อให้แน่ใจว่าการแสดงผลจะไม่เกิดข้อผิดพลาดแม้ในกรณีที่ข้อมูลไม่สมบูรณ์หรือไฟล์เสียหาย
      * 
-     * @return array
+     * @return array ข้อมูล maintenance ที่ประกอบด้วย message, retry_after, และ allowed_ips เพื่อใช้ในการแสดงหน้า maintenance และจัดการ exceptions ได้อย่างถูกต้อง
      */
     private function getMaintenanceData(): array
     {
+        $configRetryAfter = Config::get('maintenance.retry_after', null);
         $default = [
             'message' => 'ขออภัย เว็บไซต์อยู่ระหว่างการปรับปรุง',
-            'retry_after' => null,
+            'retry_after' => $configRetryAfter ?: null,
         ];
 
         if (!file_exists($this->maintenanceFile)) {
@@ -210,14 +223,23 @@ class MaintenanceMiddleware extends Middleware
         $content = file_get_contents($this->maintenanceFile);
         $data = json_decode($content, true);
 
-        return $data ?? $default;
+        if (!is_array($data)) {
+            return $default;
+        }
+
+        if (!array_key_exists('retry_after', $data) || $data['retry_after'] === null || $data['retry_after'] === '') {
+            $data['retry_after'] = $default['retry_after'];
+        }
+
+        return $data;
     }
 
     /**
      * สร้าง HTML สำหรับหน้า maintenance
+     * จุดประสงค์: สร้างหน้า HTML ที่สวยงามและให้ข้อมูลที่ชัดเจนสำหรับผู้ใช้เมื่อระบบอยู่ในโหมดปิดปรุง โดยมีการแสดงข้อความแจ้งเตือน, เวลาที่คาดว่าจะกลับมา, และข้อมูลติดต่อถ้าจำเป็น เพื่อให้ผู้ใช้ได้รับประสบการณ์ที่ดีแม้ในช่วงเวลาที่ระบบไม่สามารถให้บริการได้ และเพื่อให้แน่ใจว่าข้อมูลที่แสดงเป็นปัจจุบันและถูกต้องตามที่กำหนดในไฟล์ maintenance หรือ config
      * 
-     * @param array $data
-     * @return string
+     * @param array $data ข้อมูล maintenance ที่ประกอบด้วย message และ retry_after เพื่อใช้ในการแสดงข้อความแจ้งเตือนและเวลาที่คาดว่าจะกลับมาให้บริการบนหน้า maintenance
+     * @return string HTML สำหรับหน้า maintenance ที่มีการจัดรูปแบบและสไตล์ที่เหมาะสมเพื่อให้ผู้ใช้ได้รับข้อมูลที่ชัดเจนและประสบการณ์ที่ดีในช่วงเวลาที่ระบบอยู่ในโหมดปิดปรุง
      */
     private function getMaintenanceHTML(array $data): string
     {
@@ -240,7 +262,7 @@ class MaintenanceMiddleware extends Middleware
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -253,7 +275,6 @@ class MaintenanceMiddleware extends Middleware
             padding: 60px 40px;
             max-width: 600px;
             text-align: center;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
         .icon {
             font-size: 80px;
@@ -308,13 +329,15 @@ HTML;
 
     /**
      * เปิด maintenance mode
+     * จุดประสงค์: เปิดโหมดปิดปรุงระบบโดยการสร้างไฟล์ maintenance พร้อมกับข้อมูลที่จำเป็น เช่น ข้อความแจ้งเตือนและเวลาที่คาดว่าจะกลับมาให้บริการ เพื่อให้ผู้ดูแลระบบสามารถเปิด maintenance mode ได้อย่างง่ายดายและมีข้อมูลที่ชัดเจนสำหรับผู้ใช้ในช่วงเวลาที่ระบบไม่สามารถให้บริการได้
      * 
      * @param string $message ข้อความแจ้งเตือน
      * @param string|null $retryAfter เวลาที่จะกลับมา
+     * @return void ไม่มีค่าที่ส่งกลับ แต่จะสร้างไฟล์ maintenance พร้อมกับข้อมูลที่จำเป็นเพื่อเปิดโหมดปิดปรุงระบบและให้ข้อมูลที่ชัดเจนสำหรับผู้ใช้ในช่วงเวลาที่ระบบไม่สามารถให้บริการได้
      */
     public static function enable(string $message = '', ?string $retryAfter = null): void
     {
-        $basePath = dirname(dirname(__DIR__));
+        $basePath = dirname(__DIR__, 3);
         $maintenanceFile = $basePath . '/storage/maintenance.json';
 
         $data = [
@@ -328,10 +351,13 @@ HTML;
 
     /**
      * ปิด maintenance mode
+     * จุดประสงค์: ปิดโหมดปิดปรุงระบบโดยการลบไฟล์ maintenance เพื่อให้ระบบกลับมาให้บริการตามปกติ และให้ผู้ใช้สามารถเข้าถึงเว็บไซต์ได้ตามปกติ
+     * 
+     * @return void ไม่มีค่าที่ส่งกลับ แต่จะลบไฟล์ maintenance เพื่อปิดโหมดปิดปรุงระบบและให้ระบบกลับมาให้บริการตามปกติ
      */
     public static function disable(): void
     {
-        $basePath = dirname(dirname(__DIR__));
+        $basePath = dirname(__DIR__, 3);
         $maintenanceFile = $basePath . '/storage/maintenance.json';
 
         if (file_exists($maintenanceFile)) {

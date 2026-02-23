@@ -52,7 +52,13 @@ class Schema
         $db->beginTransaction();
         try {
             $sql = $blueprint->toCreateSql();
-            $db->execRaw($sql);
+            if (is_array($sql)) {
+                foreach ($sql as $stmt) {
+                    $db->execRaw($stmt);
+                }
+            } else {
+                $db->execRaw($sql);
+            }
             if ($db->inTransaction()) $db->commit();
         } catch (\Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
@@ -128,6 +134,11 @@ class Schema
      */
     public static function dropColumn(Database $db, string $table, string $column): void
     {
+        $driver = Config::get('database.connection', 'mysql');
+        if ($driver === 'sqlite') {
+            throw new \RuntimeException('SQLite does not support DROP COLUMN directly.');
+        }
+
         $sql = 'ALTER TABLE `' . str_replace('`', '``', $table) . '` DROP COLUMN `' . str_replace('`', '``', $column) . '`';
         $db->execRaw($sql);
     }
@@ -148,7 +159,12 @@ class Schema
      */
     public static function renameTable(Database $db, string $from, string $to): void
     {
-        $sql = 'RENAME TABLE `' . str_replace('`', '``', $from) . '` TO `' . str_replace('`', '``', $to) . '`';
+        $driver = Config::get('database.connection', 'mysql');
+        if ($driver === 'sqlite') {
+            $sql = 'ALTER TABLE `' . str_replace('`', '``', $from) . '` RENAME TO `' . str_replace('`', '``', $to) . '`';
+        } else {
+            $sql = 'RENAME TABLE `' . str_replace('`', '``', $from) . '` TO `' . str_replace('`', '``', $to) . '`';
+        }
         $db->execRaw($sql);
     }
 }

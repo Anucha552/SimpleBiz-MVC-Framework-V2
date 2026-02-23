@@ -1,4 +1,9 @@
 <?php
+/**
+ * MakeTestCommand
+ *
+ * จุดประสงค์: คำสั่งสำหรับสร้าง Test ใหม่ในโครงสร้างของแอปพลิเคชัน
+ */
 
 declare(strict_types=1);
 
@@ -58,8 +63,10 @@ class MakeTestCommand extends BaseCommand
             $this->info("รันคำสั่งนี้เพื่อทดสอบ:");
             $this->info("  php console test tests/{$type}/{$name}.php");
             $this->info("  php console test --filter {$name}");
+            echo "\n";
         } catch (\Exception $e) {
             $this->error("เกิดข้อผิดพลาด: " . $e->getMessage());
+            echo "\n";
         }
     }
 

@@ -7,7 +7,7 @@
  * 
  * ฟีเจอร์หลัก:
  * - CRUD operations (Create, Read, Update, Delete)
- * - การเชื่อมต่อฐานข้อมูลผ่าน PDO
+ * - การเชื่อมต่อฐานข้อมูลผ่าน Database wrapper
  * - การแมปโมเดลกับตารางฐานข้อมูล
  * - การจัดการฟิลด์ fillable และ guarded
  * - การจัดการ timestamps (created_at, updated_at)
@@ -86,7 +86,6 @@
 namespace App\Core;
 
 use App\Core\Database;
-use PDO;
 
 abstract class Model
 {
@@ -473,8 +472,7 @@ abstract class Model
             $sql .= " WHERE deleted_at IS NULL";
         }
 
-        $stmt = $instance->db->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_CLASS, static::class);
+        return $instance->db->fetchAllAsClass($sql, [], static::class);
     }
 
     /**
@@ -501,12 +499,7 @@ abstract class Model
 
         $sql .= " LIMIT 1";
 
-        $stmt = $instance->db->prepare($sql);
-        $stmt->bindValue(':id', $id);
-        $stmt->execute();
-
-        $stmt->setFetchMode(PDO::FETCH_CLASS, static::class);
-        $result = $stmt->fetch();
+        $result = $instance->db->fetchAsClass($sql, ['id' => $id], static::class);
 
         return $result ?: null;
     }
@@ -1191,14 +1184,7 @@ abstract class Model
             $sql .= " OFFSET " . (int)$this->query['offset'];
         }
 
-        $stmt = $this->db->prepare($sql);
-
-        foreach ($bindings as $key => $value) {
-            $stmt->bindValue(":{$key}", $value);
-        }
-
-        $stmt->execute();
-        $results = $stmt->fetchAll(PDO::FETCH_CLASS, static::class);
+        $results = $this->db->fetchAllAsClass($sql, $bindings, static::class);
 
         // Eager load relations if requested
         if (!empty($this->query['with']) && $results) {
@@ -1255,19 +1241,11 @@ abstract class Model
     public static function raw(string $sql, array $bindings = [])
     {
         $instance = static::query();
-        $stmt = $instance->db->prepare($sql);
-        foreach ($bindings as $key => $value) {
-            $param = is_int($key) ? $key + 1 : ":{$key}";
-            $stmt->bindValue($param, $value);
+        try {
+            return $instance->db->fetchAll($sql, $bindings);
+        } catch (\Throwable $e) {
+            return false;
         }
-
-        $result = $stmt->execute();
-
-        if ($result) {
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
-
-        return false;
     }
 
     /**

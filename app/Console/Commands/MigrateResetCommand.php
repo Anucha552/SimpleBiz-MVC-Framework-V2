@@ -1,4 +1,9 @@
 <?php
+/**
+ * MigrateResetCommand
+ *
+ * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับ rollback migrations ทั้งหมดในโปรเจกต์ เพื่อให้ผู้ใช้สามารถจัดการกับฐานข้อมูลและโครงสร้างของตารางได้อย่างง่ายดายผ่านทางคอนโซล
+ */
 
 declare(strict_types=1);
 
@@ -60,5 +65,6 @@ class MigrateResetCommand extends BaseCommand
         }
 
         $this->success("Reset migrations เรียบร้อยแล้ว (rollback {$totalRolledBack} migrations)");
+        echo "\n";
     }
 }

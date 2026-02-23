@@ -1,4 +1,8 @@
 <?php
+/**
+ * Command: Migrate Rollback
+ * จุดประสงค์: ย้อนกลับการทำงานของ migration ล่าสุด
+ */
 
 declare(strict_types=1);
 
@@ -23,11 +27,13 @@ class MigrateRollbackCommand extends BaseCommand
     protected function execute(array $args): void
     {
         try {
+            // ตรวจสอบการเชื่อมต่อฐานข้อมูลก่อนดำเนินการ
             if (!$this->checkDatabaseConnection()) {
                 exit(1);
             }
-
+            
             $runner = new MigrationRunner();
+            $this->info("จำนวน batch migration ที่มีอยู่: {$runner->getBatchCount()}");
             $steps = (!empty($args) && is_numeric($args[0])) ? (int) $args[0] : 1;
 
             $this->info("กำลังย้อนกลับ {$steps} batch(es)...");

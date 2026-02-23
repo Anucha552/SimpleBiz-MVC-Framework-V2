@@ -1,4 +1,9 @@
 <?php
+/**
+ * MakeModelCommand
+ *
+ * จุดประสงค์: คำสั่งสำหรับสร้าง Model ใหม่ในโครงสร้างของแอปพลิเคชัน
+ */
 
 declare(strict_types=1);
 
@@ -39,6 +44,7 @@ class MakeModelCommand extends BaseCommand
             }
 
             $this->success("สร้าง Model สำเร็จ: app/Models/{$name}.php");
+            echo "\n";
         } catch (\Exception $e) {
             echo "\n";
             echo "┌─ Create Model Error ────────────────────────────────┐\n";
@@ -51,14 +57,15 @@ class MakeModelCommand extends BaseCommand
 
     private function getModelTemplate(string $name): string
     {
-        $table = strtolower($name) . 's';
 
         return <<<PHP
 <?php
+declare(strict_types=1);
+
 /**
- * {$name} Model
+ * โมเดล {$name}
  *
- * จุดประสงค์: [อธิบายหน้าที่ของ model]
+ * จุดประสงค์: อธิบายหน้าที่ของโมเดลนี้ (เช่น จัดการข้อมูลผู้ใช้)
  */
 
 namespace App\Models;
@@ -67,15 +74,54 @@ use App\Core\Model;
 
 class {$name} extends Model
 {
-    protected string \$table = '{$table}';
+    /**
+     * ชื่อตารางในฐานข้อมูล
+     */
+    protected string \$table = '{$name}';
 
+    /**
+     * Primary key (ปกติใช้ id)
+     */
+    protected string \$primaryKey = 'id';
+
+    /**
+     * ฟิลด์ที่อนุญาตให้ mass assignment
+     * fillable: รายชื่อคอลัมน์ที่ “อนุญาต” ให้ตั้งค่าผ่าน fill() หรือ 
+     * create() ได้ ถ้าใส่ไว้ ระบบจะเซฟเฉพาะคอลัมน์ในลิสต์นี้เท่านั้น
+     */
     protected array \$fillable = [
-        // TODO: กำหนด fillable fields
+        // ตัวอย่าง: 'name', 'email', 'status'
     ];
 
+    /**
+     * ฟิลด์ที่ห้าม mass assignment
+     * guarded: รายชื่อคอลัมน์ที่ “ห้าม” ให้ตั้งค่าผ่าน fill() หรือ 
+     * create() ได้ ถ้าใส่ไว้ ระบบจะไม่เซฟคอลัมน์ในลิสต์นี้เลย
+     */
     protected array \$guarded = ['id'];
 
+    /**
+     * เปิด/ปิด timestamps (created_at, updated_at)
+     * ถ้าเปิด ระบบจะจัดการคอลัมน์ created_at และ updated_at 
+     * ให้อัตโนมัติเมื่อสร้างหรืออัพเดตเรคคอร์ด
+     */
     protected bool \$timestamps = true;
+
+    /**
+     * เปิด/ปิด soft deletes (deleted_at)
+     * ถ้าเปิด ระบบจะจัดการคอลัมน์ deleted_at 
+     * ให้อัตโนมัติเมื่อทำการลบเรคคอร์ด
+     */
+    protected bool \$softDeletes = false;
+
+    // ใส่เมธอด query ที่ใช้ซ้ำบ่อยไว้ที่นี่ได้ เช่น scope หรือ helper
+    // ตัวอย่างเมธอด query ที่ใช้ซ้ำบ่อย
+    // public static function active(): array
+    // {
+    //     return static::where('status', 'active')
+    //         ->orderBy('created_at', 'DESC')
+    //         ->get();
+    // }
 }
 
 PHP;

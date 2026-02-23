@@ -131,4 +131,40 @@ abstract class Middleware
     {
         return Response::redirect($url);
     }
+
+    /**
+     * รับ IP ของ client โดยเชื่อ X-Forwarded-For เฉพาะ proxy ที่ไว้ใจได้
+     * จุดประสงค์: รับ IP ของ client โดยเชื่อ X-Forwarded-For เฉพาะ proxy ที่ไว้ใจได้
+     * getClientIp() ควรใช้กับอะไร: เมื่อคุณต้องการรับ IP ของ client โดยเชื่อ X-Forwarded-For เฉพาะ proxy ที่ไว้ใจได้
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $clientIp = $this->getClientIp();
+     * ```
+     * 
+     * @return string คืนค่า IP ของ client หรือ 'unknown' หากไม่สามารถระบุได้
+     */
+    protected function getClientIp(): string
+    {
+        $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $trustedProxies = (array) Config::get('app.trusted_proxies', []);
+
+        $isTrustedProxy = in_array($remoteAddr, $trustedProxies, true);
+
+        if ($isTrustedProxy) {
+            $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
+            if (is_string($forwarded) && $forwarded !== '') {
+                $parts = array_map('trim', explode(',', $forwarded));
+                if (!empty($parts[0])) {
+                    return $parts[0];
+                }
+            }
+
+            $realIp = $_SERVER['HTTP_X_REAL_IP'] ?? '';
+            if (is_string($realIp) && $realIp !== '') {
+                return trim($realIp);
+            }
+        }
+
+        return is_string($remoteAddr) && $remoteAddr !== '' ? $remoteAddr : 'unknown';
+    }
 }

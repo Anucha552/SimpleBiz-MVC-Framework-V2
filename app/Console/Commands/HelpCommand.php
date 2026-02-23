@@ -71,6 +71,10 @@ class HelpCommand extends BaseCommand
         echo ConsoleColor::CYAN . "    ตัวอย่าง: php console migrate:rollback\n";
         echo "              php console migrate:rollback 3\n" . ConsoleColor::RESET . "\n";
 
+        echo ConsoleColor::GREEN . "  migrate:batch" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::WHITE . "    แสดงรายการ batch migrations ที่มีอยู่\n";
+        echo ConsoleColor::CYAN . "    ตัวอย่าง: php console migrate:batch\n" . ConsoleColor::RESET . "\n";
+
         echo ConsoleColor::GREEN . "  migrate:fresh" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    ลบตารางทั้งหมดและรัน migrations ใหม่\n";
         echo ConsoleColor::RED . "    [WARNING] จะลบข้อมูลทั้งหมด!\n" . ConsoleColor::RESET . "\n";
@@ -90,9 +94,10 @@ class HelpCommand extends BaseCommand
         echo ConsoleColor::WHITE . "    แสดงสถานะ migrations (รันแล้ว/ยังไม่รัน)\n";
         echo ConsoleColor::CYAN . "    ตัวอย่าง: php console migrate:status\n" . ConsoleColor::RESET . "\n";
 
-        echo ConsoleColor::GREEN . "  migrate:create " . ConsoleColor::CYAN . "<name>" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::GREEN . "  migrate:create " . ConsoleColor::CYAN . "<name>" . " " .  ConsoleColor::CYAN . "[module]" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    สร้างไฟล์ migration ใหม่\n";
-        echo ConsoleColor::CYAN . "    ตัวอย่าง: php console migrate:create create_posts_table\n" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::CYAN . "    ตัวอย่าง: php console migrate:create create_posts_table\n" . ConsoleColor::RESET;
+        echo ConsoleColor::CYAN . "              php console migrate:create create_posts_table blog\n" . ConsoleColor::RESET . "\n";
 
         echo ConsoleColor::GREEN . "  migrate:modules" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    แสดงรายการ migration modules ที่มี\n";
@@ -103,6 +108,10 @@ class HelpCommand extends BaseCommand
         echo ConsoleColor::WHITE . "    รัน seeders เพื่อเพิ่มข้อมูลตัวอย่าง\n";
         echo ConsoleColor::CYAN . "    ตัวอย่าง: php console seed\n";
         echo "              php console seed UserSeeder\n" . ConsoleColor::RESET . "\n";
+
+        echo ConsoleColor::GREEN . "  seed:show" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::WHITE . "    แสดงรายการ seeder ที่มีอยู่\n";
+        echo ConsoleColor::CYAN . "    ตัวอย่าง: php console seed:show\n" . ConsoleColor::RESET . "\n";
 
         echo ConsoleColor::YELLOW . "━━━ สร้างโค้ดอัตโนมัติ (Generators) ━━━\n" . ConsoleColor::RESET;
         echo ConsoleColor::GREEN . "  make:controller " . ConsoleColor::CYAN . "<name>" . ConsoleColor::RESET . "\n";
@@ -160,6 +169,9 @@ class HelpCommand extends BaseCommand
         echo ConsoleColor::GREEN . "  log:clear" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    ลบไฟล์ log ทั้งหมด หรือระบุโฟลเดอร์/ชื่อ/pattern ของไฟล์ที่จะลบ\n";
         echo ConsoleColor::CYAN . "    ตัวอย่าง: php console log:clear\n" . ConsoleColor::CYAN . "             php console log:clear --force app.log 2026-01-20.log\n" . ConsoleColor::CYAN . "             php console log:clear test '*.log'\n" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::GREEN . "  log:prune" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::WHITE . "    ลบไฟล์ log เก่าตาม LOG_RETENTION_DAYS (แบบวันปฏิทิน)\n";
+        echo ConsoleColor::CYAN . "    ตัวอย่าง: php console log:prune\n" . ConsoleColor::CYAN . "             php console log:prune test\n" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::GREEN . "  log:show" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    แสดงรายการไฟล์ในโฟลเดอร์ logs (รองรับโฟลเดอร์ย่อย/absolute path)\n";
         echo ConsoleColor::CYAN . "    ตัวอย่าง: php console log:show\n" . ConsoleColor::CYAN . "             php console log:show test\n" . ConsoleColor::RESET . "\n";
@@ -197,16 +209,15 @@ class HelpCommand extends BaseCommand
         echo "              php console t:f\n" . ConsoleColor::RESET . "\n";
 
         echo ConsoleColor::YELLOW . "━━━ Aliases (shortcuts) ━━━\n" . ConsoleColor::RESET;
-        echo ConsoleColor::GREEN . "  m, m:r, m:f, m:reset, m:refresh, m:s, m:c" . ConsoleColor::RESET . "\n";
-        echo ConsoleColor::WHITE . "    ย่อคำสั่ง migration (migrate, rollback, fresh, reset, refresh, status, create)\n" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::GREEN . "  m, m:r, m:f, m:reset, m:refresh, m:s, m:c, m:batch," . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::WHITE . "    ย่อคำสั่ง migration (migrate, rollback, fresh, reset, refresh, status, create, batch)\n" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::GREEN . "  s" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    ย่อคำสั่ง serve (php console s)\n" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::GREEN . "  c:c" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    ย่อคำสั่ง cache:clear\n" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::GREEN . "  t, t:u, t:f" . ConsoleColor::RESET . "\n";
-        echo ConsoleColor::WHITE . "    ย่อคำสั่ง test (all/unit/feature)\n" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::WHITE . "    ย่อคำสั่ง test (all/unit/feature)\n" . ConsoleColor::RESET;
 
-        echo ConsoleColor::CYAN . "[DOCS] อ่านเอกสารเพิ่มเติมได้ที่โฟลเดอร์: docs/\n" . ConsoleColor::RESET;
         echo "\n";
     }
 }

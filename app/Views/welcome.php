@@ -25,7 +25,7 @@
 		<ul class="features">
 			<li><strong>โครงสร้าง MVC</strong><br>แยกชัดเจนระหว่าง Controller, Model, View</li>
 			<li><strong>Routing & Middleware</strong><br>รองรับ middleware, CORS, rate limit</li>
-			<li><strong>Database Migrations</strong><br>ใช้ PDO + migration runner</li>
+			<li><strong>Database Migrations</strong><br>ใช้ Database + migration runner</li>
 			<li><strong>Logging & Security</strong><br>ระบบล็อกและตรวจจับเหตุการณ์ความปลอดภัย</li>
 		</ul>
 

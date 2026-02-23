@@ -5,7 +5,17 @@
  * จุดประสงค์: กำหนดเส้นทางของเว็บแอปพลิเคชัน (การตอบกลับแบบ JSON)
  * 
  * การกำหนดเส้นทาง:
- * $router->get('/api/path', $apiBasePath . 'Controller@method', [Middleware::class]);
+ * $router->get('/api/path', $apiBasePath . 'Controller@method');
+ * 
+ * การกำหนดเส้นทางแบบมี Middleware:
+ * $router->get(
+ *   '/api/path',
+ *   $apiBasePath . 'Controller@method',
+ *   [
+ *     AuthMiddleware::class,
+ *     [RoleMiddleware::class, ['admin', 'manager'], 10, true],
+ *   ]
+ * );
  * 
 * เมธอดที่ใช้ได้:
  * - get()    - คำขอ GET
@@ -20,7 +30,6 @@
  */
 
 use App\Middleware\AuthMiddleware;
-use App\Middleware\ApiKeyMiddleware;
 
 // กำหนดตัวแปร Path เริ่มต้นสำหรับ API 
 $apiBasePath = 'App\\Controllers\\Api\\';
@@ -29,6 +38,19 @@ $apiBasePath = 'App\\Controllers\\Api\\';
 // เส้นทาง API Routes
 // ===================================
 
-$router->get('/api', $apiBasePath . 'ApiController@index',[
-    ApiKeyMiddleware::class
-]);
+$router->get('/api', $apiBasePath . 'ApiController@index');
+
+// ดึงรายการพนักงานทั้งหมด (ส่งออกเป็น JSON)
+$router->get('/api/employees', $apiBasePath . 'ApiEmployeeController@index');
+
+// ดึงข้อมูลพนักงาน 1 คน ตาม id (JSON)
+$router->get('/api/employees/{id}', $apiBasePath . 'ApiEmployeeController@show');
+
+// สร้างพนักงานใหม่ (รับข้อมูลแบบ JSON)
+$router->post('/api/employees', $apiBasePath . 'ApiEmployeeController@store');
+
+// อัปเดตข้อมูลพนักงานทั้งหมด (PUT = แก้ไขทั้ง resource)
+$router->put('/api/employees/{id}', $apiBasePath . 'ApiEmployeeController@update');
+
+// ลบพนักงานตาม id (DELETE method)
+$router->delete('/api/employees/{id}', $apiBasePath . 'ApiEmployeeController@destroy');

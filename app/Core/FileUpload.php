@@ -212,8 +212,30 @@ class FileUpload
             return false;
         }
 
-        // สร้างชื่อไฟล์
-        $fileName = $customName ?: $this->generateFileName($file['name']);
+        // สร้างชื่อไฟล์ (ป้องกัน path traversal จาก custom name)
+        $originalExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($customName !== null) {
+            $customBaseName = pathinfo($customName, PATHINFO_FILENAME);
+            $customExtension = strtolower(pathinfo($customName, PATHINFO_EXTENSION));
+
+            if ($customExtension !== '' && $customExtension !== $originalExtension) {
+                $this->error = 'นามสกุลไฟล์ที่กำหนดไม่ตรงกับไฟล์ต้นฉบับ';
+                return false;
+            }
+
+            $safeBaseName = $this->sanitizeFileName($customBaseName);
+            if ($safeBaseName === '') {
+                $this->error = 'ชื่อไฟล์ไม่ถูกต้อง';
+                return false;
+            }
+
+            $fileName = $safeBaseName;
+            if ($originalExtension !== '') {
+                $fileName .= '.' . $originalExtension;
+            }
+        } else {
+            $fileName = $this->generateFileName($file['name']);
+        }
 
         // สร้างโฟลเดอร์ถ้ายังไม่มี
         if (!$this->createUploadDirectory()) {
@@ -299,6 +321,11 @@ class FileUpload
      */
     private function validateFile(array $file): bool
     {
+        if (empty($this->allowedTypes) && empty($this->allowedMimeTypes)) {
+            $this->error = 'ต้องกำหนดชนิดไฟล์ที่อนุญาตก่อนอัปโหลด';
+            return false;
+        }
+
         // ตรวจสอบว่าเป็นไฟล์ที่อัปโหลดจริง
         if (!is_uploaded_file($file['tmp_name'])) {
             $this->error = 'ไฟล์ไม่ถูกต้อง';

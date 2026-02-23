@@ -1,4 +1,11 @@
 <?php
+/**
+ * ยังทำงานไม่ถูกต้อง
+ * 
+ * class OptimizeClearCommand
+ * 
+ * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับลบ optimization caches ทั้งหมด เพื่อให้แอปพลิเคชันกลับสู่สถานะก่อนการ optimize และสามารถทำการ optimize ใหม่ได้อีกครั้ง
+ */
 
 declare(strict_types=1);
 

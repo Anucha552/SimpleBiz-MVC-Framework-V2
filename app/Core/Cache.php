@@ -147,23 +147,9 @@ class Cache
             return $default;
         }
 
-        // อ่านไฟล์
-        $content = file_get_contents($filePath);
-        if ($content === false) {
+        $cacheData = self::readCacheFile($filePath);
+        if (!is_array($cacheData)) {
             return $default;
-        }
-
-        // วิเคราะห์ข้อมูล cache
-        $cacheData = @unserialize($content);
-
-        // ตรวจสอบการวิเคราะห์ข้อมูล
-        if ($cacheData === false || !is_array($cacheData)) {
-            $json = @json_decode($content, true);
-            if (is_array($json) && array_key_exists('value', $json)) {
-                $cacheData = $json;
-            } else {
-                return $default;
-            }
         }
 
         // ตรวจสอบว่าหมดอายุหรือยัง
@@ -199,19 +185,9 @@ class Cache
             return false;
         }
 
-        // อ่านและตรวจสอบว่าหมดอายุหรือยัง
-        $content = file_get_contents($filePath);
-        $cacheData = @unserialize($content);
-
-        // JSON fallback similar to get(). Don't delete file here on unserialize
-        // failure; just consider the key missing.
-        if ($cacheData === false || !is_array($cacheData)) {
-            $json = @json_decode($content, true);
-            if (is_array($json) && array_key_exists('value', $json)) {
-                $cacheData = $json;
-            } else {
-                return false;
-            }
+        $cacheData = self::readCacheFile($filePath);
+        if (!is_array($cacheData)) {
+            return false;
         }
 
         // ตรวจสอบว่าหมดอายุหรือยัง
@@ -353,15 +329,54 @@ class Cache
      */
     public static function increment(string $key, int $value = 1): int|bool
     {
-        $current = self::get($key, 0);
-        if (!is_numeric($current)) {
+        $filePath = self::getCacheFilePath($key);
+        $cacheData = null;
+
+        if (file_exists($filePath)) {
+            $cacheData = self::readCacheFile($filePath);
+            if (is_array($cacheData)) {
+                $expiresAt = $cacheData['expires_at'] ?? 0;
+                if ($expiresAt > 0 && time() > $expiresAt) {
+                    self::forget($key);
+                    $cacheData = null;
+                }
+            } else {
+                $cacheData = null;
+            }
+        }
+
+        if (is_array($cacheData)) {
+            $current = $cacheData['value'] ?? 0;
+            if (!is_numeric($current)) {
+                return false;
+            }
+
+            $newValue = (int) $current + $value;
+            $cacheData['key'] = $cacheData['key'] ?? $key;
+            $cacheData['value'] = $newValue;
+            $cacheData['created_at'] = $cacheData['created_at'] ?? time();
+
+            if (!array_key_exists('expires_at', $cacheData)) {
+                $cacheData['expires_at'] = time() + self::DEFAULT_TTL;
+            }
+        } else {
+            $newValue = $value;
+            $cacheData = [
+                'key' => $key,
+                'value' => $newValue,
+                'expires_at' => time() + self::DEFAULT_TTL,
+                'created_at' => time(),
+            ];
+        }
+
+        if (!self::ensureCacheDirectory()) {
             return false;
         }
 
-        $newValue = (int)$current + $value;
-        self::forever($key, $newValue);
+        $serialized = serialize($cacheData);
+        $result = file_put_contents($filePath, $serialized, LOCK_EX);
 
-        return $newValue;
+        return $result !== false ? $newValue : false;
     }
 
     /**
@@ -395,6 +410,8 @@ class Cache
      */
     public static function flush(): bool
     {
+        self::normalizeCacheDirectory();
+
         if (!is_dir(self::$cacheDir)) {
             return true;
         }
@@ -427,6 +444,8 @@ class Cache
      */
     public static function clearExpired(): int
     {
+        self::normalizeCacheDirectory();
+
         if (!is_dir(self::$cacheDir)) {
             return 0;
         }
@@ -438,13 +457,8 @@ class Cache
 
         $count = 0;
         foreach ($files as $file) {
-            $content = @file_get_contents($file);
-            if ($content === false) {
-                continue;
-            }
-
-            $cacheData = @unserialize($content);
-            if ($cacheData === false || !is_array($cacheData)) {
+            $cacheData = self::readCacheFile($file);
+            if (!is_array($cacheData)) {
                 unlink($file);
                 $count++;
                 continue;
@@ -476,6 +490,8 @@ class Cache
      */
     public static function forgetPattern(string $pattern): int
     {
+        self::normalizeCacheDirectory();
+
         if (!is_dir(self::$cacheDir)) {
             return 0;
         }
@@ -487,13 +503,8 @@ class Cache
 
         $count = 0;
         foreach ($files as $file) {
-            $content = @file_get_contents($file);
-            if ($content === false) {
-                continue;
-            }
-
-            $cacheData = @unserialize($content);
-            if ($cacheData === false || !is_array($cacheData)) {
+            $cacheData = self::readCacheFile($file);
+            if (!is_array($cacheData)) {
                 continue;
             }
 
@@ -525,6 +536,8 @@ class Cache
      */
     public static function stats(): array
     {
+        self::normalizeCacheDirectory();
+
         if (!is_dir(self::$cacheDir)) {
             return [
                 'total_files' => 0,
@@ -548,14 +561,8 @@ class Cache
         foreach ($files as $file) {
             $totalSize += filesize($file);
 
-            $content = @file_get_contents($file);
-            if ($content === false) {
-                continue;
-            }
-
-            $cacheData = @unserialize($content);
-            if ($cacheData === false || !is_array($cacheData)) {
-                $expiredCount++;
+            $cacheData = self::readCacheFile($file);
+            if (!is_array($cacheData)) {
                 continue;
             }
 
@@ -591,10 +598,7 @@ class Cache
      */
     private static function getCacheFilePath(string $key): string
     {
-        if (!self::$cacheDirNormalized) {
-            self::$cacheDir = self::resolvePath(self::$cacheDir);
-            self::$cacheDirNormalized = true;
-        }
+        self::normalizeCacheDirectory();
 
         $hashedKey = md5($key);
         return self::$cacheDir . DIRECTORY_SEPARATOR . $hashedKey . self::CACHE_EXTENSION;
@@ -613,10 +617,7 @@ class Cache
      */
     private static function ensureCacheDirectory(): bool
     {
-        if (!self::$cacheDirNormalized) {
-            self::$cacheDir = self::resolvePath(self::$cacheDir);
-            self::$cacheDirNormalized = true;
-        }
+        self::normalizeCacheDirectory();
 
         if (!is_dir(self::$cacheDir)) {
             if (!mkdir(self::$cacheDir, 0755, true)) {
@@ -674,6 +675,57 @@ class Cache
     }
 
     /**
+     * ตรวจสอบและแปลงโฟลเดอร์ cache ให้เป็น absolute path หากยังไม่ถูกแปลง
+     * จุดประสงค์: ให้แน่ใจว่าโฟลเดอร์ cache ถูกแปลงเป็น absolute path แล้วก่อนที่จะใช้งาน
+     * normalizeCacheDirectory() ควรใช้กับอะไร: เมื่อคุณต้องการให้แน่ใจว่าโฟลเดอร์ cache ถูกแปลงเป็น absolute path แล้วก่อนที่จะใช้งานในฟังก์ชันอื่น ๆ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * Cache::normalizeCacheDirectory();
+     * ```
+     * 
+     * @return void ไม่คืนค่าอะไร
+     */
+    private static function normalizeCacheDirectory(): void
+    {
+        if (!self::$cacheDirNormalized) {
+            self::$cacheDir = self::resolvePath(self::$cacheDir);
+            self::$cacheDirNormalized = true;
+        }
+    }
+
+    /**
+     * อ่านและวิเคราะห์ข้อมูลจากไฟล์ cache
+     * จุดประสงค์: ใช้อ่านข้อมูลจากไฟล์ cache และแปลงเป็นอาร์เรย์
+     * readCacheFile() ควรใช้กับอะไร: เมื่อต้องการดึงข้อมูลจากไฟล์ cache เพื่อนำไปใช้งาน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $cacheData = Cache::readCacheFile('path/to/cache/file.cache');
+     * ```
+     * 
+     * @param string $filePath กำหนด path ของไฟล์ cache
+     * @return array|null คืนค่าอาร์เรย์ของข้อมูล cache หรือ null หากไม่สามารถอ่านได้
+     */
+    private static function readCacheFile(string $filePath): ?array
+    {
+        $content = @file_get_contents($filePath);
+        if ($content === false) {
+            return null;
+        }
+
+        $cacheData = @unserialize($content);
+        if ($cacheData === false || !is_array($cacheData)) {
+            $json = @json_decode($content, true);
+            if (is_array($json)) {
+                $cacheData = $json;
+            } else {
+                return null;
+            }
+        }
+
+        return $cacheData;
+    }
+
+    /**
      * แปลงขนาดไฟล์เป็นรูปแบบที่อ่านง่าย
      * จุดประสงค์: แปลงขนาดไฟล์จากไบต์เป็นหน่วยที่อ่านง่าย เช่น KB, MB
      * formatBytes() ควรใช้กับอะไร: เมื่อต้องการแสดงขนาดไฟล์ในรูปแบบที่เข้าใจง่ายสำหรับผู้ใช้
@@ -711,6 +763,8 @@ class Cache
      */
     public static function all(): array
     {
+        self::normalizeCacheDirectory();
+
         // ตรวจสอบว่าโฟลเดอร์ cache มีอยู่หรือไม่
         if (!is_dir(self::$cacheDir)) {
             return [];
@@ -726,17 +780,12 @@ class Cache
 
         // วนลูปผ่านไฟล์ทั้งหมดและวิเคราะห์ข้อมูล
         foreach ($files as $file) {
-            $content = @file_get_contents($file);
-            if ($content === false) {
+            $cacheData = self::readCacheFile($file);
+            if (!is_array($cacheData)) {
                 continue;
             }
 
-            $cacheData = @unserialize($content);
-            if ($cacheData === false || !is_array($cacheData)) {
-                continue;
-            }
-
-            $key = $cacheData['key'] ?? '';
+            $key = $cacheData['key'] ?? basename($file);
             $isExpired = false;
 
             if (isset($cacheData['expires_at']) && $cacheData['expires_at'] > 0) {
@@ -771,6 +820,8 @@ class Cache
      */
     public static function clearOlderThan(int $seconds): int
     {
+        self::normalizeCacheDirectory();
+
         if (!is_dir(self::$cacheDir)) {
             return 0;
         }
@@ -784,13 +835,8 @@ class Cache
         $count = 0;
 
         foreach ($files as $file) {
-            $content = @file_get_contents($file);
-            if ($content === false) {
-                continue;
-            }
-
-            $cacheData = @unserialize($content);
-            if ($cacheData === false || !is_array($cacheData)) {
+            $cacheData = self::readCacheFile($file);
+            if (!is_array($cacheData)) {
                 continue;
             }
 

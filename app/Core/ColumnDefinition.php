@@ -312,6 +312,22 @@ class ColumnDefinition
         return $this->primary;
     }
 
+    /**
+     * ตรวจสอบว่าคอลัมน์เป็น AUTO_INCREMENT หรือไม่
+     * จุดประสงค์: คืนค่าคุณสมบัติ AUTO_INCREMENT ของคอลัมน์
+     * isAutoIncrement() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าคอลัมน์ในฐานข้อมูลมีคุณสมบัติ AUTO_INCREMENT หรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isAutoIncrement = $column->isAutoIncrement(); // ตรวจสอบว่าเป็น AUTO_INCREMENT หรือไม่
+     * ```
+     * 
+     * @return bool คืนค่า true หากคอลัมน์เป็น AUTO_INCREMENT, false หากไม่ใช่
+     */
+    public function isAutoIncrement(): bool
+    {
+        return $this->autoIncrement;
+    }
+
     /** 
      * สร้างนิยาม SQL สำหรับคอลัมน์
      * จุดประสงค์: สร้างสตริง SQL ที่แสดงถึงการกำหนดคอลัมน์
@@ -329,6 +345,65 @@ class ColumnDefinition
     }
 
     /**
+     * ดึงไดรเวอร์ฐานข้อมูลที่กำหนดในคอนฟิก
+     * จุดประสงค์: ใช้เพื่อดึงชื่อไดรเวอร์ฐานข้อมูลที่กำหนดในคอนฟิก เพื่อใช้ในการปรับแต่งนิยาม SQL ตามไดรเวอร์ที่ใช้งาน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $driver = $this->getDriver(); // ดึงไดรเวอร์ฐานข้อมูล
+     * ```
+     * 
+     * @return string คืนค่าไดรเวอร์ฐานข้อมูลที่กำหนดในคอนฟิก, ค่าเริ่มต้นเป็น 'mysql' หากไม่มีการตั้งค่า
+     */
+    protected function getDriver(): string
+    {
+        return Config::get('database.connection', 'mysql');
+    }
+
+    /**
+    * ปรับแต่งประเภทข้อมูลตามไดรเวอร์ฐานข้อมูล
+    * จุดประสงค์: ปรับแต่งประเภทข้อมูลของคอลัมน์ให้เหมาะสมกับไดรเวอร์ฐานข้อมูลที่ใช้งาน เช่น การแปลงประเภทข้อมูลบางประเภทให้เข้ากับ SQLite
+    * ตัวอย่างการใช้งาน:
+    * ```php
+    * $normalizedType = $this->normalizeType($this->type, $driver); // ปรับแต่งประเภทข้อมูลตามไดรเวอร์
+    * ```
+    * 
+    * @param string $type ประเภทข้อมูลที่ต้องการปรับแต่ง
+    * @param string $driver ไดรเวอร์ฐานข้อมูลที่ใช้งาน
+    * @return string คืนค่าประเภทข้อมูลที่ปรับแต่งแล้วตามไดรเวอร์
+    */
+    protected function normalizeType(string $type, string $driver): string
+    {
+        if ($driver !== 'sqlite') {
+            return $type;
+        }
+
+        $upper = strtoupper($type);
+        if ($upper === 'INT' || $upper === 'INTEGER') {
+            return 'INTEGER';
+        }
+        if ($upper === 'BIGINT' || $upper === 'SMALLINT') {
+            return 'INTEGER';
+        }
+        if ($upper === 'TINYINT' || $upper === 'TINYINT(1)') {
+            return 'INTEGER';
+        }
+        if ($upper === 'TIMESTAMP') {
+            return 'DATETIME';
+        }
+        if ($upper === 'TINYTEXT' || $upper === 'MEDIUMTEXT' || $upper === 'LONGTEXT') {
+            return 'TEXT';
+        }
+        if ($upper === 'JSON') {
+            return 'TEXT';
+        }
+        if (str_starts_with($upper, 'ENUM(')) {
+            return 'TEXT';
+        }
+
+        return $type;
+    }
+
+    /**
      * สร้างนิยาม SQL สำหรับคอลัมน์
      * จุดประสงค์: สร้างสตริง SQL ที่แสดงถึงการกำหนดคอลัมน์
      * toSqlDefinition() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างนิยาม SQL สำหรับคอลัมน์ในตารางฐานข้อมูล
@@ -341,28 +416,38 @@ class ColumnDefinition
      */
     public function toSqlDefinition(): string
     {
-        $sql = $this->escapeName($this->name) . ' ' . $this->type;
+        $driver = $this->getDriver();
+        $type = $this->normalizeType($this->type, $driver);
+        $sql = $this->escapeName($this->name) . ' ' . $type;
 
-        if ($this->unsigned) {
+        if ($driver !== 'sqlite' && $this->unsigned) {
             $sql .= ' UNSIGNED';
         }
 
         if ($this->autoIncrement) {
-            $sql .= ' AUTO_INCREMENT';
+            if ($driver === 'sqlite') {
+                $sql .= ' PRIMARY KEY AUTOINCREMENT';
+            } else {
+                $sql .= ' AUTO_INCREMENT';
+            }
         }
 
         $sql .= $this->nullable ? ' NULL' : ' NOT NULL';
 
         if ($this->default !== null) {
             if ($this->defaultIsRaw && is_string($this->default)) {
-                $sql .= ' DEFAULT ' . $this->default;
+                $default = $this->default;
+                if ($driver === 'sqlite' && stripos($default, 'ON UPDATE') !== false) {
+                    $default = 'CURRENT_TIMESTAMP';
+                }
+                $sql .= ' DEFAULT ' . $default;
             } else {
                 $default = is_numeric($this->default) ? $this->default : "'" . addslashes((string)$this->default) . "'";
                 $sql .= ' DEFAULT ' . $default;
             }
         }
 
-        if ($this->comment !== null) {
+        if ($driver !== 'sqlite' && $this->comment !== null) {
             $sql .= " COMMENT '" . addslashes($this->comment) . "'";
         }
 

@@ -1,8 +1,7 @@
 <?php
 /**
- * Console Command Runner
- *
- * จุดประสงค์: รันคำสั่ง CLI ต่างๆ สำหรับจัดการ Framework Base
+ * ไฟล์นี้เป็นจุดเริ่มต้นของแอปพลิเคชันคอนโซล (Console Application) ซึ่งจะทำหน้าที่ในการโหลด dependencies, ตั้งค่าการเข้ารหัส UTF-8, โหลด environment variables และรันคำสั่งคอนโซลที่ถูกเรียกใช้งานผ่าน command line interface (CLI)
+ * จุดประสงค์หลักของไฟล์นี้คือการเตรียมสภาพแวดล้อมสำหรับการทำงานของคำสั่งคอนโซลต่างๆ ที่ถูกกำหนดไว้ในโฟลเดอร์ app/Console/Commands และให้สามารถรองรับการแสดงผลภาษาไทยได้อย่างถูกต้องในทุกระบบปฏิบัติการ
  */
 
 // ตรวจสอบว่าติดตั้ง Composer dependencies แล้วหรือยัง
@@ -20,6 +19,7 @@ if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
     exit(1);
 }
 
+// โหลด Composer autoload เพื่อให้สามารถใช้คลาสต่างๆ ที่ถูกติดตั้งผ่าน Composer ได้
 require_once __DIR__ . '/vendor/autoload.php';
 
 // ตั้งค่า UTF-8 encoding สำหรับทุกระบบปฏิบัติการ
@@ -31,14 +31,17 @@ if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
     putenv('LC_ALL=en_US.UTF-8');
 }
 
+// ตั้งค่า internal encoding และ HTTP output เป็น UTF-8
 if (function_exists('mb_internal_encoding')) {
     mb_internal_encoding('UTF-8');
 }
 
+// ตั้งค่า HTTP output เป็น UTF-8 เพื่อให้รองรับการแสดงผลภาษาไทยในคอนโซล
 if (function_exists('mb_http_output')) {
     mb_http_output('UTF-8');
 }
 
+// ตั้งค่า default charset เป็น UTF-8
 ini_set('default_charset', 'UTF-8');
 
 // โหลด environment variables
@@ -55,10 +58,17 @@ if (file_exists(__DIR__ . '/.env')) {
     }
 }
 
+// โหลด helper สำหรับ env() และ config()
+if (file_exists(__DIR__ . '/config/env.php')) {
+    require_once __DIR__ . '/config/env.php';
+}
+
+// สร้าง instance ของ ConsoleIO, ConsoleContext และ CommandRegistry จากนั้นเรียกใช้ ConsoleRunner เพื่อรันคำสั่งที่ถูกเรียกผ่าน CLI
 $io = new \App\Console\ConsoleIO();
 $context = new \App\Console\ConsoleContext(__DIR__, $io);
 $registry = new \App\Console\CommandRegistry();
 $registry->discover(__DIR__ . '/app/Console/Commands', 'App\\Console\\Commands');
 
+// สร้าง instance ของ ConsoleRunner และรันคำสั่งที่ถูกเรียกผ่าน CLI โดยส่ง $argv ซึ่งเป็นอาร์เรย์ของอาร์กิวเมนต์ที่ถูกส่งเข้ามาใน command line
 $runner = new \App\Console\ConsoleRunner($registry, $context);
 $runner->run($argv);

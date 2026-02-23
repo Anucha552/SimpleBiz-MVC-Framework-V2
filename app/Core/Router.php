@@ -182,8 +182,27 @@ class Router
         }
 
         // เรียกใช้ลูกโซ่ middleware
-        foreach ($route['middleware'] as $middlewareClass) {
-            $middleware = new $middlewareClass();
+        foreach ($route['middleware'] as $middlewareDefinition) {
+            if (is_array($middlewareDefinition)) {
+                $middlewareClass = $middlewareDefinition[0] ?? null;
+                $middlewareArgs = [];
+
+                if (!is_string($middlewareClass) || $middlewareClass === '') {
+                    throw new \InvalidArgumentException('Invalid middleware definition');
+                }
+
+                if (count($middlewareDefinition) === 2 && is_array($middlewareDefinition[1])) {
+                    $middlewareArgs = $middlewareDefinition[1];
+                } else {
+                    $middlewareArgs = array_slice($middlewareDefinition, 1);
+                }
+
+                $middlewareArgs = is_array($middlewareArgs) ? $middlewareArgs : [$middlewareArgs];
+                $middleware = new $middlewareClass(...$middlewareArgs);
+            } else {
+                $middlewareClass = $middlewareDefinition;
+                $middleware = new $middlewareClass();
+            }
 
             $result = $middleware->handle($request);
 

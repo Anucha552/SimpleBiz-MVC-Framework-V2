@@ -75,7 +75,7 @@ class Session
         if (session_status() === PHP_SESSION_NONE) {
             // รองรับ CLI และ testing environment
             // สำหรับ CLI หรือ testing environment เราจะไม่ใช้ session ของ PHP
-            $isTesting = (\env('APP_ENV') === 'testing');
+            $isTesting = (Config::get('app.env', 'development') === 'testing');
             if (PHP_SAPI === 'cli' || $isTesting) {
                 if (!isset($_SESSION) || !is_array($_SESSION)) {
                     $_SESSION = [];

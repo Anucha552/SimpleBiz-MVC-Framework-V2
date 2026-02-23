@@ -1,4 +1,9 @@
 <?php
+/**
+ * class LogClearCommand
+ * 
+ * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับลบไฟล์ log ทั้งหมดในโฟลเดอร์ storage/logs โดยสามารถระบุไฟล์หรือโฟลเดอร์ย่อยที่ต้องการลบได้ และมีตัวเลือก --force เพื่อข้ามการยืนยันก่อนลบ
+ */
 
 declare(strict_types=1);
 
@@ -17,13 +22,16 @@ class LogClearCommand extends BaseCommand
     {
         $logRoot = $this->path('storage/logs');
 
+        // ตรวจสอบและแยกอาร์กิวเมนต์เพื่อหาตัวเลือก --force และทำความสะอาดอาร์กิวเมนต์ที่เหลือสำหรับการประมวลผล
         $force = $this->hasForceFlag($args);
         $cleanArgs = array_values(array_filter($args, function ($a) {
             return trim($a) !== '--force';
         }));
 
+        // หาตำแหน่งโฟลเดอร์ logs ที่จะทำการลบไฟล์ log โดยตรวจสอบอาร์กิวเมนต์ที่ระบุมาเพื่อหาตัวเลือกโฟลเดอร์ย่อยหรือไฟล์ที่ต้องการลบ หากไม่มีการระบุโฟลเดอร์ย่อยหรือไฟล์ใดๆ จะใช้โฟลเดอร์ logs ทั้งหมดเป็นเป้าหมายในการลบ
         $logDir = $this->resolveLogDir($logRoot, $cleanArgs);
 
+        // ตรวจสอบว่าโฟลเดอร์ logs ที่ระบุมีอยู่จริงหรือไม่ หากไม่มีจะแสดงข้อความเตือนและยกเลิกการทำงาน
         if (!is_dir($logDir)) {
             $this->warning("โฟลเดอร์ logs ไม่พบ: {$logDir}");
             return;
@@ -31,15 +39,21 @@ class LogClearCommand extends BaseCommand
 
         $filesToDelete = [];
 
+        // หากไม่มีอาร์กิวเมนต์เพิ่มเติม จะลบไฟล์ log ทั้งหมดในโฟลเดอร์ logs แต่หากมีอาร์กิวเมนต์ที่ระบุมา จะทำการประมวลผลเพื่อหาตัวเลือกไฟล์หรือโฟลเดอร์ย่อยที่ต้องการลบ โดยรองรับการใช้ wildcards เช่น * หรือ ? เพื่อระบุกลุ่มของไฟล์ log ที่ต้องการลบ
         if (empty($cleanArgs)) {
             $filesToDelete = glob($logDir . '/*.log');
         } else {
+
+            // ประมวลผลอาร์กิวเมนต์ที่ระบุมาเพื่อหาตัวเลือกไฟล์หรือโฟลเดอร์ย่อยที่ต้องการลบ โดยรองรับการใช้ wildcards เช่น * หรือ ? เพื่อระบุกลุ่มของไฟล์ log ที่ต้องการลบ
             foreach ($cleanArgs as $pattern) {
                 $pattern = trim((string) $pattern);
+                
+                // ข้ามอาร์กิวเมนต์ที่เป็นตัวเลือกหรือว่างเปล่า
                 if ($pattern === '') {
                     continue;
                 }
 
+                // แปลง pattern ที่ระบุมาเป็นเส้นทางเต็มและตรวจสอบว่าเป็นไฟล์หรือโฟลเดอร์ จากนั้นใช้ glob เพื่อค้นหาไฟล์ log ที่ตรงกับ pattern และเพิ่มเข้าไปในรายการไฟล์ที่จะลบ
                 $resolved = $this->resolvePath($logDir, $pattern);
                 if (strpbrk($pattern, '*?[]') !== false) {
                     $matches = glob($resolved);
@@ -47,6 +61,8 @@ class LogClearCommand extends BaseCommand
                         $filesToDelete = array_merge($filesToDelete, $matches);
                     }
                 } else {
+
+                   // หาก pattern ที่ระบุมาไม่มี wildcards ให้ตรวจสอบว่าเป็นโฟลเดอร์หรือไฟล์ จากนั้นใช้ glob เพื่อค้นหาไฟล์ log ที่ตรงกับ pattern และเพิ่มเข้าไปในรายการไฟล์ที่จะลบ
                     if (is_dir($resolved)) {
                         $matches = glob(rtrim($resolved, '/\\') . '/*.log');
                         if ($matches) {
@@ -55,6 +71,7 @@ class LogClearCommand extends BaseCommand
                         continue;
                     }
 
+                    // หาก pattern ที่ระบุมาไม่มี wildcards และไม่ใช่โฟลเดอร์ ให้ตรวจสอบว่าเป็นไฟล์ log ที่มีอยู่จริงหรือไม่ หากมีอยู่จริงให้เพิ่มเข้าไปในรายการไฟล์ที่จะลบ
                     if (file_exists($resolved)) {
                         $filesToDelete[] = $resolved;
                     }
@@ -62,7 +79,10 @@ class LogClearCommand extends BaseCommand
             }
         }
 
+        // ทำความสะอาดรายการไฟล์ที่จะลบโดยการลบรายการที่ซ้ำกันและตรวจสอบว่าเป็นไฟล์จริงๆ เท่านั้น หากไม่มีไฟล์ที่จะลบจะแสดงข้อความเตือนและยกเลิกการทำงาน
         $filesToDelete = array_values(array_unique($filesToDelete));
+
+        // ตรวจสอบว่าไฟล์ที่จะลบเป็นไฟล์จริงๆ เท่านั้น โดยใช้ฟังก์ชัน is_file เพื่อกรองรายการไฟล์ที่จะลบให้เหลือเฉพาะไฟล์ที่มีอยู่จริงในระบบเท่านั้น หากไม่มีไฟล์ที่จะลบจะแสดงข้อความเตือนและยกเลิกการทำงาน
         $filesToDelete = array_filter($filesToDelete, 'is_file');
 
         if (empty($filesToDelete)) {

@@ -167,10 +167,10 @@ class Auth
             $cookieOptions = [
                 'expires' => time() - 3600,
                 'path' => '/',
-                'domain' => \env('APP_COOKIE_DOMAIN', '', 'string'),
+                    'domain' => (string) Config::get('auth.cookie_domain', ''),
                 'secure' => $secure,
                 'httponly' => true,
-                'samesite' => \env('REMEMBER_SAMESITE', 'Lax', 'string'),
+                    'samesite' => (string) Config::get('auth.remember_samesite', 'Lax'),
             ];
 
             setcookie(self::REMEMBER_COOKIE, '', $cookieOptions);
@@ -440,13 +440,16 @@ class Auth
         $cookieOptions = [
             'expires' => time() + self::REMEMBER_DURATION,
             'path' => '/',
-            'domain' => \env('APP_COOKIE_DOMAIN', '', 'string'),
+            'domain' => (string) Config::get('auth.cookie_domain', ''),
             'secure' => $secure,
             'httponly' => true,
-            'samesite' => \env('REMEMBER_SAMESITE', 'Lax', 'string'),
+            'samesite' => (string) Config::get('auth.remember_samesite', 'Lax'),
         ];
 
-        setcookie(self::REMEMBER_COOKIE, $userId . '|' . $token, $cookieOptions);
+        $payload = $userId . '|' . $token;
+        $signature = self::signRememberPayload($payload);
+
+        setcookie(self::REMEMBER_COOKIE, $payload . '|' . $signature, $cookieOptions);
     }
 
     /**
@@ -467,24 +470,33 @@ class Auth
         }
 
         $cookieValue = $_COOKIE[self::REMEMBER_COOKIE];
-        $parts = explode('|', $cookieValue, 2);
+        $parts = explode('|', $cookieValue, 3);
 
-        if (count($parts) !== 2) {
+        if (count($parts) < 2) {
             return false;
         }
 
         [$userId, $token] = $parts;
+
+        // Validate signature when present; reject legacy cookies if APP_KEY is set.
+        if (count($parts) === 3) {
+            $signature = $parts[2];
+            if (!self::isRememberSignatureValid($userId . '|' . $token, $signature)) {
+                return false;
+            }
+        } elseif (self::getAppKey() !== '') {
+            return false;
+        }
+
         $hashedToken = hash('sha256', $token);
 
         // ตรวจสอบใน database
         $db = Database::getInstance();
         $sql = "SELECT id FROM users WHERE id = :id AND remember_token = :token";
-        $stmt = $db->query($sql, [
+        $user = $db->fetch($sql, [
             'id' => $userId,
             'token' => $hashedToken
         ]);
-
-        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if ($user) {
             // ล็อกอินอัตโนมัติ
@@ -493,6 +505,60 @@ class Auth
         }
 
         return false;
+    }
+
+    /**
+     * ดึง APP_KEY สำหรับลงลายเซ็นข้อมูล
+     * จุดประสงค์: ใช้เพื่อดึงค่า APP_KEY จากการตั้งค่าเพื่อใช้ในการลงลายเซ็นข้อมูลสำหรับ remember cookie
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $appKey = Auth::getAppKey();
+     * ```
+     * 
+     * @return string คืนค่า APP_KEY ถ้ามีการตั้งค่า, คืนค่าเป็นสตริงว่างถ้าไม่มีการตั้งค่า
+     */
+    private static function getAppKey(): string
+    {
+        return (string) Config::get('auth.app_key', '');
+    }
+
+    /**
+     * สร้างลายเซ็นสำหรับ remember cookie payload
+     * จุดประสงค์: ใช้เพื่อสร้างลายเซ็น HMAC สำหรับข้อมูล payload ของ remember cookie เพื่อความปลอดภัย
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $signature = Auth::signRememberPayload('1|randomtoken');
+     * ```
+     * 
+     * @param string $payload กำหนดข้อมูล payload ที่ต้องการลงลายเซ็น
+     * @return string คืนค่าลายเซ็น HMAC ของ payload
+     */
+    private static function signRememberPayload(string $payload): string
+    {
+        return hash_hmac('sha256', $payload, self::getAppKey());
+    }
+
+    /**
+     * ตรวจสอบลายเซ็นของ remember cookie payload
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่าลายเซ็น HMAC ของ remember cookie payload ถูกต้องหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $isValid = Auth::isRememberSignatureValid('1|randomtoken', 'expected_signature');
+     * ```
+     * 
+     * @param string $payload กำหนดข้อมูล payload ที่ต้องการตรวจสอบลายเซ็น
+     * @param string $signature กำหนดลายเซ็นที่ต้องการตรวจสอบ
+     * @return bool คืนค่า true ถ้าลายเซ็นถูกต้อง, false ถ้าไม่ถูกต้อง
+     */
+    private static function isRememberSignatureValid(string $payload, string $signature): bool
+    {
+        $key = self::getAppKey();
+        if ($key === '') {
+            return false;
+        }
+
+        $expected = hash_hmac('sha256', $payload, $key);
+        return hash_equals($expected, $signature);
     }
 
     /**
@@ -540,8 +606,7 @@ class Auth
             $sql = "SELECT * FROM users WHERE username = :identifier LIMIT 1";
         }
 
-        $stmt = $db->query($sql, ['identifier' => $identifier]);
-        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $user = $db->fetch($sql, ['identifier' => $identifier]);
 
         return $user ?: null;
     }
@@ -562,9 +627,8 @@ class Auth
     {
         $db = Database::getInstance();
         $sql = "SELECT * FROM users WHERE id = :id LIMIT 1";
-        $stmt = $db->query($sql, ['id' => $userId]);
         // ดึงข้อมูลผู้ใช้จากฐานข้อมูลของเรา
-        $userData = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $userData = $db->fetch($sql, ['id' => $userId]);
 
         return $userData ?: null;
     }
@@ -629,8 +693,8 @@ class Auth
             if ($userId) {
                 // ตาราง user_permissions (user_id, permission)
                 $sql = "SELECT 1 FROM user_permissions WHERE user_id = :uid AND permission = :perm LIMIT 1";
-                $stmt = $db->query($sql, ['uid' => $userId, 'perm' => $permission]);
-                if ($stmt->fetchColumn()) {
+                $exists = $db->fetchColumn($sql, ['uid' => $userId, 'perm' => $permission]);
+                if ($exists) {
                     return true;
                 }
             }
@@ -641,20 +705,19 @@ class Auth
 
             if ($roleId) {
                 $sql = "SELECT 1 FROM role_permissions WHERE role_id = :rid AND permission = :perm LIMIT 1";
-                $stmt = $db->query($sql, ['rid' => $roleId, 'perm' => $permission]);
-                if ($stmt->fetchColumn()) {
+                $exists = $db->fetchColumn($sql, ['rid' => $roleId, 'perm' => $permission]);
+                if ($exists) {
                     return true;
                 }
             } elseif ($roleName) {
                 // หา role id จากชื่่อ role แล้วเช็ค
                 $sql = "SELECT id FROM roles WHERE name = :rname LIMIT 1";
-                $stmt = $db->query($sql, ['rname' => $roleName]);
-                $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $row = $db->fetch($sql, ['rname' => $roleName]);
                 if ($row && !empty($row['id'])) {
                     $rid = $row['id'];
                     $sql = "SELECT 1 FROM role_permissions WHERE role_id = :rid AND permission = :perm LIMIT 1";
-                    $stmt = $db->query($sql, ['rid' => $rid, 'perm' => $permission]);
-                    if ($stmt->fetchColumn()) {
+                    $exists = $db->fetchColumn($sql, ['rid' => $rid, 'perm' => $permission]);
+                    if ($exists) {
                         return true;
                     }
                 }

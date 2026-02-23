@@ -35,10 +35,12 @@ use App\Core\Database;
 use App\Core\Response;
 use App\Core\Auth;
 use App\Core\Session;
-use PDO;
 
 class RoleMiddleware extends Middleware
 {
+    /**
+     * ตัวบันทึกเหตุการณ์ (Logger) สำหรับบันทึกความพยายามเข้าถึงที่ไม่ได้รับอนุญาตและเหตุการณ์ที่เกี่ยวข้องกับการตรวจสอบบทบาท
+     */
     private Logger $logger;
     
     /**
@@ -57,7 +59,8 @@ class RoleMiddleware extends Middleware
     ];
 
     /**
-     * Constructor
+     * สร้างอินสแตนซ์ RoleMiddleware ใหม่
+     * จุดประสงค์: เตรียมตัวบันทึกเหตุการณ์และเริ่มต้นเซสชันเพื่อใช้ในการตรวจสอบบทบาท และตั้งค่าบทบาทที่อนุญาตผ่านพารามิเตอร์
      * 
      * @param string|array $roles บทบาทที่อนุญาต
      */
@@ -78,8 +81,10 @@ class RoleMiddleware extends Middleware
 
     /**
      * จัดการการตรวจสอบบทบาท
+     * จุดประสงค์: ตรวจสอบว่าผู้ใช้มีบทบาทที่อนุญาตหรือไม่ และดำเนินการตามนั้น (อนุญาตหรือปฏิเสธคำขอ)
      * 
-        * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
+     * @param \App\Core\Request|null $request คำขอ HTTP ปัจจุบัน (ไม่จำเป็นต้องใช้ในกรณีนี้ แต่สามารถรับได้ถ้าต้องการ)
+     * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
         public function handle(?\App\Core\Request $request = null): bool|Response
     {
@@ -101,7 +106,6 @@ class RoleMiddleware extends Middleware
         // ดึงข้อมูลผู้ใช้
         $userId = $this->getUserId();
         $user = $this->getUserById($userId);
-
         if (!$user) {
             $this->logger->error('role.user_not_found', [
                 'user_id' => $userId,
@@ -137,9 +141,10 @@ class RoleMiddleware extends Middleware
 
     /**
      * ตรวจสอบว่าผู้ใช้มีบทบาทที่ต้องการหรือไม่
+     * จุดประสงค์: ตรวจสอบว่าบทบาทของผู้ใช้ตรงกับบทบาทที่อนุญาตหรือมีลำดับชั้นสูงกว่า เพื่อให้สามารถกำหนดสิทธิ์การเข้าถึงได้อย่างยืดหยุ่น
      * 
-     * @param string $userRole
-     * @return bool
+     * @param string $userRole บทบาทของผู้ใช้
+     * @return bool ผลลัพธ์การตรวจสอบว่าผู้ใช้มีบทบาทที่ต้องการหรือไม่
      */
     private function hasRequiredRole(string $userRole): bool
     {
@@ -165,11 +170,14 @@ class RoleMiddleware extends Middleware
 
     /**
      * จัดการกรณียังไม่เข้าสู่ระบบ
+     * จุดประสงค์: จัดการการตอบกลับเมื่อผู้ใช้ยังไม่เข้าสู่ระบบ โดยแยกการตอบกลับสำหรับ API และ Web เพื่อให้เหมาะสมกับแต่ละประเภทของคำขอ
+     * 
+     * @return \App\Core\Response การตอบกลับที่เหมาะสมสำหรับกรณียังไม่เข้าสู่ระบบ
      */
     private function handleUnauthorized(): Response
     {
         $uri = $_SERVER['REQUEST_URI'] ?? '';
-        $isApiRequest = strpos($uri, '/api/') === 0;
+        $isApiRequest = preg_match('#^/api(/|$)#', $uri);
 
         if ($isApiRequest) {
             return $this->jsonError('Authentication required', 401);
@@ -182,11 +190,14 @@ class RoleMiddleware extends Middleware
 
     /**
      * จัดการกรณีไม่มีสิทธิ์
+     * จุดประสงค์: จัดการการตอบกลับเมื่อผู้ใช้ไม่มีสิทธิ์เข้าถึงทรัพยากร โดยแยกการตอบกลับสำหรับ API และ Web เพื่อให้เหมาะสมกับแต่ละประเภทของคำขอ
+     * 
+     * @return \App\Core\Response การตอบกลับที่เหมาะสมสำหรับกรณีไม่มีสิทธิ์
      */
     private function handleForbidden(): Response
     {
         $uri = $_SERVER['REQUEST_URI'] ?? '';
-        $isApiRequest = strpos($uri, '/api/') === 0;
+        $isApiRequest = preg_match('#^/api(/|$)#', $uri);
 
         if ($isApiRequest) {
             return $this->jsonError('Insufficient permissions', 403);
@@ -197,23 +208,25 @@ class RoleMiddleware extends Middleware
 
     /**
      * ดึงข้อมูลผู้ใช้จาก database
+     * จุดประสงค์: ดึงข้อมูลผู้ใช้จากฐานข้อมูลตาม ID ที่ระบุ เพื่อใช้ในการตรวจสอบบทบาทและสิทธิ์ของผู้ใช้
      * 
-     * @param int $userId
-     * @return array|null
+     * @param int $userId ID ของผู้ใช้ที่ต้องการดึงข้อมูล
+     * @return array|null คืนค่าข้อมูลผู้ใช้ในรูปแบบ array หรือ null หากไม่พบผู้ใช้
      */
     private function getUserById(int $userId): ?array
     {
         $db = Database::getInstance();
         $sql = "SELECT * FROM users WHERE id = :id LIMIT 1";
-        $stmt = $db->query($sql, ['id' => $userId]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $user = $db->fetch($sql, ['id' => $userId]);
         return $user ?: null;
     }
 
     /**
      * เพิ่มบทบาทที่อนุญาต
+     * จุดประสงค์: เพิ่มบทบาทที่อนุญาตให้เข้าถึงทรัพยากร โดยสามารถเพิ่มได้หลายบทบาทพร้อมกัน เพื่อให้สามารถกำหนดสิทธิ์การเข้าถึงได้อย่างยืดหยุ่น
      * 
-     * @param string|array $roles
+     * @param string|array $roles บทบาทที่ต้องการเพิ่ม (สามารถเป็น string เดียวหรือ array ของบทบาท)
+     * @return void ไม่มีค่าที่ส่งกลับ แต่จะเพิ่มบทบาทที่อนุญาตในตัวแปร $allowedRoles
      */
     public function addAllowedRoles($roles): void
     {
@@ -226,8 +239,10 @@ class RoleMiddleware extends Middleware
 
     /**
      * ตั้งค่าลำดับชั้นของบทบาท
+     * จุดประสงค์: ให้สามารถกำหนดลำดับชั้นของบทบาทได้อย่างยืดหยุ่น เพื่อให้การตรวจสอบบทบาทสามารถพิจารณาลำดับชั้นได้ตามที่กำหนด
      * 
-     * @param array $hierarchy
+     * @param array $hierarchy ลำดับชั้นของบทบาทในรูปแบบ associative array เช่น ['guest' => 0, 'user' => 1, 'manager' => 2, 'admin' => 3]
+     * @return void ไม่มีค่าที่ส่งกลับ แต่จะตั้งค่าลำดับชั้นของบทบาทในตัวแปร $roleHierarchy
      */
     public function setRoleHierarchy(array $hierarchy): void
     {
@@ -236,9 +251,10 @@ class RoleMiddleware extends Middleware
 
     /**
      * ตรวจสอบว่าผู้ใช้มีบทบาทเฉพาะหรือไม่ (static method)
+     * จุดประสงค์: ตรวจสอบว่าผู้ใช้มีบทบาทเฉพาะหรือไม่ โดยใช้ ID ของผู้ใช้ที่เข้าสู่ระบบและดึงข้อมูลจากฐานข้อมูลเพื่อเปรียบเทียบบทบาท ซึ่งสามารถใช้ได้ในส่วนอื่นของแอปพลิเคชันที่ต้องการตรวจสอบบทบาทโดยไม่ต้องผ่าน middleware
      * 
-     * @param string $role
-     * @return bool
+     * @param string $role บทบาทที่ต้องการตรวจสอบ
+     * @return bool ผลลัพธ์การตรวจสอบว่าผู้ใช้มีบทบาทที่ต้องการหรือไม่
      */
     public static function userHasRole(string $role): bool
     {
@@ -249,8 +265,7 @@ class RoleMiddleware extends Middleware
 
         $db = Database::getInstance();
         $sql = "SELECT role FROM users WHERE id = :id LIMIT 1";
-        $stmt = $db->query($sql, ['id' => $userId]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $user = $db->fetch($sql, ['id' => $userId]);
 
         if (!$user) {
             return false;
@@ -261,8 +276,9 @@ class RoleMiddleware extends Middleware
 
     /**
      * ตรวจสอบว่าผู้ใช้เป็น admin หรือไม่ (static method)
+     * จุดประสงค์: ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบมีบทบาทเป็น admin หรือไม่ โดยใช้เมธอด userHasRole
      * 
-     * @return bool
+     * @return bool ผลลัพธ์การตรวจสอบว่าผู้ใช้เป็น admin หรือไม่
      */
     public static function isAdmin(): bool
     {

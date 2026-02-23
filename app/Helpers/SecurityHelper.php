@@ -461,57 +461,6 @@ class SecurityHelper
     }
 
     /**
-     * สร้าง CSRF token
-     * จุดประสงค์: ใช้เพื่อสร้าง token สำหรับป้องกัน CSRF
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $csrfToken = SecurityHelper::generateCsrfToken();
-     * ```
-     * 
-     * ผลลัพธ์: (string) CSRF token
-     * 
-     * returns string CSRF token
-     * 
-     * @return string
-     */
-    public static function generateCsrfToken(): string
-    {
-        $token = self::generateToken(32);
-        
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        $_SESSION['csrf_token'] = $token;
-        
-        return $token;
-    }
-
-    /**
-     * ตรวจสอบ CSRF token
-     * จุดประสงค์: ใช้เพื่อตรวจสอบ token สำหรับป้องกัน CSRF
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $isValid = SecurityHelper::verifyCsrfToken($token);
-     * ```
-     * 
-     * ผลลัพธ์: true
-     * 
-     * returns bool ผลลัพธ์การตรวจสอบ CSRF token
-     * 
-     * @param string $token
-     * @return bool
-     */
-    public static function verifyCsrfToken(string $token): bool
-    {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
-    }
-
-    /**
      * เข้ารหัสข้อความ
      * จุดประสงค์: ใช้เพื่อเข้ารหัสข้อความด้วย AES-256-CBC
      * ตัวอย่างการใช้งาน:
