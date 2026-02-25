@@ -77,19 +77,19 @@ class {$name} extends Model
     /**
      * ชื่อตารางในฐานข้อมูล
      */
-    protected string \$table = '{$name}';
+    protected static string \$table = '{$name}';
 
     /**
      * Primary key (ปกติใช้ id)
      */
-    protected string \$primaryKey = 'id';
+    protected static string \$primaryKey = 'id';
 
     /**
      * ฟิลด์ที่อนุญาตให้ mass assignment
      * fillable: รายชื่อคอลัมน์ที่ “อนุญาต” ให้ตั้งค่าผ่าน fill() หรือ 
      * create() ได้ ถ้าใส่ไว้ ระบบจะเซฟเฉพาะคอลัมน์ในลิสต์นี้เท่านั้น
      */
-    protected array \$fillable = [
+    protected static array \$fillable = [
         // ตัวอย่าง: 'name', 'email', 'status'
     ];
 
@@ -98,21 +98,21 @@ class {$name} extends Model
      * guarded: รายชื่อคอลัมน์ที่ “ห้าม” ให้ตั้งค่าผ่าน fill() หรือ 
      * create() ได้ ถ้าใส่ไว้ ระบบจะไม่เซฟคอลัมน์ในลิสต์นี้เลย
      */
-    protected array \$guarded = ['id'];
+    protected static array \$guarded = ['id'];
 
     /**
      * เปิด/ปิด timestamps (created_at, updated_at)
      * ถ้าเปิด ระบบจะจัดการคอลัมน์ created_at และ updated_at 
      * ให้อัตโนมัติเมื่อสร้างหรืออัพเดตเรคคอร์ด
      */
-    protected bool \$timestamps = true;
+    protected static bool \$timestamps = true;
 
     /**
      * เปิด/ปิด soft deletes (deleted_at)
      * ถ้าเปิด ระบบจะจัดการคอลัมน์ deleted_at 
      * ให้อัตโนมัติเมื่อทำการลบเรคคอร์ด
      */
-    protected bool \$softDeletes = false;
+    protected static bool \$softDeletes = false;
 
     // ใส่เมธอด query ที่ใช้ซ้ำบ่อยไว้ที่นี่ได้ เช่น scope หรือ helper
     // ตัวอย่างเมธอด query ที่ใช้ซ้ำบ่อย

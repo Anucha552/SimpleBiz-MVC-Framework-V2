@@ -149,10 +149,12 @@ class FormHelper
         Session::start(); // เริ่มเซสชันถ้ายังไม่เริ่ม
         $errors = Session::getFlash('validation_errors', []);
 
+        // ถ้า $field เป็น null ให้คืนข้อผิดพลาดทั้งหมด, ถ้าไม่ใช่ ให้คืนเฉพาะข้อผิดพลาดสำหรับฟิลด์นั้น
         if (!is_array($errors)) {
             return [];
         }
 
+        // ถ้า $field เป็น null ให้คืนข้อผิดพลาดทั้งหมด
         if ($field === null) {
             return $errors;
         }

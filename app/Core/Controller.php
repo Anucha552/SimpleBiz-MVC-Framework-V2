@@ -48,9 +48,9 @@ class Controller
     }
 
     /**
-     * สร้าง Response สำหรับ view (เหมาะกับ controller ที่ต้องการ return Response)
-     * จุดประสงค์: สร้าง Response HTML จากวิวพร้อมข้อมูลและเลย์เอาต์ (ถ้ามี)
-     * responseView() ควรใช้กับอะไร: เมื่อคุณต้องการคืนค่า Response HTML จากตัวควบคุม
+     * แสดงผลวิวพร้อมข้อมูลและคืนค่า Response พร้อมกำหนด Cache
+     * จุดประสงค์: แสดงผลวิว HTML โดยส่งข้อมูลไปยังวิวและคืนค่า Response
+     * responseView() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลหน้าวิวพร้อมข้อมูลและคืนค่า Response ในตัวควบคุม
      * ตัวอย่างการใช้งาน:
      * ```php
      * return $this->responseView('home', ['name' => 'John'], 'main_layout', 200);
@@ -60,13 +60,18 @@ class Controller
      * @param array $data กำหนดข้อมูลที่จะส่งไปยังวิว
      * @param string|null $layout กำหนดชื่อเลย์เอาต์ (ถ้ามี)
      * @param int $statusCode กำหนดรหัสสถานะ HTTP เช่น 200, 404
+     * @param int|null $cacheSeconds กำหนดเวลาการแคชในหน่วยวินาที (ถ้ามี)
      * @return Response คืนค่า Response HTML
      */
-    protected function responseView(string $view, array $data = [], ?string $layout = null, int $statusCode = 200): Response
-    {
+    protected function responseView(string $view, array $data = [], ?string $layout = null, int $statusCode = 200, ?int $cacheSeconds = null): Response {
         $engine = new View($view, $data);
-        if ($layout !== null && $layout !== '') {
+
+        if ($layout) {
             $engine->layout($layout);
+        }
+
+        if ($cacheSeconds !== null) {
+            $engine->cache($cacheSeconds);
         }
 
         return Response::html($engine->render(), $statusCode);
@@ -575,12 +580,15 @@ class Controller
      */
     protected function validateOrRedirect(array $data, array $rules, array $customMessages = [], ?string $redirect = null): ?Response
     {
+        // สร้าง Validator และทำการ validate
         $validator = $this->validate($data, $rules, $customMessages);
 
+        // ถ้า validation ล้มเหลว ให้ flash errors และ old input แล้ว redirect
         if ($validator->fails()) {
-            \App\Core\Session::flash('validation_errors', $validator->errors());
-            \App\Core\Session::flashInput($data);
+            \App\Core\Session::flash('validation_errors', $validator->errors()); // แฟลชข้อผิดพลาดการตรวจสอบความถูกต้อง
+            \App\Core\Session::flashInput($data); // แฟลชข้อมูล input เพื่อใช้กับ old() ในคำขอถัดไป
 
+            // ถ้า $redirect ถูกกำหนด ให้ redirect ไปที่ URL นั้น, ถ้าไม่ก็ redirect กลับไปยังหน้าที่แล้ว
             if ($redirect !== null) {
                 return $this->redirect($redirect);
             }
@@ -745,17 +753,10 @@ class Controller
      */
     protected function model(string $name)
     {
-        $candidates = [
-            'App\\Models\\' . $name,
-            'App\\Models\\' . ucfirst($name),
-        ];
-
-        foreach ($candidates as $fqcn) {
-            if (class_exists($fqcn)) {
-                return new $fqcn();
-            }
+        $className = "App\\Models\\$name";
+        if (class_exists($className)) {
+            return $className::class;
         }
-
         return null;
     }
 
@@ -917,7 +918,7 @@ class Controller
      * @param mixed|null $value กำหนดค่าของข้อมูลที่ต้องการแชร์ (ไม่จำเป็นถ้า $key เป็นอาร์เรย์)
      * @return void ไม่มีค่าที่ส่งกลับ แต่จะทำการแชร์ข้อมูลให้ทุกวิวผ่าน View::share
      */
-    protected function share($key, $value = null): void
+    protected function share(string $key,mixed $value): void
     {
         View::share($key, $value);
     }

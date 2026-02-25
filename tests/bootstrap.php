@@ -40,3 +40,6 @@ if (file_exists($envFile)) {
         }
     }
 }
+
+// ตั้งค่าการเชื่อมต่อฐานข้อมูลสำหรับโมเดลเมื่อรันเทสต์
+\App\Core\Model::setConnection(\App\Core\Database::getInstance());

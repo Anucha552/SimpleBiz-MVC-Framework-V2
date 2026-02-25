@@ -180,6 +180,19 @@ class Database
     }
 
     /**
+     * Lazily initialize and return Logger instance.
+     *
+     * @return Logger
+     */
+    private function getLogger(): Logger
+    {
+        if ($this->logger === null) {
+            $this->logger = new Logger();
+        }
+        return $this->logger;
+    }
+
+    /**
      * คอนสตรัคเตอร์แบบ private เพื่อป้องกันการสร้างอินสแตนซ์โดยตรง
      * บังคับใช้รูปแบบ singleton
      */
@@ -359,11 +372,29 @@ class Database
     public function query(string $sql, array $params = []): PDOStatement
     {
         $start = microtime(true);
-        $stmt = $this->connection->prepare($sql);
-        $stmt->execute($params);
-        $duration = (microtime(true) - $start) * 1000.0;
-        $this->recordQuery($sql, $params, $duration);
-        return $stmt;
+        try {
+            $stmt = $this->connection->prepare($sql);
+            $stmt->execute($params);
+            $duration = (microtime(true) - $start) * 1000.0;
+            $this->recordQuery($sql, $params, $duration);
+            if ($duration > 500.0) {
+                $this->getLogger()->warning('db.slow_query', [
+                    'sql' => $sql,
+                    'params' => $params,
+                    'duration_ms' => $duration,
+                ]);
+            }
+            return $stmt;
+        } catch (\Throwable $e) {
+            $duration = (microtime(true) - $start) * 1000.0;
+            $this->getLogger()->error('db.query_error', [
+                'sql' => $sql,
+                'params' => $params,
+                'error' => $e->getMessage(),
+                'duration_ms' => $duration,
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -513,11 +544,29 @@ class Database
     public function execute(string $sql, array $params = []): int
     {
         $start = microtime(true);
-        $stmt = $this->connection->prepare($sql);
-        $stmt->execute($params);
-        $duration = (microtime(true) - $start) * 1000.0;
-        $this->recordQuery($sql, $params, $duration);
-        return $stmt->rowCount();
+        try {
+            $stmt = $this->connection->prepare($sql);
+            $stmt->execute($params);
+            $duration = (microtime(true) - $start) * 1000.0;
+            $this->recordQuery($sql, $params, $duration);
+            if ($duration > 500.0) {
+                $this->getLogger()->warning('db.slow_query', [
+                    'sql' => $sql,
+                    'params' => $params,
+                    'duration_ms' => $duration,
+                ]);
+            }
+            return $stmt->rowCount();
+        } catch (\Throwable $e) {
+            $duration = (microtime(true) - $start) * 1000.0;
+            $this->getLogger()->error('db.execute_error', [
+                'sql' => $sql,
+                'params' => $params,
+                'error' => $e->getMessage(),
+                'duration_ms' => $duration,
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -599,10 +648,28 @@ class Database
     public function execRaw(string $sql): int
     {
         $start = microtime(true);
-        $result = $this->connection->exec($sql);
-        $duration = (microtime(true) - $start) * 1000.0;
-        $this->recordQuery($sql, [], $duration);
-        return $result;
+        try {
+            $result = $this->connection->exec($sql);
+            $duration = (microtime(true) - $start) * 1000.0;
+            $this->recordQuery($sql, [], $duration);
+            if ($duration > 500.0) {
+                $this->getLogger()->warning('db.slow_query', [
+                    'sql' => $sql,
+                    'params' => [],
+                    'duration_ms' => $duration,
+                ]);
+            }
+            return $result;
+        } catch (\Throwable $e) {
+            $duration = (microtime(true) - $start) * 1000.0;
+            $this->getLogger()->error('db.exec_raw_error', [
+                'sql' => $sql,
+                'params' => [],
+                'error' => $e->getMessage(),
+                'duration_ms' => $duration,
+            ]);
+            throw $e;
+        }
     }
 
     /**

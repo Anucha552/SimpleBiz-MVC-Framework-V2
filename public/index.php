@@ -29,6 +29,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// เปิด output buffering เพื่อให้สามารถควบคุมการส่งออกทั้งหมดได้
+// (ErrorHandler จะล้าง buffer ก่อนแสดงหน้า error ดังนั้นจะไม่ซ้อนกัน)
+if (!ob_get_level()) {
+    ob_start();
+}
+
 // เส้นทางไปยัง Composer autoloader
 $autoloadPath = __DIR__ . '/../vendor/autoload.php';
 
@@ -272,6 +278,11 @@ if ($config['env'] === 'production') {
 // ตั้งค่า timezone
 date_default_timezone_set($config['timezone']);
 
+// สร้างการเชื่อมต่อฐานข้อมูล Model
+App\Core\Model::setConnection(
+    App\Core\Database::getInstance()
+);
+
 // ===== Global error/exception handlers =====
 $logger = new App\Core\Logger();
 
@@ -385,3 +396,8 @@ foreach ($globalMiddleware as $middlewareClass) {
 
 // ส่งคำขอ (ข้อผิดพลาดจะถูกจัดการโดย global handlers)
 $router->dispatch($request);
+
+// ปิด/flush output buffer ถ้าทำงานปกติ (ErrorHandler จะเคลียร์บัฟเฟอร์แล้ว exit)
+if (ob_get_level()) {
+    @ob_end_flush();
+}

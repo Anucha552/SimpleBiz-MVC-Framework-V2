@@ -11,6 +11,7 @@ use App\Core\Controller;
  */
 class WebController extends Controller
 {
+    
     /**
      * แสดงหน้าเว็บต้อนรับ
      */

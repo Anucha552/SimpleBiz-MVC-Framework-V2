@@ -61,7 +61,14 @@ class ErrorHandler
      */
     public static function show(int $code, string $message = ''): void
     {
+        // Clear any existing output buffers to avoid partial/overlapping HTML
+        while (ob_get_level() > 0) {
+            @ob_end_clean();
+        }
+
+        // Send the error response and terminate to prevent mixed output
         self::response($code, $message)->send();
+        exit;
     }
 
     /**

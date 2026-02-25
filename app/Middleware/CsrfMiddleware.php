@@ -1,4 +1,5 @@
 <?php
+
 /**
  * MIDDLEWARE CSRF TOKEN
  * 
@@ -71,30 +72,25 @@ class CsrfMiddleware extends Middleware
      * @param \App\Core\Request|null $request คำขอ HTTP ปัจจุบัน
      * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-        public function handle(?\App\Core\Request $request = null): bool|Response
+    public function handle(?\App\Core\Request $request = null): bool|Response
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-        // ตรวจสอบเฉพาะเมธอดที่เปลี่ยนแปลงข้อมูล
+        // ตรวจเฉพาะ method ที่เปลี่ยนข้อมูล
         if (!in_array($method, ['POST', 'PUT', 'DELETE', 'PATCH'])) {
-            return true; // ไม่ต้องตรวจสอบสำหรับ GET, HEAD, OPTIONS
+            return true;
         }
 
-        // ข้าม API endpoints (ใช้ API key แทน)
+        // ข้าม API
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         if (preg_match('#^/api(/|$)#', $uri)) {
             return true;
         }
 
-        // ตรวจสอบว่า token หมดอายุหรือไม่
-        if ($this->isTokenExpired()) {
-            $this->regenerateToken();
-        }
-
-        // รับ token จากคำขอ
+        // รับ token จาก request ก่อน
         $submittedToken = $this->getSubmittedToken();
-
-        // ตรวจสอบว่า token ถูกส่งมาหรือไม่
+        
+        // ถ้าไม่มี token ที่ส่งมาเลย ถือว่าเป็นความพยายามที่ไม่ถูกต้อง
         if (!$submittedToken) {
             $this->logger->security('csrf.missing_token', [
                 'route' => $uri,
@@ -106,7 +102,7 @@ class CsrfMiddleware extends Middleware
             return Response::redirect($referer);
         }
 
-        // ตรวจสอบ token
+        // ตรวจสอบ token ก่อนเสมอ
         if (!$this->validateToken($submittedToken)) {
             $this->logger->security('csrf.invalid_token', [
                 'route' => $uri,
@@ -118,7 +114,12 @@ class CsrfMiddleware extends Middleware
             return Response::redirect($referer);
         }
 
-        // Token ถูกต้อง
+        // ตรงนี้คือ token ถูกต้องแล้ว
+        // ค่อยเช็คหมดอายุ และ regenerate หลังจาก validate ผ่าน
+        if ($this->isTokenExpired()) {
+            $this->regenerateToken();
+        }
+
         return true;
     }
 
@@ -222,7 +223,9 @@ class CsrfMiddleware extends Middleware
     private function validateToken(string $token): bool
     {
         // ตรวจสอบกับ token ในเซสชัน
-        $sessionToken = Session::getCsrfToken();
+        $sessionToken = Session::getCsrfToken(); // ใช้ getCsrfToken() เพื่อรองรับ legacy token
+
+        // ตรวจสอบว่า token ในเซสชันมีค่าและตรงกับ token ที่ส่งมา
         if (is_string($sessionToken) && $sessionToken !== '' && hash_equals($sessionToken, $token)) {
             return true;
         }

@@ -37,7 +37,7 @@ class UrlHelper
     public static function base(): string
     {
         $protocol = self::isSecure() ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost'; // ใช้ localhost เป็นค่าเริ่มต้นถ้าไม่มี HTTP_HOST
         
         return "{$protocol}://{$host}";
     }
@@ -360,8 +360,8 @@ class UrlHelper
      */
     public static function asset(string $path): string
     {
-        $path = ltrim($path, '/');
-        return self::base() . '/' . $path;
+        $path = ltrim($path, '/'); // ลบ slash นำหน้าออกถ้ามี
+        return self::base() . '/' . $path; // สร้าง URL เต็มสำหรับ asset 
     }
 
     /**
@@ -712,4 +712,5 @@ class UrlHelper
         
         return implode('/', array_filter($segments));
     }
+
 }

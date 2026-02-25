@@ -6,6 +6,7 @@
 .env
 .env.*
 !.env.example
+.env.testing
 
 # Composer dependencies
 /vendor/

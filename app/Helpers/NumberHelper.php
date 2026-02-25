@@ -824,13 +824,45 @@ class NumberHelper
      * $number = NumberHelper::fromOctal("100"); // ผลลัพธ์: 64
      * ```
      * 
-     * returns int จำนวนเต็มที่แปลงจาก Octal
-     * 
-     * @param string $octal
-     * @return int
+     * @param string $octal กำหนดตัวเลขในรูปแบบ Octal ที่ต้องการแปลง
+     * @return int จำนวนเต็มที่แปลงจาก Octal
      */
     public static function fromOctal(string $octal): int
     {
         return octdec($octal);
+    }
+
+    /**
+     * สร้างรหัสตัวเลข
+     * จุดประสงค์: ใช้เพื่อสร้างรหัสตัวเลขที่มีรูปแบบตามที่กำหนด
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $code = NumberHelper::generateCode('INV', 1, 5); // ผลลัพธ์: "INV00001"
+     * $code = NumberHelper::generateCode(null, null, 5, 'INV00001'); // ผลลัพธ์: "INV00002"
+     * ```
+     * 
+     * @param string|null $prefix กำหนดคำนำหน้าของรหัส (เช่น "INV")
+     * @param int|null $number กำหนดตัวเลขที่ต้องการใช้ในรหัส
+     * @param int $digit กำหนดจำนวนหลักของตัวเลขในรหัส (ค่าเริ่มต้นคือ 3)
+     * @param string|null $lastCode กำหนดรหัสล่าสุดเพื่อให้ระบบสามารถสร้างรหัสถัดไปได้โดยอัตโนมัติ
+     * @return string|false รหัสตัวเลขที่ถูกสร้างขึ้น หรือ false หากพารามิเตอร์ไม่ครบ
+     */
+    public static function generateCode($prefix = null, $number = null, $digit = 3, $lastCode = null) {
+
+        // โหมดรันต่อจากรหัสล่าสุด
+        if ($lastCode !== null) {
+            $numberPart = preg_replace('/[^0-9]/', '', $lastCode);
+            $prefixPart = preg_replace('/[0-9]/', '', $lastCode);
+
+            $newNumber = (int)$numberPart + 1;
+            return $prefixPart . str_pad($newNumber, $digit, "0", STR_PAD_LEFT);
+        }
+
+        // โหมดกำหนดเลขเอง
+        if ($prefix !== null && $number !== null) {
+            return $prefix . str_pad($number, $digit, "0", STR_PAD_LEFT);
+        }
+
+        return false; // กรณีพารามิเตอร์ไม่ครบ
     }
 }

@@ -29,6 +29,7 @@
  */
 
 use App\Middleware\AuthMiddleware;
+use App\Middleware\CsrfMiddleware;
 
 // กำหนดตัวแปร Path เริ่มต้นสำหรับ Web
 $webBasePath = 'App\\Controllers\\Web\\';
@@ -46,7 +47,9 @@ $router->get('/employees',  $webBasePath . 'EmployeeController@index');
 $router->get('/employees/create', $webBasePath . 'EmployeeController@create');
 
 // รับข้อมูลจาก Form แล้วบันทึกพนักงานใหม่ลงฐานข้อมูล
-$router->post('/employees', $webBasePath . 'EmployeeController@store');
+$router->post('/employees', $webBasePath . 'EmployeeController@store', [
+    CsrfMiddleware::class
+]);
 
 // แสดงรายละเอียดพนักงาน 1 คน ตาม id
 $router->get('/employees/{id}', $webBasePath . 'EmployeeController@show');
@@ -55,7 +58,9 @@ $router->get('/employees/{id}', $webBasePath . 'EmployeeController@show');
 $router->get('/employees/{id}/edit', $webBasePath . 'EmployeeController@edit');
 
 // รับข้อมูลที่แก้ไขแล้ว แล้วอัปเดตลงฐานข้อมูล
-$router->post('/employees/{id}/update', $webBasePath . 'EmployeeController@update');
+$router->post('/employees/{id}/update', $webBasePath . 'EmployeeController@update', [
+    CsrfMiddleware::class
+]);
 
 // ลบพนักงานตาม id (มาจากปุ่มลบในหน้าเว็บ)
 $router->post('/employees/{id}/delete', $webBasePath . 'EmployeeController@destroy');
