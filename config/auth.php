@@ -18,4 +18,5 @@ return [
     'remember_samesite' => env('REMEMBER_SAMESITE', 'Lax', 'string'),
     'guest_redirect_to' => env('GUEST_REDIRECT_TO', '', 'string'),
     'auth_redirect_to' => env('AUTH_REDIRECT_TO', '', 'string'),
+    'permission_cache_ttl' => env('PERMISSION_CACHE_TTL', 3600, 'int'),
 ];

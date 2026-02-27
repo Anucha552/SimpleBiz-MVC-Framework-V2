@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  * คลาส Auth สำหรับการจัดการการพิสูจน์ตัวตน (Authentication) และการอนุญาต (Authorization)
  * 
@@ -27,7 +28,14 @@
 
 namespace App\Core;
 
-class Auth
+use App\Core\Session;
+use App\Core\Config;
+use App\Core\Logger;
+use App\Core\Cache;
+use App\Core\Database;
+use App\Core\Authorization;
+
+final class Auth
 {
     /**
      * Session key สำหรับ user ID
@@ -50,9 +58,26 @@ class Auth
     private const REMEMBER_DURATION = 60 * 60 * 24 * 30;
 
     /**
+     * Dummy bcrypt hash used for timing-attack mitigation when user not found.
+     * Generated with: password_hash('dummy', PASSWORD_BCRYPT)
+     */
+    private const DUMMY_PASSWORD_HASH = '$2y$12$2dWD7rDSfP1iwG1BS4lGqO3d1z5RN/U44ylkHX5fWdeI4haZmsEUK';
+
+    /**
      * User data ที่ล็อกอินอยู่ สำหรับเก็บข้อมูลผู้ใช้ที่ล็อกอินอยู่ในหน่วยความจำ
      */
     private static ?array $user = null;
+
+    /**
+     * การป้องกันการโจมตีแบบ brute-force: กำหนดจำนวนครั้งสูงสุดที่อนุญาตให้พยายามเข้าสู่ระบบได้ และระยะเวลาที่จะบล็อกหลังจากเกินจำนวนครั้ง
+     */
+    private const MAX_LOGIN_ATTEMPTS = 5;
+
+    /**
+     * ระยะเวลาที่จะบล็อกหลังจากเกินจำนวนครั้งที่อนุญาต (5 นาที)
+     */
+    private const ATTEMPT_WINDOW = 300; // seconds (5 minutes)
+
 
     /**
      * พยายามเข้าสู่ระบบด้วยข้อมูลรับรอง
@@ -74,30 +99,69 @@ class Auth
         $identifier = $credentials['username'] ?? $credentials['email'] ?? null;
         $password = $credentials['password'] ?? null;
 
+        // ตรวจสอบว่ามี username/email และ password หรือไม่
         if (!$identifier || !$password) {
+            return false;
+        }
+
+        // ใช้ IP address ของผู้ใช้สำหรับการบล็อกการโจมตีแบบ brute-force
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $logger = new Logger();
+
+        // ตรวจสอบการล็อกอินแบบ brute-force
+        $blocked = self::isBlocked($identifier, $ip);
+        if ($blocked['blocked']) {
+            $logger->security('auth.login.locked', ['identifier' => substr($identifier, 0, 64), 'ip' => $ip, 'remaining_seconds' => $blocked['remaining']]);
+            // don't reveal timing to clients, but add slight delay
+            usleep(200000);
             return false;
         }
 
         // ค้นหาผู้ใช้
         $user = self::findUserByCredentials($identifier);
 
+        // ถ้าไม่พบผู้ใช้, บันทึกความพยายามที่ล้มเหลวและทำการหน่วงเวลาเพื่อป้องกันการโจมตีแบบ brute-force
         if (!$user) {
+            // record attempt by identifier and ip
+            self::recordFailedAttemptFor($identifier, $ip);
+            // timing-attack mitigation: run password_verify on a dummy bcrypt hash
+            password_verify($password, self::DUMMY_PASSWORD_HASH);
+            // small delay to slow brute force (200-300ms)
+            usleep(250000);
+            return false;
+        }
+
+        // ตรวจสอบสถานะผู้ใช้
+        if (($user['status'] ?? null) !== 'active') {
+            return false;
+        }
+
+        // ตรวจสอบว่าผู้ใช้ถูกลบหรือไม่
+        if (!empty($user['deleted_at'])) {
             return false;
         }
 
         // ตรวจสอบรหัสผ่าน
         if (!self::verifyPassword($password, $user['password'])) {
+            self::recordFailedAttemptFor($identifier, $ip);
+            $logger->security('auth.login.failed', ['identifier' => substr($identifier, 0, 64), 'ip' => $ip]);
+            // small delay to slow brute force (200-300ms)
+            usleep(250000);
             return false;
         }
 
         // ล็อกอินผู้ใช้
         self::login($user, $remember);
 
+        // On successful login clear failed attempts
+        self::clearFailedAttemptsFor($identifier, $ip);
+        $logger->info('auth.login.success', ['user_id' => $user['id'], 'ip' => $ip]);
+
         return true;
     }
 
     /**
-     * เข้าสู่ระบบด้วย User object
+     * เข้าสู่ระบบด้วยข้อมูลผู้ใช้
      * จุดประสงค์: ใช้เพื่อเข้าสู่ระบบด้วยข้อมูลผู้ใช้ที่ให้มา
      * login() ควรใช้กับอะไร: หลังจากการลงทะเบียน, การเข้าสู่ระบบแบบโซเชียล, etc.
      * ตัวอย่างการใช้งาน:
@@ -112,28 +176,60 @@ class Auth
     public static function login($user, bool $remember = false): void
     {
         Session::start();
-
-        // แปลงเป็น array ถ้าเป็น object
+        
+        // ตรวจสอบว่า $user เป็น object หรือ array และดึง user ID ออกมา
         if (is_object($user)) {
-            /** @var object{id: int} $user */
+            // สมมติว่า object มี property 'id'
             $userId = $user->id;
         } else {
+            // สมมติว่าเป็น array และมี key 'id'
             $userId = $user['id'];
         }
 
         // บันทึก user ID ใน session
         Session::set(self::SESSION_KEY, $userId);
 
-        // สร้าง session ใหม่เพื่อป้องกัน session fixation
-        Session::regenerate();
+        // สร้าง session ใหม่เพื่อป้องกัน session fixation (logged with context)
+        Session::regenerateWithContext('login', is_int($userId) ? (int)$userId : null);
 
-        // Remember me
+        // ถ้าต้องการจดจำการเข้าสู่ระบบ, ให้ตั้งค่า remember token และ cookie
         if ($remember) {
-            self::setRememberToken($userId);
+            $logger = new Logger();
+
+            // ตรวจสอบว่า APP_KEY ถูกตั้งค่าเพื่อความปลอดภัยของ remember me functionality
+            if (self::getAppKey() === '') {
+                $logger->error('auth.app_key.missing', ['note' => 'APP_KEY missing, remember-me disabled']);
+            } else {
+                self::setRememberToken($userId);
+                $logger->info('auth.remember.created', ['user_id' => $userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            }
         }
 
         // โหลดข้อมูลผู้ใช้
         self::$user = self::getUserById($userId);
+
+        // ถ้าไม่พบข้อมูลผู้ใช้ (อาจเกิดจากการลบหรือปัญหาฐานข้อมูล), ให้ทำการล็อกเอาต์เพื่อความปลอดภัย
+        if (!self::$user) {
+            self::logout();
+            return;
+        }
+        // Cache ข้อมูลสิทธิ์ของผู้ใช้ใน session เพื่อลดการเรียกฐานข้อมูลในอนาคต
+        // Ensure any previous permission cache is cleared to prevent permission leakage
+        // when login occurs on top of an existing session (e.g., admin logs in over user)
+        Session::remove('_auth_permissions');
+        self::cacheUserPermissions(self::$user);
+        // เรียกใช้ Logger เพื่อบันทึกเหตุการณ์การเข้าสู่ระบบ
+        $logger = new Logger();
+        $logger->info('login.created', ['user_id' => $userId]);
+
+        $db = Database::getInstance();
+        $db->execute(
+            "UPDATE users SET last_login_at = NOW(), last_login_ip = :ip WHERE id = :id",
+            [
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+                'id' => $userId
+            ]
+        );
     }
 
     /**
@@ -155,6 +251,8 @@ class Auth
         if (self::check()) {
             $userId = Session::get(self::SESSION_KEY);
             self::removeRememberToken($userId);
+            $logger = new Logger();
+            $logger->security('auth.logout.remember_cleared', ['user_id' => $userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
         }
 
         // ลบข้อมูล session
@@ -164,21 +262,28 @@ class Auth
         // ลบ cookie (ใช้ options เดียวกับการตั้งค่าเพื่อให้แน่ใจว่าถูกลบ)
         if (isset($_COOKIE[self::REMEMBER_COOKIE])) {
             $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+            $domain = Config::get('auth.cookie_domain', null);
+            if ($domain === '') {
+                $domain = null;
+            }
             $cookieOptions = [
                 'expires' => time() - 3600,
                 'path' => '/',
-                    'domain' => (string) Config::get('auth.cookie_domain', ''),
+                'domain' => $domain,
                 'secure' => $secure,
                 'httponly' => true,
-                    'samesite' => (string) Config::get('auth.remember_samesite', 'Lax'),
+                'samesite' => (string) Config::get('auth.remember_samesite', 'Lax'),
             ];
 
             setcookie(self::REMEMBER_COOKIE, '', $cookieOptions);
             unset($_COOKIE[self::REMEMBER_COOKIE]);
         }
 
-        // สร้าง session ใหม่
-        Session::regenerate();
+        // สร้าง session ใหม่ (logged with context 'logout')
+        Session::regenerateWithContext('logout', isset($userId) ? (int)$userId : null);
+        // log logout event
+        $logger = new Logger();
+        $logger->security('auth.logout', ['user_id' => $userId ?? null, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
     }
 
     /**
@@ -198,6 +303,10 @@ class Auth
      */
     public static function check(): bool
     {
+        if (self::$user !== null) {
+            return true;
+        }
+
         Session::start();
 
         // ตรวจสอบ session
@@ -333,6 +442,11 @@ class Auth
      */
     public static function loginTemporary(array $user): void
     {
+        // การป้องกันการใช้งานในสภาพแวดล้อมการผลิต: ฟังก์ชันนี้ควรใช้สำหรับการทดสอบเท่านั้น และจะโยนข้อผิดพลาดถ้าพยายามใช้ในโหมด production
+        if (!Config::get('app.debug')) {
+            throw new \RuntimeException('loginTemporary() is for testing only and is disabled in production.');
+        }
+
         self::$user = $user;
     }
 
@@ -416,13 +530,20 @@ class Auth
      * setRememberToken() ควรใช้กับอะไร: การจดจำผู้ใช้ระหว่างการเยี่ยมชมเว็บไซต์
      * ตัวอย่างการใช้งาน:
      * ```php
-     * Auth::setRememberToken(1);
+     * Auth::setRememberToken(1); 
      * ```
      * 
      * @param int $userId กำหนดรหัสผู้ใช้ที่ต้องการตั้งค่า remember token
+     * @return void ไม่มีผลลัพธ์ (void)
      */
     private static function setRememberToken(int $userId): void
     {
+        $logger = new Logger();
+        // enforce APP_KEY presence
+        if (self::getAppKey() === '') {
+            $logger->error('auth.app_key.missing', ['note' => 'APP_KEY missing, remember-me disabled']);
+            return;
+        }
         // สร้าง token
         $token = bin2hex(random_bytes(self::REMEMBER_TOKEN_LENGTH));
         $hashedToken = hash('sha256', $token);
@@ -437,10 +558,14 @@ class Auth
 
         // ตั้งค่า cookie โดยใช้ options array (รองรับ PHP 7.3+)
         $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        $domain = Config::get('auth.cookie_domain', null);
+        if ($domain === '') {
+            $domain = null;
+        }
         $cookieOptions = [
             'expires' => time() + self::REMEMBER_DURATION,
             'path' => '/',
-            'domain' => (string) Config::get('auth.cookie_domain', ''),
+            'domain' => $domain,
             'secure' => $secure,
             'httponly' => true,
             'samesite' => (string) Config::get('auth.remember_samesite', 'Lax'),
@@ -450,6 +575,8 @@ class Auth
         $signature = self::signRememberPayload($payload);
 
         setcookie(self::REMEMBER_COOKIE, $payload . '|' . $signature, $cookieOptions);
+        // do not log tokens or cookie values; log creation abstractly
+        $logger->info('auth.remember.set', ['user_id' => $userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
     }
 
     /**
@@ -469,9 +596,15 @@ class Auth
             return false;
         }
 
-        $cookieValue = $_COOKIE[self::REMEMBER_COOKIE];
-        $parts = explode('|', $cookieValue, 3);
+        $logger = new Logger();
 
+        // Trim cookie value to avoid whitespace/tampering issues
+        $cookieValue = trim((string) ($_COOKIE[self::REMEMBER_COOKIE] ?? ''));
+        if ($cookieValue === '') {
+            return false;
+        }
+
+        $parts = explode('|', $cookieValue, 3);
         if (count($parts) < 2) {
             return false;
         }
@@ -482,29 +615,68 @@ class Auth
         if (count($parts) === 3) {
             $signature = $parts[2];
             if (!self::isRememberSignatureValid($userId . '|' . $token, $signature)) {
+                // invalid signature -> possible tampering
+                $logger->security('auth.remember.invalid_signature', ['user_id' => is_numeric($userId) ? (int)$userId : null, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
                 return false;
             }
         } elseif (self::getAppKey() !== '') {
             return false;
         }
 
-        $hashedToken = hash('sha256', $token);
-
-        // ตรวจสอบใน database
-        $db = Database::getInstance();
-        $sql = "SELECT id FROM users WHERE id = :id AND remember_token = :token";
-        $user = $db->fetch($sql, [
-            'id' => $userId,
-            'token' => $hashedToken
-        ]);
-
-        if ($user) {
-            // ล็อกอินอัตโนมัติ
-            Session::set(self::SESSION_KEY, $userId);
-            return true;
+        // If APP_KEY missing, remember functionality must not work
+        if (self::getAppKey() === '') {
+            $logger->error('auth.app_key.missing', ['note' => 'APP_KEY missing, remember-me disabled']);
+            return false;
         }
 
-        return false;
+        $hashedToken = hash('sha256', $token);
+
+        // ตรวจสอบใน database (separate checks to provide specific logs)
+        $db = Database::getInstance();
+        $row = $db->fetch("SELECT remember_token FROM users WHERE id = :id LIMIT 1", ['id' => $userId]);
+
+        if (!$row) {
+            $logger->security('auth.remember.unknown_user', ['user_id' => is_numeric($userId) ? (int)$userId : null, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            return false;
+        }
+
+        $storedToken = $row['remember_token'] ?? null;
+
+        if ($storedToken === null) {
+            // token cleared server-side or expired
+            $logger->security('auth.remember.expired', ['user_id' => (int)$userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            return false;
+        }
+
+        // Compare stored hash with presented token hash without logging sensitive values
+        if (!is_string($storedToken) || !hash_equals($storedToken, $hashedToken)) {
+            $logger->security('auth.remember.mismatch', ['user_id' => (int)$userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            return false;
+        }
+
+        // Valid remember token -> perform auto-login
+        Session::start();
+        Session::set(self::SESSION_KEY, $userId);
+
+        // Regenerate session to prevent fixation (logged with context 'remember')
+        Session::regenerateWithContext('remember', is_numeric($userId) ? (int)$userId : null);
+
+        // Rotate remember token to prevent replay
+        self::setRememberToken((int) $userId);
+
+        // log token rotation (do not include token)
+        $logger->security('auth.remember.rotated', ['user_id' => (int)$userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+
+
+        // Load user cache
+        self::$user = self::getUserById((int) $userId);
+        // Preload and cache permissions in session (same as normal login)
+        self::cacheUserPermissions(self::$user);
+
+        // security log for successful remember login
+        $logger->security('auth.remember.login', ['user_id' => (int)$userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+
+        return true;
     }
 
     /**
@@ -601,9 +773,9 @@ class Auth
 
         // ตรวจสอบว่าเป็น email หรือ username
         if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
-            $sql = "SELECT * FROM users WHERE email = :identifier LIMIT 1";
+            $sql = "SELECT * FROM users WHERE email = :identifier AND deleted_at IS NULL LIMIT 1";
         } else {
-            $sql = "SELECT * FROM users WHERE username = :identifier LIMIT 1";
+            $sql = "SELECT * FROM users WHERE username = :identifier AND deleted_at IS NULL LIMIT 1";
         }
 
         $user = $db->fetch($sql, ['identifier' => $identifier]);
@@ -626,11 +798,162 @@ class Auth
     private static function getUserById(int $userId): ?array
     {
         $db = Database::getInstance();
-        $sql = "SELECT * FROM users WHERE id = :id LIMIT 1";
+        $sql = "SELECT * FROM users WHERE id = :id AND deleted_at IS NULL LIMIT 1";
         // ดึงข้อมูลผู้ใช้จากฐานข้อมูลของเรา
         $userData = $db->fetch($sql, ['id' => $userId]);
 
         return $userData ?: null;
+    }
+
+    // ========== Brute-force protection helpers ==========
+
+    /**
+     * สร้างคีย์สำหรับการติดตามความพยายามล็อกอินที่ล้มเหลวโดยใช้ identifier (username/email)
+     * จุดประสงค์: ใช้เพื่อสร้างคีย์ที่ไม่ระบุข้อมูลส่วนตัวสำหรับการติดตามความพยายามล็อกอินที่ล้มเหลวโดยใช้ username หรือ email
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $key = Auth::attemptKeyIdentifier('johndoe');
+     * ```
+     * 
+     * @param string $identifier กำหนด username หรือ email ที่ใช้เป็น identifier
+     * @return string คืนค่าคีย์ที่ถูกแฮชสำหรับการติดตามความพยายามล็อกอินที่ล้มเหลว
+     */
+    private static function attemptKeyIdentifier(string $identifier): string
+    {
+        return 'auth:fail:identifier:' . hash('sha256', (string) $identifier);
+    }
+
+    /**
+     * สร้างคีย์สำหรับการติดตามความพยายามล็อกอินที่ล้มเหลวโดยใช้ IP address
+     * จุดประสงค์: ใช้เพื่อสร้างคีย์ที่ไม่ระบุข้อมูลส่วนตัวสำหรับการติดตามความพยายามล็อกอินที่ล้มเหลวโดยใช้ IP address
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $key = Auth::attemptKeyIp('127.0.0.1');
+     * ```
+     * 
+     * @param string $ip กำหนด IP address ที่ใช้เป็น identifier
+     * @return string คืนค่าคีย์ที่ถูกแฮชสำหรับการติดตามความพยายามล็อกอินที่ล้มเหลว
+     */
+    private static function attemptKeyIp(string $ip): string
+    {
+        return 'auth:fail:ip:' . (string) $ip;
+    }
+
+    /**
+     * ตรวจสอบว่ามีการบล็อกการพยายามล็อกอินหรือไม่ โดยตรวจสอบทั้งจาก identifier และ IP address
+     * จุดประสงค์: ใช้เพื่อตรวจสอบว่าผู้ใช้หรือ IP address มีการบล็อกการพยายามล็อกอินเนื่องจากความพยายามที่ล้มเหลวเกินขีดจำกัดหรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $result = Auth::isBlocked('johndoe', '127.0.0.1');
+     * ```
+     * 
+     * @param string $identifier กำหนด username หรือ email ที่ใช้เป็น identifier
+     * @param string $ip กำหนด IP address ของผู้ใช้
+     * @return array คืนค่า associative array ที่มีคีย์ 'blocked' (bool) และ 'remaining' (int) สำหรับเวลาที่เหลือในการบล็อก
+     */
+    private static function isBlocked(string $identifier, string $ip): array
+    {
+        $now = time();
+        $idKey = self::attemptKeyIdentifier($identifier);
+        $ipKey = self::attemptKeyIp($ip);
+
+        $idEntry = Cache::get($idKey, null);
+        $ipEntry = Cache::get($ipKey, null);
+
+        $remaining = 0;
+        $blocked = false;
+
+        foreach ([$idEntry, $ipEntry] as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $count = (int) ($entry['count'] ?? 0);
+            $first = (int) ($entry['first'] ?? 0);
+            if ($count >= self::MAX_LOGIN_ATTEMPTS) {
+                $expiresAt = $first + self::ATTEMPT_WINDOW;
+                $r = $expiresAt - $now;
+                if ($r > 0) {
+                    $blocked = true;
+                    if ($r > $remaining) {
+                        $remaining = $r;
+                    }
+                }
+            }
+        }
+
+        return ['blocked' => $blocked, 'remaining' => $remaining];
+    }
+
+    /**
+     * บันทึกความพยายามล็อกอินที่ล้มเหลวและบันทึกลงใน log ใช้ structured cache entries เพื่อคำนวณเวลาที่เหลือ
+     * จุดประสงค์: ใช้เพื่อบันทึกความพยายามล็อกอินที่ล้มเหลวสำหรับ identifier และ IP address และบันทึกเหตุการณ์ที่เกี่ยวข้องใน log โดยใช้โครงสร้างข้อมูลใน cache เพื่อคำนวณเวลาที่เหลือในการบล็อก
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * Auth::recordFailedAttemptFor('johndoe', '127.0.0.1');
+     * ```
+     * 
+     * @param string $identifier กำหนด username หรือ email ที่ใช้เป็น identifier
+     * @param string $ip กำหนด IP address ของผู้ใช้
+     * @return void ไม่มีผลลัพธ์ (void)
+     */
+    private static function recordFailedAttemptFor(string $identifier, string $ip): void
+    {
+        $logger = new Logger();
+
+        $now = time();
+        $idKey = self::attemptKeyIdentifier($identifier);
+        $ipKey = self::attemptKeyIp($ip);
+
+        $idEntry = Cache::get($idKey, null);
+        if (!is_array($idEntry) || ($now - ($idEntry['first'] ?? 0)) > self::ATTEMPT_WINDOW) {
+            $idEntry = ['count' => 1, 'first' => $now];
+        } else {
+            $idEntry['count'] = (int) ($idEntry['count'] ?? 0) + 1;
+        }
+        Cache::set($idKey, $idEntry, self::ATTEMPT_WINDOW);
+
+        $ipEntry = Cache::get($ipKey, null);
+        if (!is_array($ipEntry) || ($now - ($ipEntry['first'] ?? 0)) > self::ATTEMPT_WINDOW) {
+            $ipEntry = ['count' => 1, 'first' => $now];
+        } else {
+            $ipEntry['count'] = (int) ($ipEntry['count'] ?? 0) + 1;
+        }
+        Cache::set($ipKey, $ipEntry, self::ATTEMPT_WINDOW);
+
+        // Log every failed attempt as security-relevant
+        $logger->security('auth.login.failed', ['identifier' => substr($identifier, 0, 64), 'ip' => $ip, 'id_attempts' => $idEntry['count'], 'ip_attempts' => $ipEntry['count']]);
+
+        // If threshold is reached, log lockout event with remaining seconds
+        if ($idEntry['count'] >= self::MAX_LOGIN_ATTEMPTS) {
+            $remaining = ($idEntry['first'] + self::ATTEMPT_WINDOW) - $now;
+            $logger->security('auth.login.locked', ['identifier' => substr($identifier, 0, 64), 'attempts' => $idEntry['count'], 'remaining_seconds' => $remaining > 0 ? $remaining : 0]);
+        }
+
+        if ($ipEntry['count'] >= self::MAX_LOGIN_ATTEMPTS) {
+            $remaining = ($ipEntry['first'] + self::ATTEMPT_WINDOW) - $now;
+            $logger->security('auth.login.locked', ['ip' => $ip, 'attempts' => $ipEntry['count'], 'remaining_seconds' => $remaining > 0 ? $remaining : 0]);
+        }
+    }
+
+    /**
+     * ล้างความพยายามล็อกอินที่ล้มเหลวสำหรับ identifier และ IP address
+     * จุดประสงค์: ใช้เพื่อล้างข้อมูลความพยายามล็อกอินที่ล้มเหลวจาก cache สำหรับ identifier และ IP address เมื่อมีการล็อกอินที่สำเร็จ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * Auth::clearFailedAttemptsFor('johndoe', '127.0.0.1');
+     * ```
+     * 
+     * @param string $identifier กำหนด username หรือ email ที่ใช้เป็น identifier
+     * @param string $ip กำหนด IP address ของผู้ใช้
+     * @return void ไม่มีผลลัพธ์ (void)
+     */
+    private static function clearFailedAttemptsFor(string $identifier, string $ip): void
+    {
+        $idKey = self::attemptKeyIdentifier($identifier);
+        $ipKey = self::attemptKeyIp($ip);
+
+        Cache::forget($idKey);
+        Cache::forget($ipKey);
     }
 
     /**
@@ -654,86 +977,10 @@ class Auth
      */
     public static function can(string $permission): bool
     {
-        $user = self::user();
-
-        if (!$user) {
-            return false;
-        }
-
-        // ตรวจสอบสิทธิ์ตามโครงสร้างของคุณ
-        // ตัวอย่าง: ตรวจสอบใน database หรือ user property
-        // Admin bypass: ถ้ามีฟิลด์ is_admin หรือ role เป็น admin
-        if (!empty($user['is_admin']) || (!empty($user['role']) && $user['role'] === 'admin')) {
-            return true;
-        }
-
-        // ลองอ่าน permissions จากข้อมูลผู้ใช้ (รองรับ array, JSON string, หรือ comma-separated string)
-        $perms = $user['permissions'] ?? null;
-
-        if (is_string($perms)) {
-            // พยายาม decode เป็น JSON ก่อน
-            $decoded = json_decode($perms, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $perms = $decoded;
-            } else {
-                // แยกรายการด้วย comma
-                $perms = array_filter(array_map('trim', explode(',', $perms)));
-            }
-        }
-
-        if (is_array($perms)) {
-            return in_array($permission, $perms, true);
-        }
-
-        // หากไม่มีข้อมูลสิทธิ์จาก user property ให้ลองตรวจสอบจากฐานข้อมูล (fallback)
-        try {
-            $db = Database::getInstance();
-            $userId = $user['id'] ?? null;
-
-            if ($userId) {
-                // ตาราง user_permissions (user_id, permission)
-                $sql = "SELECT 1 FROM user_permissions WHERE user_id = :uid AND permission = :perm LIMIT 1";
-                $exists = $db->fetchColumn($sql, ['uid' => $userId, 'perm' => $permission]);
-                if ($exists) {
-                    return true;
-                }
-            }
-
-            // ตรวจสอบ role permissions (มี role_id หรือ role name)
-            $roleId = $user['role_id'] ?? null;
-            $roleName = $user['role'] ?? null;
-
-            if ($roleId) {
-                $sql = "SELECT 1 FROM role_permissions WHERE role_id = :rid AND permission = :perm LIMIT 1";
-                $exists = $db->fetchColumn($sql, ['rid' => $roleId, 'perm' => $permission]);
-                if ($exists) {
-                    return true;
-                }
-            } elseif ($roleName) {
-                // หา role id จากชื่่อ role แล้วเช็ค
-                $sql = "SELECT id FROM roles WHERE name = :rname LIMIT 1";
-                $row = $db->fetch($sql, ['rname' => $roleName]);
-                if ($row && !empty($row['id'])) {
-                    $rid = $row['id'];
-                    $sql = "SELECT 1 FROM role_permissions WHERE role_id = :rid AND permission = :perm LIMIT 1";
-                    $exists = $db->fetchColumn($sql, ['rid' => $rid, 'perm' => $permission]);
-                    if ($exists) {
-                        return true;
-                    }
-                }
-            }
-        } catch (\Throwable $e) {
-            // ถ้า DB หรือตารางไม่ถูกต้อง ให้ fallback เงียบ ๆ กลับไปยังการคืนค่า false
-        }
-
-        // หากไม่พบสิทธิ์ ให้คืนค่า false
-        return false;
+        return Authorization::can($permission);
     }
 
     /**
-     * 
-     * ========= ตรวจสอบ Role อาจจะต้องปรับปรุงในอนาคต ==========
-     * 
      * ตรวจสอบว่าผู้ใช้มี role หรือไม่ (สำหรับขยายในอนาคต)
      * จุดประสงค์: ใช้เพื่อตรวจสอบว่าผู้ใช้ที่ล็อกอินอยู่มี role ที่ระบุหรือไม่
      * hasRole() ควรใช้กับอะไร: การตรวจสอบสิทธิ์ก่อนเข้าถึงหน้าที่ต้องล็อกอิน
@@ -751,61 +998,60 @@ class Auth
      */
     public static function hasRole(string $role): bool
     {
-        $user = self::user();
+        return Authorization::hasRole($role);
+    }
 
-        if (!$user) {
-            return false;
+    /**
+     * โหลดและแคชสิทธิ์ของผู้ใช้ใน session เพื่อประสิทธิภาพ
+     * จุดประสงค์: ใช้เพื่อโหลดและแคชสิทธิ์ของผู้ใช้ที่ล็อกอินอยู่ใน session เพื่อปรับปรุงประสิทธิภาพการตรวจสอบสิทธิ์ในคำขอถัดไป
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * Auth::cacheUserPermissions($user);
+     * ```
+     * 
+     * @param array|null $user กำหนดข้อมูลผู้ใช้ที่ล็อกอินอยู่
+     * @return void ไม่มีผลลัพธ์ (void)
+     */
+    private static function cacheUserPermissions(?array $user): void
+    {
+        // พยายามโหลดสิทธิ์ทั้งหมดจาก Authorization ถ้า method นั้นมีอยู่และทำงานได้
+        $allPermissions = null;
+        if (is_callable([Authorization::class, 'loadAllPermissions'])) {
+            try {
+                $allPermissions = Authorization::loadAllPermissions($user);
+            } catch (\Throwable $e) {
+                // ถ้าเกิดข้อผิดพลาดใดๆ ในการโหลดสิทธิ์จาก Authorization ให้ล้างค่าและใช้ fallback แบบเดิม
+                $allPermissions = null;
+            }
         }
 
-        // ตรวจสอบ role ตามโครงสร้างของคุณ
-        // ตัวอย่าง: $user->role === $role
-        // Admin bypass
-        if (!empty($user['is_admin']) || (!empty($user['role']) && $user['role'] === 'admin')) {
-            return true;
+        if (is_array($allPermissions)) {
+            Session::set('_auth_permissions', $allPermissions);
+            return;
         }
 
-        // รองรับหลายรูปแบบของข้อมูล role: `roles` (array), `roles` JSON, comma-separated string, หรือ `role` เป็น string
-        $roles = $user['roles'] ?? ($user['role'] ?? null);
+        // ถ้าไม่สามารถโหลดสิทธิ์ทั้งหมดได้ ให้พยายามดึงสิทธิ์จากข้อมูลผู้ใช้โดยตรง
+        $perms = $user['permissions'] ?? null;
+        $normalized = null;
+        // ถ้า Authorization มี method สำหรับ normalize permissions ให้ใช้มัน
+        if (is_callable([Authorization::class, 'normalizePermissions'])) {
+            $normalized = Authorization::normalizePermissions($perms);
+        }
 
-        if (is_string($roles)) {
-            $decoded = json_decode($roles, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $roles = $decoded;
-            } else {
-                if (strpos($roles, ',') !== false) {
-                    $roles = array_filter(array_map('trim', explode(',', $roles)));
+        // ถ้าไม่ได้ผล ให้พยายามแปลงสิทธิ์จากรูปแบบต่างๆ (เช่น JSON หรือ comma-separated string) เป็น array
+        if ($normalized === null) {
+            if (is_string($perms)) {
+                $decoded = json_decode($perms, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $normalized = $decoded;
                 } else {
-                    $roles = [$roles];
+                    $normalized = array_filter(array_map('trim', explode(',', $perms)));
                 }
+            } elseif (is_array($perms)) {
+                $normalized = $perms;
             }
         }
 
-        if (is_array($roles)) {
-            return in_array($role, $roles, true);
-        }
-
-        // Fallback: ตรวจสอบจากฐานข้อมูล (user_roles / roles)
-        try {
-            $db = Database::getInstance();
-            $userId = $user['id'] ?? null;
-
-            if ($userId) {
-                $sql = "SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = :uid AND (r.name = :rname OR r.slug = :rname) LIMIT 1";
-                $stmt = $db->query($sql, ['uid' => $userId, 'rname' => $role]);
-                if ($stmt->fetchColumn()) {
-                    return true;
-                }
-            }
-
-            // ถ้ามี role field เดี่ยว ๆ ให้เช็คเทียบชื่ออีกครั้ง
-            $roleName = $user['role'] ?? null;
-            if ($roleName && $roleName === $role) {
-                return true;
-            }
-        } catch (\Throwable $e) {
-            // เงียบๆ fallback เป็น false
-        }
-
-        return false;
+        Session::set('_auth_permissions', $normalized ?? []);
     }
 }

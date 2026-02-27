@@ -52,7 +52,7 @@ use App\Helpers\FormHelper;
                             <div class="d-flex gap-2 justify-content-center flex-nowrap">
                                 <a href="<?= UrlHelper::to('/employees/' . $this->e($employee['id']) . '/edit') ?>" class="btn btn-sm btn-primary d-flex align-items-center">แก้ไข</a>
                                 <form action="<?= UrlHelper::to('/employees/' . $this->e($employee['id']) . '/delete') ?>" method="post">
-                                    
+                                    <?= FormHelper::csrfField() ?>
                                     <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center" onclick="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบพนักงานนี้?')">ลบ</button>
                                 </form>
                                 <a href="<?= UrlHelper::to('/employees/' . $this->e($employee['id'])) ?>" class="btn btn-sm btn-info d-flex align-items-center">ดูรายละเอียด</a>

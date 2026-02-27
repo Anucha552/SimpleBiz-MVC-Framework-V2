@@ -25,9 +25,14 @@ namespace App\Core;
 use App\Helpers\UrlHelper;
 use App\Helpers\FormHelper;
 use App\Helpers\ArrayHelper;
+use App\Core\View;
+use App\Core\Response;
+use App\Core\Request;
+use App\Core\Auth;
 
 class Controller
 {
+
     /**
      * แสดงผลวิวพร้อมข้อมูล
      * จุดประสงค์: แสดงผลวิว HTML โดยส่งข้อมูลไปยังวิวโดยไม่ต้องคืนค่า Response
@@ -96,35 +101,6 @@ class Controller
     }
 
     /**
-     * คืนค่าการตอบกลับแบบ JSON
-     * จุดประสงค์: สร้างการตอบกลับ JSON สำหรับ API
-     * json() ควรใช้กับอะไร: เมื่อคุณต้องการคืนค่าการตอบกลับ JSON จากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * return $this->json(true, ['id' => 1, 'name' => 'John'], 'User retrieved successfully', [], 200);
-     * 
-     * รูปแบบ JSON มาตรฐานสำหรับการตอบกลับ API:
-     * {
-     *   "success": true|false,
-     *   "data": {...},
-     *   "message": "...",
-     *   "errors": [...]
-     * }
-     * ```
-     * 
-     * @param bool $success กำหนดสถานะความสำเร็จของการตอบกลับ
-     * @param mixed $data กำหนดข้อมูลที่จะส่งกลับ (ถ้ามี)
-     * @param string $message กำหนดข้อความเพิ่มเติม (ไม่บังคับ)
-     * @param array $errors กำหนดอาร์เรย์ข้อผิดพลาด (ไม่บังคับ)
-     * @param int $statusCode กำหนดรหัสสถานะ HTTP
-     * @return Response คืนค่า Response JSON
-     */
-    protected function json(bool $success, $data = null, string $message = '', array $errors = [], int $statusCode = 200): Response
-    {
-        return $this->responseJson($success, $data, $message, $errors, $statusCode);
-    }
-
-    /**
      * สร้าง Response แบบ JSON (ไม่ exit) เพื่อใช้กับ Router ที่รองรับ return Response
      * จุดประสงค์: สร้างการตอบกลับ JSON สำหรับ API
      * responseJson() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างการตอบกลับ JSON จากตัวควบคุม
@@ -149,101 +125,6 @@ class Controller
         return Response::apiError($message !== '' ? $message : 'Error', $errors, $statusCode);
     }
 
-    /**
-     * สร้าง Response redirect (ไม่ exit)
-     * จุดประสงค์: สร้างการตอบกลับ HTTP redirect
-     * responseRedirect() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างการตอบกลับ redirect จากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * return $this->responseRedirect('/home', 301);
-     * ```
-     * 
-     * @param string $url กำหนด URL ที่จะเปลี่ยนเส้นทางไป
-     * @param int $statusCode กำหนดรหัสสถานะ HTTP เช่น 302, 301
-     * @return Response คืนค่า Response redirect
-     */
-    protected function responseRedirect(string $url, int $statusCode = 302): Response
-    {
-        return Response::redirect($url, $statusCode);
-    }
-
-    /**
-     * ตรวจสอบพารามิเตอร์ POST ที่จำเป็น
-     * จุดประสงค์: ตรวจสอบว่าพารามิเตอร์ที่จำเป็นทั้งหมดมีอยู่ในคำขอ POST
-     * validateRequired() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าพารามิเตอร์ที่จำเป็นถูกส่งมาหรือไม่
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $missing = $this->validateRequired(['username', 'password', 'email']);
-     * ```
-     * 
-     * @param array $required กำหนดอาร์เรย์ของชื่อพารามิเตอร์ที่จำเป็น
-     * @return array คืนค่าอาร์เรย์ของชื่อพารามิเตอร์ที่ขาดหาย
-     */
-    protected function validateRequired(array $required): array
-    {
-        $missing = [];
-
-        foreach ($required as $field) {
-            if (!isset($_POST[$field]) || trim($_POST[$field]) === '') {
-                $missing[] = $field;
-            }
-        }
-
-        return $missing;
-    }
-
-    /**
-     * ทำความสะอาดสตริงที่ป้อนเข้า
-     * จุดประสงค์: ป้องกัน XSS โดยการลบแท็ก HTML และช่องว่าง
-     * sanitize() ควรใช้กับอะไร: เมื่อคุณต้องการทำความสะอาดข้อมูลสตริงที่ป้อนเข้าจากผู้ใช้
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $cleanInput = $this->sanitize($_POST['user_input']);
-     * ```
-     * 
-     * @param string $input กำหนดสตริงที่จะทำความสะอาด
-     * @return string คืนค่าสตริงที่ทำความสะอาดแล้ว
-     */
-    protected function sanitize(string $input): string
-    {
-        return trim(strip_tags($input));
-    }
-
-    /**
-     * ตรวจสอบความถูกต้องของข้อมูลจำนวนเต็ม
-     * จุดประสงค์: ตรวจสอบว่าค่าเป็นจำนวนเต็มบวก
-     * validateInt() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าค่าที่ป้อนเข้าคือจำนวนเต็มบวก
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $validId = $this->validateInt($_POST['id']);
-     * ```
-     * 
-     * @param mixed $value กำหนดค่าที่จะตรวจสอบ
-     * @return int|null คืนค่าจำนวนเต็มที่ถูกต้องหรือ null
-     */
-    protected function validateInt($value): ?int
-    {
-        $int = filter_var($value, FILTER_VALIDATE_INT);
-        return ($int !== false && $int > 0) ? $int : null;
-    }
-
-    /**
-     * ตรวจสอบความถูกต้องของข้อมูลทศนิยม
-     * จุดประสงค์: ตรวจสอบว่าค่าเป็นจำนวนบวกทศนิยม
-     * validateFloat() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่าค่าที่ป้อนเข้าคือจำนวนบวกทศนิยม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $validPrice = $this->validateFloat($_POST['price']);
-     * ```
-     * 
-     * @param mixed $value กำหนดค่าที่จะตรวจสอบ
-     * @return float|null คืนค่าทศนิยมที่ถูกต้องหรือ null
-     */
-    protected function validateFloat($value): ?float
-    {
-        $float = filter_var($value, FILTER_VALIDATE_FLOAT);
-        return ($float !== false && $float >= 0) ? $float : null;
-    }
 
     /**
      * ดึง ID ของผู้ใช้ที่ยืนยันตัวตนปัจจุบัน
@@ -285,21 +166,6 @@ class Controller
     }
 
     /**
-     * คืนค่า Request object (wrapper)
-     * จุดประสงค์: ให้สามารถเข้าถึงข้อมูลคำขอผ่าน Request object ได้อย่างสะดวก
-     * request() ควรใช้กับอะไร: เมื่อคุณต้องการเข้าถึงข้อมูลคำขอ เช่น พารามิเตอร์, เฮดเดอร์, หรือข้อมูลอื่น ๆ ผ่าน Request object
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $request = $this->request();
-     * $username = $request->input('username');
-     * ```
-     */
-    protected function request(): Request
-    {
-        return new Request();
-    }
-
-    /**
      * ย่อการเรียก input จาก Request
      * จุดประสงค์: ให้สามารถเข้าถึงข้อมูล input จากคำขอได้อย่างสะดวก
      * input() ควรใช้กับอะไร: เมื่อคุณต้องการดึงค่าจากคำขอ เช่น พารามิเตอร์หรือข้อมูลฟอร์ม
@@ -314,7 +180,7 @@ class Controller
      */
     protected function input(?string $key = null, $default = null)
     {
-        return $this->request()->input($key, $default);
+        return (new Request())->input($key, $default);
     }
 
     /**
@@ -331,7 +197,7 @@ class Controller
      */
     protected function only(array $keys): array
     {
-        return $this->request()->only($keys);
+        return (new Request())->only($keys);
     }
 
     /**
@@ -347,7 +213,7 @@ class Controller
      */
     protected function all(): array
     {
-        return $this->request()->all();
+        return (new Request())->all();
     }
 
     /**
@@ -383,52 +249,9 @@ class Controller
     protected function flash(string $key, $value): void
     {
         // Session::flash จะจัดการ start() เอง
-        \App\Core\Session::flash($key, $value);
+        Session::flash($key, $value);
     }
 
-    /**
-     * ดึงค่า old input ผ่าน FormHelper
-     * จุดประสงค์: ให้สามารถดึงค่า old input ที่ถูกแฟลชไว้ในคำขอถัดไปได้อย่างสะดวก
-     * old() ควรใช้กับอะไร: เมื่อคุณต้องการดึงค่า old input ที่ถูกแฟลชไว้ในคำขอถัดไปจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $oldUsername = $this->old('username', 'default_username');
-     * ```
-     * 
-     * @param string $key กำหนดชื่อของค่า old input ที่ต้องการดึง
-     * @param mixed $default กำหนดค่าดีฟอลต์เมื่อค่า old input ไม่ถูกแฟลชไว้
-     * @param bool $escape กำหนดว่าควรทำการ escape ค่าที่ดึงมาหรือไม่ (ป้องกัน XSS)
-     * @return string คืนค่าของ old input ที่ดึงมา หรือค่าดีฟอลต์ถ้าไม่ถูกแฟลชไว้ โดยอาจถูก escape ตามที่กำหนดไว้ในพารามิเตอร์ $escape
-     */
-    protected function old(string $key, $default = '', bool $escape = true): string
-    {
-        return FormHelper::old($key, $default, $escape);
-    }
-
-    /**
-     * เบื้องต้น: สร้าง Validator และคืน Validator instance
-     * ไม่ทำ redirect อัตโนมัติ เพื่อให้ caller ควบคุมการไหลได้
-     * จุดประสงค์: ให้สามารถตรวจสอบความถูกต้องของข้อมูลด้วย Validator ได้อย่างสะดวก
-     * validate() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบความถูกต้องของข้อมูลด้วย Validator จากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $validator = $this->validate($data, [
-     *     'username' => 'required|min:3|max:20',
-     *     'email' => 'required|email',
-     * ]);
-     * ```
-     * 
-     * @param array $data กำหนดอาร์เรย์ของข้อมูลที่จะตรวจสอบ
-     * @param array $rules กำหนดอาร์เรย์ของกฎการตรวจสอบความถูกต้อง
-     * @param array $customMessages กำหนดอาร์เรย์ของข้อความและกฎที่กำหนดเอง (ไม่บังคับ)
-     * @return Validator คืนค่า Validator instance หลังจากทำการ validate แล้ว
-     */
-    protected function validate(array $data, array $rules, array $customMessages = []): Validator
-    {
-        $validator = new Validator($data, $rules, $customMessages);
-        $validator->validate();
-        return $validator;
-    }
 
     /**
      * ตรวจสอบสิทธิ์อย่างง่าย: ถ้าไม่ผ่าน คืน Response redirect ตามที่ระบุ
@@ -469,59 +292,6 @@ class Controller
     }
 
     /**
-     * ดึง flash message (wrapper)
-     * จุดประสงค์: ให้สามารถดึงค่า flash message ที่ถูกตั้งไว้ในคำขอถัดไปได้อย่างสะดวก
-     * getFlash() ควรใช้กับอะไร: เมื่อคุณต้องการดึงค่า flash message ที่ถูกตั้งไว้ในคำขอถัดไปจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $successMessage = $this->getFlash('success', 'No message');
-     * ```
-     * 
-     * @param string $key กำหนดชื่อของ flash message ที่ต้องการดึง
-     * @param mixed $default กำหนดค่าดีฟอลต์เมื่อ flash message ไม่ถูกตั้งไว้
-     * @return mixed คืนค่าของ flash message ที่ดึงมา หรือค่าดีฟอลต์ถ้าไม่ถูกตั้งไว้
-     */
-    protected function getFlash(string $key, $default = null)
-    {
-        return FormHelper::flash($key, $default);
-    }
-
-    /**
-     * ตรวจสอบว่ามี flash message มีหรือไม่
-     * จุดประสงค์: ให้สามารถตรวจสอบว่ามี flash message ที่ถูกตั้งไว้หรือไม่อย่างสะดวก
-     * hasFlash() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่ามี flash message ที่ถูกตั้งไว้จากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * if ($this->hasFlash('success')) {
-     *     // ทำบางอย่าง
-     * }
-     * ```
-     * 
-     * @param string $key กำหนดชื่อของ flash message ที่ต้องการตรวจสอบ
-     * @return bool คืนค่า true ถ้ามี flash message ที่ถูกตั้งไว้ หรือ false ถ้าไม่มี
-     */
-    protected function hasFlash(string $key): bool
-    {
-        return FormHelper::hasFlash($key);
-    }
-
-    /**
-     * ดึง flash messages ทั้งหมด
-     * จุดประสงค์: ให้สามารถดึงค่า flash messages ทั้งหมดที่ถูกตั้งไว้ในคำขอถัดไปได้อย่างสะดวก
-     * allFlash() ควรใช้กับอะไร: เมื่อคุณต้องการดึงค่า flash messages ทั้งหมดที่ถูกตั้งไว้ในคำขอถัดไปจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $allFlash = $this->allFlash();
-     * ```
-     * 
-     * @return array คืนค่าอาร์เรย์ของ flash messages ทั้งหมดที่ถูกตั้งไว้ในคำขอถัดไป
-     */
-    protected function allFlash(): array
-    {
-        return FormHelper::allFlash();
-    }
-
-    /**
      * แฟลช input เพื่อใช้กับ old() ในคำขอถัดไป
      * จุดประสงค์: ให้สามารถแฟลชค่า input เพื่อใช้กับ old() ในคำขอถัดไปได้อย่างสะดวก
      * flashInput() ควรใช้กับอะไร: เมื่อคุณต้องการแฟลชค่า input เพื่อใช้กับ old() ในคำขอถัดไปจากตัวควบคุม
@@ -535,107 +305,9 @@ class Controller
      */
     protected function flashInput(array $input): void
     {
-        \App\Core\Session::flashInput($input);
+        Session::flashInput($input);
     }
 
-    /**
-     * ดึงค่า old input แบบดิบ
-     * จุดประสงค์: ให้สามารถดึงค่า old input แบบดิบที่ถูกแฟลชไว้ในคำขอถัดไปได้อย่างสะดวก
-     * oldRaw() ควรใช้กับอะไร: เมื่อคุณต้องการดึงค่า old input แบบดิบที่ถูกแฟลชไว้ในคำขอถัดไปจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $oldUsernameRaw = $this->oldRaw('username', 'default_username');
-     * ```
-     * 
-     * @param string|null $key กำหนดชื่อของค่า old input ที่ต้องการดึง หรือ null เพื่อดึงทั้งหมด
-     * @param mixed $default กำหนดค่าดีฟอลต์เมื่อค่า old input ไม่ถูกแฟลชไว้
-     * @return mixed คืนค่าของ old input แบบดิบที่ดึงมา หรือค่าดีฟอลต์ถ้าไม่ถูกแฟลชไว้ โดยไม่มีการ escape หรือการแปลงใด ๆ
-     */
-    protected function oldRaw(?string $key = null, $default = null)
-    {
-        return FormHelper::oldRaw($key, $default);
-    }
-
-    /**
-     * Validate และถ้าล้มเหลวให้ flash errors + old input แล้ว redirect back/ไปที่ $redirect
-     * คืนค่า Response เมื่อ redirect เกิดขึ้น หรือ null เมื่อผ่าน
-     * จุดประสงค์: ให้สามารถตรวจสอบความถูกต้องของข้อมูลและจัดการการตอบกลับเมื่อเกิดข้อผิดพลาดได้อย่างสะดวก
-     * validateOrRedirect() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบความถูกต้องของข้อมูลและจัดการการตอบกลับเมื่อเกิดข้อผิดพลาดจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * return $this->validateOrRedirect($data, [
-     *     'username' => 'required|string|max:255',
-     *     'email' => 'required|email|max:255',
-     * ], [
-     *     'username.required' => 'กรุณากรอกชื่อผู้ใช้',
-     *     'email.required' => 'กรุณากรอกอีเมล',
-     * ]);
-     * ```
-     * 
-     * @param array $data กำหนดอาร์เรย์ของข้อมูลที่จะตรวจสอบ
-     * @param array $rules กำหนดอาร์เรย์ของกฎการตรวจสอบความถูกต้อง
-     * @param array $customMessages กำหนดอาร์เรย์ของข้อความและกฎที่กำหนดเอง (ไม่บังคับ)
-     * @param string|null $redirect กำหนด URL ที่จะเปลี่ยนเส้นทางไปเมื่อเกิดข้อผิดพลาด (ถ้า null จะ redirect กลับไปยังหน้าที่แล้ว)
-     * @return Response|null คืนค่า Response redirect เมื่อเกิดข้อผิดพลาด หรือ null เมื่อข้อมูลถูกต้องและผ่านการตรวจสอบความถูกต้อง
-     */
-    protected function validateOrRedirect(array $data, array $rules, array $customMessages = [], ?string $redirect = null): ?Response
-    {
-        // สร้าง Validator และทำการ validate
-        $validator = $this->validate($data, $rules, $customMessages);
-
-        // ถ้า validation ล้มเหลว ให้ flash errors และ old input แล้ว redirect
-        if ($validator->fails()) {
-            \App\Core\Session::flash('validation_errors', $validator->errors()); // แฟลชข้อผิดพลาดการตรวจสอบความถูกต้อง
-            \App\Core\Session::flashInput($data); // แฟลชข้อมูล input เพื่อใช้กับ old() ในคำขอถัดไป
-
-            // ถ้า $redirect ถูกกำหนด ให้ redirect ไปที่ URL นั้น, ถ้าไม่ก็ redirect กลับไปยังหน้าที่แล้ว
-            if ($redirect !== null) {
-                return $this->redirect($redirect);
-            }
-
-            return $this->back();
-        }
-
-        return null;
-    }
-
-    /**
-     * ส่ง JSON success response (wrapper)
-     * จุดประสงค์: ให้สามารถส่งการตอบกลับ JSON ที่แสดงถึงความสำเร็จได้อย่างสะดวก
-     * jsonSuccess() ควรใช้กับอะไร: เมื่อคุณต้องการส่งการตอบกลับ JSON ที่แสดงถึงความสำเร็จจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * return $this->jsonSuccess(['id' => 1, 'name' => 'John'], 'User created successfully', 201);
-     * ```
-     * 
-     * @param mixed $data กำหนดข้อมูลที่จะส่งกลับ (ถ้ามี)
-     * @param string $message กำหนดข้อความเพิ่มเติม (ไม่บังคับ)     
-     * @param int $statusCode กำหนดรหัสสถานะ HTTP
-     * @return Response คืนค่า Response JSON ที่แสดงถึงความสำเร็จ
-     */
-    protected function jsonSuccess($data = null, string $message = 'Success', int $statusCode = 200): Response
-    {
-        return $this->responseJson(true, $data, $message, [], $statusCode);
-    }
-
-    /**
-     * ส่ง JSON error response (wrapper)
-     * จุดประสงค์: ให้สามารถส่งการตอบกลับ JSON ที่แสดงถึงข้อผิดพลาดได้อย่างสะดวก
-     * jsonError() ควรใช้กับอะไร: เมื่อคุณต้องการส่งการตอบกลับ JSON ที่แสดงถึงข้อผิดพลาดจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * return $this->jsonError('Invalid request', ['field' => 'Error message'], 422);
-     * ```
-     * 
-     * @param string $message กำหนดข้อความข้อผิดพลาด
-     * @param array $errors กำหนดรายละเอียดข้อผิดพลาดเพิ่มเติม (ไม่บังคับ)
-     * @param int $statusCode กำหนดรหัสสถานะ HTTP
-     * @return Response คืนค่า Response JSON ที่แสดงถึงข้อผิดพลาด
-     */
-    protected function jsonError(string $message = 'Error', array $errors = [], int $statusCode = 400): Response
-    {
-        return $this->responseJson(false, null, $message, $errors, $statusCode);
-    }
 
     /**
      * สร้าง CSRF hidden field (wrapper)
@@ -669,23 +341,6 @@ class Controller
         return FormHelper::csrfMeta();
     }
 
-    /**
-     * สร้าง URL สะดวก ๆ
-     * จุดประสงค์: ให้สามารถสร้าง URL ได้อย่างสะดวกโดยใช้ UrlHelper
-     * url() ควรใช้กับอะไร: เมื่อคุณต้องการสร้าง URL จากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $url = $this->url('/home', ['ref' => 'dashboard']);
-     * ```
-     * 
-     * @param string $path กำหนด path หรือ route-like string ที่ต้องการสร้าง URL
-     * @param array $params กำหนดอาร์เรย์ของพารามิเตอร์ที่จะเพิ่มลงใน URL
-     * @return string คืนค่า URL ที่สร้างขึ้น
-     */
-    protected function url(string $path = '', array $params = []): string
-    {
-        return UrlHelper::to($path, $params);
-    }
 
     /**
      * สร้าง asset URL
@@ -718,7 +373,7 @@ class Controller
      */
     protected function file(?string $key = null)
     {
-        return $this->request()->file($key);
+        return (new Request())->file($key);
     }
 
     /**
@@ -740,28 +395,7 @@ class Controller
     }
 
     /**
-     * โหลด/instantiate model โดยคาดว่าอยู่ใน App\Models namespace
-     * จุดประสงค์: ให้สามารถโหลดหรือสร้างอินสแตนซ์ของโมเดลได้อย่างสะดวกโดยคาดว่าโมเดลอยู่ใน namespace ที่กำหนด
-     * model() ควรใช้กับอะไร: เมื่อคุณต้องการโหลดหรือสร้างอินสแตนซ์ของโมเดลจากตัวควบคุมโดยคาดว่าโมเดลอยู่ใน namespace ที่กำหนด
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $userModel = $this->model('User');
-     * ```
-     * 
-     * @param string $name กำหนดชื่อของโมเดลที่ต้องการโหลดหรือสร้างอินสแตนซ์
-     * @return object|null คืนค่าอินสแตนซ์ของโมเดลที่โหลดหรือสร้างขึ้น หรือ null ถ้าไม่พบคลาสโมเดลที่ตรงกับชื่อที่ระบุ
-     */
-    protected function model(string $name)
-    {
-        $className = "App\\Models\\$name";
-        if (class_exists($className)) {
-            return $className::class;
-        }
-        return null;
-    }
-
-    /**
-     * Paginate an array (wrapper to ArrayHelper)
+     * แบ่งหน้าอาร์เรย์โดยใช้ ArrayHelper (wrapper)
      * จุดประสงค์: ให้สามารถแบ่งหน้าอาร์เรย์ได้อย่างสะดวกโดยใช้ ArrayHelper
      * paginate() ควรใช้กับอะไร: เมื่อคุณต้องการแบ่งหน้าอาร์เรย์จากตัวควบคุมโดยใช้ ArrayHelper
      * ตัวอย่างการใช้งาน:
@@ -813,97 +447,6 @@ class Controller
         return Response::noContent();
     }
 
-    /**
-     * ตรวจสอบว่ามี old input หรือไม่ (wrapper)
-     * จุดประสงค์: ให้สามารถตรวจสอบว่ามีค่า old input ที่ถูกแฟลชไว้ในคำขอถัดไปหรือไม่อย่างสะดวก
-     * hasOld() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่ามีค่า old input ที่ถูกแฟลชไว้ในคำขอถัดไปจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * if ($this->hasOld('username')) {
-     *     // มีค่า old input สำหรับ 'username'
-     * }
-     * ```
-     * 
-     * @param string $key กำหนดชื่อของค่า old input ที่ต้องการตรวจสอบ
-     * @return bool คืนค่า true ถ้ามีค่า old input ที่ถูกแฟลชไว้ในคำขอถัดไปสำหรับชื่อที่ระบุ หรือ false ถ้าไม่มี
-     */
-    protected function hasOld(string $key): bool
-    {
-        return FormHelper::hasOld($key);
-    }
-
-    /**
-     * ดึงข้อผิดพลาดสำหรับฟิลด์หรือทั้งหมด (wrapper)
-     * จุดประสงค์: ให้สามารถดึงข้อผิดพลาดสำหรับฟิลด์เฉพาะหรือทั้งหมดได้อย่างสะดวก
-     * errors() ควรใช้กับอะไร: เมื่อคุณต้องการดึงข้อผิดพลาดสำหรับฟิลด์เฉพาะหรือทั้งหมดจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $errors = $this->errors('username'); // ดึงข้อผิดพลาดสำหรับฟิลด์ 'username'
-     * $allErrors = $this->errors(); // ดึงข้อผิดพลาดทั้งหมด
-     * ```
-     * 
-     * @param string|null $field กำหนดชื่อของฟิลด์ที่ต้องการดึงข้อผิดพลาด (ไม่ระบุจะดึงข้อผิดพลาดทั้งหมด)
-     * @return array คืนค่าอาร์เรย์ของข้อผิดพลาดสำหรับฟิลด์ที่ระบุ หรือทั้งหมดถ้าไม่ระบุฟิลด์
-     */
-    protected function errors(?string $field = null): array
-    {
-        return FormHelper::errors($field);
-    }
-
-    /**
-     * ตรวจสอบว่ามีข้อผิดพลาดสำหรับฟิลด์หรือไม่ (wrapper)
-     * จุดประสงค์: ให้สามารถตรวจสอบว่ามีข้อผิดพลาดสำหรับฟิลด์เฉพาะหรือไม่อย่างสะดวก
-     * hasError() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบว่ามีข้อผิดพลาดสำหรับฟิลด์เฉพาะจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * if ($this->hasError('username')) {
-     *     // มีข้อผิดพลาดสำหรับฟิลด์ 'username'
-     * }
-     * ```
-     * 
-     * @param string $field กำหนดชื่อของฟิลด์ที่ต้องการตรวจสอบ
-     * @return bool คืนค่า true ถ้ามีข้อผิดพลาดสำหรับฟิลด์ที่ระบุ หรือ false ถ้าไม่มี
-     */
-    protected function hasError(string $field): bool
-    {
-        return FormHelper::hasError($field);
-    }
-
-    /**
-     * ดึงข้อความข้อผิดพลาดแรกสำหรับฟิลด์ (wrapper)
-     * จุดประสงค์: ให้สามารถดึงข้อความข้อผิดพลาดแรกสำหรับฟิลด์เฉพาะได้อย่างสะดวก
-     * firstError() ควรใช้กับอะไร: เมื่อคุณต้องการดึงข้อความข้อผิดพลาดแรกสำหรับฟิลด์เฉพาะจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $firstError = $this->firstError('username', 'No error', true);
-     * ```
-     * 
-     * @param string $field กำหนดชื่อของฟิลด์ที่ต้องการดึงข้อความข้อผิดพลาดแรก
-     * @param string|null $default กำหนดค่าดีฟอลต์เมื่อไม่มีข้อผิดพลาดสำหรับฟิลด์ที่ระบุ
-     * @param bool $escape กำหนดว่าควรทำการ escape ค่าที่ดึงมาหรือไม่ (ป้องกัน XSS)
-     * @return string|null คืนค่าข้อความข้อผิดพลาดแรกสำหรับฟิลด์ที่ระบุ หรือค่าดีฟอลต์ถ้าไม่มีข้อผิดพลาดสำหรับฟิลด์นั้น โดยอาจถูก escape ตามที่กำหนดไว้ในพารามิเตอร์ $escape
-     */
-    protected function firstError(string $field, ?string $default = null, bool $escape = true): ?string
-    {
-        return FormHelper::firstError($field, $default, $escape);
-    }
-
-    /**
-     * คืนคลาส CSS เมื่อตรวจพบข้อผิดพลาด (wrapper)
-     * invalidClass() ควรใช้กับอะไร: เมื่อคุณต้องการคืนคลาส CSS สำหรับฟิลด์ที่มีข้อผิดพลาดจากตัวควบคุม
-     * ตัวอย่างการใช้งาน:
-     * ```php
-     * $usernameClass = $this->invalidClass('username', 'is-invalid');
-     * ```
-     * 
-     * @param string $field กำหนดชื่อของฟิลด์ที่ต้องการตรวจสอบข้อผิดพลาด
-     * @param string $class กำหนดชื่อคลาส CSS ที่จะคืนเมื่อตรวจพบข้อผิดพลาด (ค่าเริ่มต้นคือ 'is-invalid')
-     * @return string คืนค่าชื่อคลาส CSS ที่กำหนดไว้ถ้ามีข้อผิดพลาดสำหรับฟิลด์ที่ระบุ หรือคืนค่าว่างถ้าไม่มีข้อผิดพลาดสำหรับฟิลด์นั้น
-     */
-    protected function invalidClass(string $field, string $class = 'is-invalid'): string
-    {
-        return FormHelper::invalidClass($field, $class);
-    }
 
     /**
      * แชร์ข้อมูลให้ทุกวิว (wrapper)
@@ -940,4 +483,4 @@ class Controller
     {
         return View::shared($key, $default);
     }
-}
+} 

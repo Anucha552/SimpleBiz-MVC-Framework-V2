@@ -303,6 +303,34 @@ class Session
         session_regenerate_id($deleteOldSession);
     }
 
+    /**
+     * Regenerate session and log the event with context (login|remember|logout).
+     * This helper preserves the original `regenerate()` behavior and adds a
+     * contextual logging option without exposing session identifiers.
+     *
+     * @param string $context One of 'login','remember','logout' or custom
+     * @param int|null $userId User id to include in log (nullable)
+     * @param bool $deleteOldSession Passed to session_regenerate_id()
+     * @return void
+     */
+    public static function regenerateWithContext(string $context, ?int $userId = null, bool $deleteOldSession = true): void
+    {
+        self::ensureStarted();
+        session_regenerate_id($deleteOldSession);
+
+        // Structured logging: do not log session id
+        try {
+            $logger = new Logger();
+            $logger->info('auth.session.regenerated', [
+                'context' => $context,
+                'user_id' => $userId,
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            ]);
+        } catch (\Throwable $e) {
+            // Logging should not interrupt execution
+        }
+    }
+
     // ========== Flash Messages ==========
 
     /**

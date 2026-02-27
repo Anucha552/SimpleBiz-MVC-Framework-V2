@@ -217,12 +217,34 @@ class FormHelper
         return self::hasError($field) ? $class : '';
     }
 
+    /**
+     * สร้างฟิลด์ CSRF สำหรับฟอร์ม HTML
+     * จุดประสงค์: ใช้เพื่อป้องกันการโจมตี CSRF โดยการเพิ่มฟิลด์ที่มีโทเค็น CSRF ลงในฟอร์ม
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * echo '<form method="POST" action="/submit">';
+     * echo FormHelper::csrfField(); // ผลลัพธ์จะเป็น <input type="hidden" name="csrf_token" value="...">
+     * echo '</form>';
+     * ```
+     * 
+     * @return string HTML ของฟิลด์ CSRF ที่สามารถนำไปใช้ในฟอร์มได้
+     */
     public static function csrfField(): string
     {
         Session::start();
         return Session::csrfField();
     }
 
+    /**
+     * สร้างเมตาแท็กสำหรับโทเค็น CSRF
+     * จุดประสงค์: ใช้เพื่อเพิ่มเมตาแท็กที่มีโทเค็น CSRF ลงในส่วน <head> ของ HTML เพื่อให้ JavaScript สามารถเข้าถึงโทเค็นได้
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * echo FormHelper::csrfMeta(); // ผลลัพธ์จะเป็น <meta name="csrf-token" content="...">
+     * ```
+     * 
+     * @return string HTML ของเมตาแท็ก CSRF ที่สามารถนำไปใช้ในส่วน <head> ของ HTML ได้
+     */
     public static function csrfMeta(): string
     {
         Session::start();

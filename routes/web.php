@@ -52,6 +52,11 @@ $router->post('/employees', $webBasePath . 'EmployeeController@store', [
 ]);
 
 // แสดงรายละเอียดพนักงาน 1 คน ตาม id
+
+// ค้นหาพนักงานตามชื่อหรือแผนก (ต้องกำหนดก่อน route ที่มี {id} เพื่อไม่ให้คำว่า "search" ถูกจับเป็น id)
+$router->get('/employees/search', $webBasePath . 'EmployeeController@search');
+
+// แสดงรายละเอียดพนักงาน 1 คน ตาม id
 $router->get('/employees/{id}', $webBasePath . 'EmployeeController@show');
 
 // แสดงหน้า Form สำหรับแก้ไขข้อมูลพนักงาน
@@ -63,5 +68,7 @@ $router->post('/employees/{id}/update', $webBasePath . 'EmployeeController@updat
 ]);
 
 // ลบพนักงานตาม id (มาจากปุ่มลบในหน้าเว็บ)
-$router->post('/employees/{id}/delete', $webBasePath . 'EmployeeController@destroy');
+$router->post('/employees/{id}/delete', $webBasePath . 'EmployeeController@destroy', [
+    CsrfMiddleware::class
+]);
 

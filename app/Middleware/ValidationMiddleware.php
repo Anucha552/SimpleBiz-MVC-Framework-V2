@@ -94,8 +94,8 @@ class ValidationMiddleware extends Middleware
         // รับข้อมูลตาม HTTP method
         $data = $this->getRequestData();
 
-        // สร้าง Validator และตรวจสอบข้อมูล
-        $validator = new Validator($data, $this->rules, $this->messages);
+        // สร้าง Validator และตรวจสอบข้อมูลตามกฎ
+        $validator = new Validator($data, $this->rules, null, $this->messages);
         
         // ถ้าตรวจสอบไม่ผ่าน
         if ($validator->fails()) {

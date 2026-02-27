@@ -24,7 +24,9 @@ class MakeModelCommand extends BaseCommand
             return;
         }
 
-        $name = $args[0];
+        // แปลงชื่อโมเดลให้เป็นรูปแบบที่ถูกต้อง (PascalCase)
+        // ตัวอย่าง: user_profile -> UserProfile
+        $name = str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $args[0])));
         $path = $this->path("app/Models/{$name}.php");
 
         if (file_exists($path)) {
@@ -86,8 +88,7 @@ class {$name} extends Model
 
     /**
      * ฟิลด์ที่อนุญาตให้ mass assignment
-     * fillable: รายชื่อคอลัมน์ที่ “อนุญาต” ให้ตั้งค่าผ่าน fill() หรือ 
-     * create() ได้ ถ้าใส่ไว้ ระบบจะเซฟเฉพาะคอลัมน์ในลิสต์นี้เท่านั้น
+     * fillable: รายชื่อคอลัมน์ที่ “อนุญาต” ให้บํนทึกข้อมูล และอัพเดทได้
      */
     protected static array \$fillable = [
         // ตัวอย่าง: 'name', 'email', 'status'
@@ -95,8 +96,7 @@ class {$name} extends Model
 
     /**
      * ฟิลด์ที่ห้าม mass assignment
-     * guarded: รายชื่อคอลัมน์ที่ “ห้าม” ให้ตั้งค่าผ่าน fill() หรือ 
-     * create() ได้ ถ้าใส่ไว้ ระบบจะไม่เซฟคอลัมน์ในลิสต์นี้เลย
+     * guarded: รายชื่อคอลัมน์ที่ “ห้าม” ให้บํนทึกข้อมูล และอัพเดทได้
      */
     protected static array \$guarded = ['id'];
 
@@ -116,7 +116,7 @@ class {$name} extends Model
 
     // ใส่เมธอด query ที่ใช้ซ้ำบ่อยไว้ที่นี่ได้ เช่น scope หรือ helper
     // ตัวอย่างเมธอด query ที่ใช้ซ้ำบ่อย
-    // public static function active(): array
+    // public function active(): array
     // {
     //     return static::where('status', 'active')
     //         ->orderBy('created_at', 'DESC')

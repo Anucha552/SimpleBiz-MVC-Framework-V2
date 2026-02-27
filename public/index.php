@@ -344,8 +344,15 @@ register_shutdown_function(static function () use ($config, $logger): void {
     App\Core\ErrorHandler::serverError($message);
 });
 
-// สร้าง router instance
-$router = new App\Core\Router();
+// สร้าง Container และลงทะเบียน binding พื้นฐาน แล้วสร้าง router โดยส่ง Container เข้าไป
+$container = new App\Core\Container();
+
+// ลงทะเบียนบริการพื้นฐานเป็น singleton เพื่อให้ใช้ร่วมกันได้ทั่วแอป
+$container->singleton(App\Core\Database::class, function($c) { return App\Core\Database::getInstance(); });
+$container->singleton(App\Core\Logger::class, function($c) { return new App\Core\Logger(); });
+
+// สร้าง router instance พร้อม Container เพื่อให้ Router สามารถ resolve controllers/middleware ผ่าน DI
+$router = new App\Core\Router($container);
 
 // โหลดการกำหนด route
 require __DIR__ . '/../routes/web.php';

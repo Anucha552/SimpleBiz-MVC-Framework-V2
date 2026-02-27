@@ -22,7 +22,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นรูปแบบ slug ที่เหมาะสำหรับ URL
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $slug = StringHelper::slug('Hello World! This is a Test.');
+     * $slug = StringHelper::slug('Hello World! This is a Test.'); // ผลลัพธ์: 'hello-world-this-is-a-test'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการแปลงเป็น slug
@@ -52,7 +52,7 @@ class StringHelper
      * ภาษาที่รองรับ: ไทยและอังกฤษ
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $truncated = StringHelper::truncate('This is a long text that needs to be truncated.', 20);
+     * $truncated = StringHelper::truncate('This is a long text that needs to be truncated.', 20); // ผลลัพธ์: 'This is a long...'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการตัด
@@ -83,7 +83,7 @@ class StringHelper
      * ภาษาที่รองรับ: ไทยและอังกฤษ
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $truncated = StringHelper::words('This is a long text that needs to be truncated by words.', 5);
+     * $truncated = StringHelper::words('This is a long text that needs to be truncated by words.', 5); // ผลลัพธ์: 'This is a long text...'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการตัด
@@ -107,7 +107,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อสร้าง string สุ่มที่ประกอบด้วยตัวอักษรและตัวเลข
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $randomString = StringHelper::random(16);
+     * $randomString = StringHelper::random(16); // ผลลัพธ์: 'a1b2c3d4e5f6g7h8'
      * ```
      * 
      * @param int $length ความยาวของ string สุ่ม
@@ -131,7 +131,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นรูปแบบ camelCase
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $camelCase = StringHelper::camelCase('hello world this is a test');
+     * $camelCase = StringHelper::camelCase('hello world this is a test'); // ผลลัพธ์: 'helloWorldThisIsATest'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการแปลงเป็น camelCase
@@ -148,7 +148,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นรูปแบบ StudlyCase หรือ PascalCase
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $studlyCase = StringHelper::studlyCase('hello world this is a test');
+     * $studlyCase = StringHelper::studlyCase('hello world this is a test'); // ผลลัพธ์: 'HelloWorldThisIsATest'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการแปลงเป็น StudlyCase
@@ -166,7 +166,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นรูปแบบ snake_case
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $snakeCase = StringHelper::snakeCase('hello world this is a test');
+     * $snakeCase = StringHelper::snakeCase('hello world this is a test'); // ผลลัพธ์: 'hello_world_this_is_a_test'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการแปลงเป็น snake_case
@@ -183,7 +183,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นรูปแบบ kebab-case
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $kebabCase = StringHelper::kebabCase('hello world this is a test');
+     * $kebabCase = StringHelper::kebabCase('hello world this is a test'); // ผลลัพธ์: 'hello-world-this-is-a-test'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการแปลงเป็น kebab-case
@@ -199,7 +199,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อตรวจสอบว่า string ขึ้นต้นด้วยข้อความที่กำหนดหรือไม่
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $startsWithHello = StringHelper::startsWith('hello world', 'hello');
+     * $startsWithHello = StringHelper::startsWith('hello world', 'hello'); // ผลลัพธ์: true
      * ```
      * 
      * @param string $haystack ข้อความที่ต้องการตรวจสอบ
@@ -222,7 +222,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อตรวจสอบว่า string ลงท้ายด้วยข้อความที่กำหนดหรือไม่
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $endsWithTxt = StringHelper::endsWith('hello world', 'world');
+     * $endsWithTxt = StringHelper::endsWith('hello world', 'world'); // ผลลัพธ์: true
      * ```
      * 
      * @param string $haystack ข้อความที่ต้องการตรวจสอบ
@@ -245,7 +245,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อตรวจสอบว่ามีข้อความที่กำหนดอยู่ภายใน string หรือไม่
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $containsHello = StringHelper::contains('hello world', 'hello');
+     * $containsHello = StringHelper::contains('hello world', 'hello'); // ผลลัพธ์: true
      * ```
      * 
      * @param string $haystack ข้อความที่ต้องการตรวจสอบ
@@ -268,7 +268,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อแทนที่ข้อความครั้งแรกที่พบในสตริง
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $result = StringHelper::replaceFirst('world', 'there', 'hello world world');
+     * $result = StringHelper::replaceFirst('world', 'there', 'hello world world'); // ผลลัพธ์: 'hello there world'
      * ```
      * 
      * @param string $search ข้อความที่ต้องการค้นหา
@@ -292,7 +292,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อแทนที่ข้อความครั้งสุดท้ายที่พบในสตริง
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $result = StringHelper::replaceLast('world', 'there', 'hello world world');
+     * $result = StringHelper::replaceLast('world', 'there', 'hello world world'); // ผลลัพธ์: 'hello world there'
      * ```
      * 
      * @param string $search ข้อความที่ต้องการค้นหา
@@ -316,7 +316,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นตัวพิมพ์ใหญ่ทั้งหมด
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $upperText = StringHelper::upper('hello world');
+     * $upperText = StringHelper::upper('hello world'); // ผลลัพธ์: 'HELLO WORLD'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการแปลง
@@ -332,7 +332,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อแปลงข้อความเป็นตัวพิมพ์เล็กทั้งหมด
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $lowerText = StringHelper::lower('HELLO WORLD');
+     * $lowerText = StringHelper::lower('HELLO WORLD'); // ผลลัพธ์: 'hello world'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการแปลง
@@ -348,7 +348,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อแปลงตัวอักษรแรกของแต่ละคำเป็นตัวพิมพ์ใหญ่
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $titleText = StringHelper::title('hello world');
+     * $titleText = StringHelper::title('hello world'); // ผลลัพธ์: 'Hello World'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการแปลง
@@ -364,7 +364,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อตรวจสอบว่าสตริงที่กำหนดเป็น JSON ที่ถูกต้องหรือไม่
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $isJson = StringHelper::isJson('{"name":"John","age":30}');
+     * $isJson = StringHelper::isJson('{"name":"John","age":30}'); // ผลลัพธ์: true
      * ```
      * 
      * @param string $text ข้อความที่ต้องการตรวจสอบ
@@ -381,7 +381,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อลบช่องว่างที่ซ้ำกันในข้อความ
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $cleanText = StringHelper::collapseWhitespace('This   is   a    test.');
+     * $cleanText = StringHelper::collapseWhitespace('This   is   a    test.'); // ผลลัพธ์: 'This is a test.'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการลบช่องว่างซ้ำ
@@ -399,7 +399,7 @@ class StringHelper
      * ```php
      * $replacements = ['apple' => 'orange', 'banana' => 'grape'];
      * $text = "I like apple and banana.";
-     * $newText = StringHelper::replaceArray($replacements, $text);
+     * $newText = StringHelper::replaceArray($replacements, $text); // ผลลัพธ์: 'I like orange and grape.'
      * ```
      * 
      * @param array $replacements ข้อมูลการแทนที่ในรูปแบบ key => value
@@ -416,7 +416,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อจำกัดความยาวของข้อความตามที่กำหนด
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $limitedText = StringHelper::limit('This is a long text that needs to be limited.', 20, '...');
+     * $limitedText = StringHelper::limit('This is a long text that needs to be limited.', 20, '...'); // ผลลัพธ์: 'This is a long text...'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการจำกัดความยาว
@@ -438,7 +438,7 @@ class StringHelper
      * จุดประสงค์: ใช้เพื่อมาสก์ส่วนหนึ่งของข้อความด้วยอักขระที่กำหนด
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $maskedEmail = StringHelper::mask('example@example.com', 2, 6);
+     * $maskedEmail = StringHelper::mask('example@example.com', 2, 6); // ผลลัพธ์: 'ex******@example.com'
      * ```
      * 
      * @param string $text ข้อความที่ต้องการมาสก์

@@ -96,9 +96,32 @@ class MakeControllerCommand extends BaseCommand
 namespace App\Controllers\Web;
 
 use App\Core\Controller;
+use App\Core\Request;
+use App\Core\Response;
 
 class {$name} extends Controller
 {
+    /**
+     * รับ Request จาก Router เพื่อให้ Dependency Injection Container ได้
+     */
+    public function __construct()
+    {
+        // กำหนด Dependencies ที่ต้องการที่นี่ (ถ้ามี) เช่น Model, Helper ฯลฯ
+    }
+    
+    /**
+     * รับ Request จาก Router เพื่อให้ Controller สามารถใช้งานข้อมูลจาก Request ได้
+     */
+    protected Request \$request;
+
+    /**
+     * เมธอดสำหรับรับ Request จาก Router
+     */
+    public function setRequest(Request \$request)
+    {
+        \$this->request = \$request;
+    }
+
     /**
      * แสดงหน้าหลัก
      */
@@ -125,10 +148,24 @@ PHP;
 namespace App\Controllers\Api;
 
 use App\Core\Controller;
+use App\Core\Request;
 use App\Core\Response;
 
 class {$name} extends Controller
 {
+    /**
+     * รับ Request จาก Router เพื่อให้ Controller สามารถใช้งานข้อมูลจาก Request ได้
+     */
+    protected Request \$request;
+
+    /**
+     * เมธอดสำหรับรับ Request จาก Router
+     */
+    public function setRequest(Request \$request)
+    {
+        \$this->request = \$request;
+    }
+        
     /**
      * แสดงหน้าหลัก
      */

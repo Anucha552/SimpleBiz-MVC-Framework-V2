@@ -1,7 +1,7 @@
 <?php
 
 /**
- * create.php
+ * edit.php
  *
  * จุดประสงค์: เป็น View สำหรับแสดงฟอร์มการสร้างพนักงานใหม่ โดยจะมีฟิลด์สำหรับกรอกข้อมูลต่าง ๆ ของพนักงาน เช่น รหัสพนักงาน ชื่อ นามสกุล แผนก อีเมล และโทรศัพท์ เมื่อผู้ใช้กรอกข้อมูลและส่งฟอร์ม ข้อมูลจะถูกส่งไปยัง Controller ที่เกี่ยวข้องเพื่อทำการบันทึกลงฐานข้อมูล
  */
@@ -11,7 +11,7 @@ use App\Helpers\FormHelper;
 ?>
 
 <?= $this->section('title'); ?>
-สร้างพนักงานใหม่
+แก้ไขพนักงาน
 <?= $this->endSection(); ?>
 
 <div class="card">
@@ -24,15 +24,15 @@ use App\Helpers\FormHelper;
     <?php endif; ?>
 
     <div class="card-header">
-        <h5 class="card-title mb-0">สร้างพนักงานใหม่</h5>
+        <h5 class="card-title mb-0">แก้ไขพนักงาน</h5>
     </div>
     <div class="card-body">
         <?php 
         
         $this->partial('components/form.php', [
-            'page' => 'create',
-            'submit' => 'บันทึก',
-            'url' => '/employees'
+            'page' => 'edit',
+            'submit' => 'แก้ไข',
+            'url' => '/employees/' . $id . '/update'  // ส่ง URL สำหรับอัปเดตข้อมูลพนักงาน
         ]);
         
         ?>

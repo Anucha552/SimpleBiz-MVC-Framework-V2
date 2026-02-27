@@ -5,6 +5,10 @@ use App\Helpers\NumberHelper;
 
 ?>
 
+<?= $this->section('title'); ?>
+รายละเอียดพนักงาน
+<?= $this->endSection(); ?>
+
 <div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">รายละเอียดพนักงาน</h5>

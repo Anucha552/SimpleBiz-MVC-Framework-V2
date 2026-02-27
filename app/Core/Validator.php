@@ -61,6 +61,27 @@ class Validator
     private array $customMessages = [];
 
     /**
+     * ป้ายชื่อฟิลด์ (labels)
+     */
+    private array $labels = [];
+
+    /**
+     * อินสแตนซ์ของ Database สำหรับการตรวจสอบ unique และ existsar Database|null อินสแตนซ์ของ Database หรือ null ถ้าไม่ถูกส่งผ่านเข้ามา
+     */
+    private ?Database $db = null;
+
+    /**
+     * ตัวแปรเพื่อป้องกันการเรียก validate() ซ้ำใน passes() และ fails()
+     */
+    private bool $validatedRun = false;
+
+    /**
+     * Cached validation result to avoid running validate() multiple times.
+     * null = not yet validated, true/false = cached result
+     */
+    private ?bool $result = null;
+
+    /**
      * ข้อความแสดงข้อผิดพลาดเริ่มต้น
      */
     private array $defaultMessages = [
@@ -94,20 +115,23 @@ class Validator
      * $validator = new Validator($data, [
      *     'username' => 'required|alphanumeric|min:3|max:20',
      *     'email' => 'required|email|unique:users,email',
-     *    'password' => 'required|min:8',
-     *    'password_confirm' => 'required|match:password'
-     * ]);
+     *     'password' => 'required|min:8',
+     *     'password_confirm' => 'required|match:password'
+     * ], $db);
      * ```
      * 
      * @param array $data ข้อมูลที่ต้องการตรวจสอบ
      * @param array $rules กฎการตรวจสอบ
+     * @param Database|null $db อินสแตนซ์ของ Database สำหรับการตรวจสอบ unique และ exists หรือ null ถ้าไม่ถูกส่งผ่านเข้ามา
      * @param array $customMessages ข้อความแสดงข้อผิดพลาดแบบกำหนดเอง
      */
-    public function __construct(array $data, array $rules, array $customMessages = [])
+    public function __construct(array $data, array $rules, ?Database $db = null, array $customMessages = [], array $labels = [])
     {
         $this->data = $data;
         $this->rules = $rules;
         $this->customMessages = $customMessages;
+        $this->labels = $labels;
+        $this->db = $db;
     }
 
     /**
@@ -128,18 +152,40 @@ class Validator
      */
     public function validate(): bool
     {
+        if ($this->result !== null) {
+            $this->validatedRun = true;
+            return $this->result;
+        }
+
+        $this->validatedRun = true;
+
         $this->errors = [];
 
         foreach ($this->rules as $field => $rules) {
             $rulesArray = is_array($rules) ? $rules : explode('|', $rules);
             $value = $this->data[$field] ?? null;
 
+            // If 'bail' is present, stop validating this field after first failure.
+            $hasBail = in_array('bail', $rulesArray, true);
+
             foreach ($rulesArray as $rule) {
+                if ($rule === 'bail') {
+                    // Do not treat 'bail' as a validation rule.
+                    continue;
+                }
+
                 $this->validateRule($field, $value, $rule);
+
+                if ($hasBail && isset($this->errors[$field]) && !$this->isEmpty($this->errors[$field])) {
+                    // stop validating this field after the first failure
+                    break;
+                }
             }
         }
 
-        return empty($this->errors);
+        $this->result = $this->isEmpty($this->errors);
+
+        return $this->result;
     }
 
     /**
@@ -215,6 +261,35 @@ class Validator
     }
 
     /**
+     * รับข้อมูลที่ผ่านการตรวจสอบแล้ว (validated)
+     * คืนค่าเฉพาะฟิลด์ที่กำหนดในกฎเท่านั้น, มีอยู่ในข้อมูล, และไม่มีข้อผิดพลาด
+     *
+     * @return array
+     */
+    public function validated(): array
+    {
+        $result = [];
+
+        if (!$this->validatedRun) {
+                $this->validate();
+            }
+
+        foreach ($this->rules as $field => $rules) {
+            if (!array_key_exists($field, $this->data)) {
+                continue;
+            }
+
+            if (isset($this->errors[$field]) && !$this->isEmpty($this->errors[$field])) {
+                continue;
+            }
+
+            $result[$field] = $this->data[$field];
+        }
+
+        return $result;
+    }
+
+    /**
      * ตรวจสอบกฎแต่ละข้อ
      * จุดประสงค์: ตรวจสอบข้อมูลตามกฎที่กำหนด
      * validateRule() ควรใช้กับอะไร: ชื่อฟิลด์, ค่าของฟิลด์, กฎที่ต้องการตรวจสอบ
@@ -232,17 +307,26 @@ class Validator
         // แยกชื่อกฎและพารามิเตอร์
         $parts = explode(':', $rule, 2);
         $ruleName = $parts[0];
-        $param = $parts[1] ?? null;
+            $param = $parts[1] ?? null;
 
+            // normalize parameter: trim and convert empty string to null
+            if ($param !== null) {
+                $param = trim($param);
+                if ($param === '') {
+                    $param = null;
+                }
+            }
         // เรียกเมธอดตรวจสอบ
         $method = 'validate' . ucfirst($ruleName);
 
-        if (method_exists($this, $method)) {
-            $result = $this->$method($value, $param);
+        if (!method_exists($this, $method)) {
+            throw new \InvalidArgumentException("Validation rule {$ruleName} does not exist.");
+        }
 
-            if (!$result) {
-                $this->addError($field, $ruleName, $param);
-            }
+        $result = $this->$method($value, $param);
+
+        if (!$result) {
+            $this->addError($field, $ruleName, $param);
         }
     }
 
@@ -261,11 +345,12 @@ class Validator
     private function addError(string $field, string $rule, $param = null): void
     {
         $message = $this->customMessages["{$field}.{$rule}"] 
-                ?? $this->customMessages[$rule] 
-                ?? $this->defaultMessages[$rule] 
-                ?? "ฟิลด์ :field ไม่ถูกต้อง";
+            ?? $this->customMessages[$rule] 
+            ?? $this->defaultMessages[$rule] 
+            ?? "ฟิลด์ :field ไม่ถูกต้อง";
 
-        $message = str_replace(':field', $field, $message);
+        $label = $this->labels[$field] ?? $field;
+        $message = str_replace(':field', $label, $message);
         $message = str_replace(':param', (string)$param, $message);
 
         // สำหรับ between rule
@@ -296,19 +381,7 @@ class Validator
      */
     private function validateRequired($value, $param = null): bool
     {
-        if (is_null($value)) {
-            return false;
-        }
-
-        if (is_string($value) && trim($value) === '') {
-            return false;
-        }
-
-        if (is_array($value) && empty($value)) {
-            return false;
-        }
-
-        return true;
+        return !$this->isEmpty($value);
     }
 
     /**
@@ -324,7 +397,7 @@ class Validator
      */
     private function validateEmail($value, $param = null): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true; // ใช้ required แยกต่างหาก
         }
 
@@ -336,16 +409,16 @@ class Validator
      * จุดประสงค์: ตรวจสอบว่าฟิลด์มีความยาวขั้นต่ำที่กำหนดหรือไม่
      * validateMin() ควรใช้กับอะไร: เมื่อคุณต้องการตรวจสอบความยาวขั้นต่ำ
      * ตัวอย่างการใช้งาน:
-     * ```php
+     * ```
      * $this->validateMin($value, 3);
      * ```
-     * 
+     *
      * @param mixed $value ค่าของฟิลด์
      * @param mixed $param พารามิเตอร์ของกฎ (ความยาวขั้นต่ำ)
      */
     private function validateMin($value, $param): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -370,7 +443,7 @@ class Validator
      */
     private function validateMax($value, $param): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -396,7 +469,7 @@ class Validator
      */
     private function validateNumeric($value, $param = null): bool
     {
-        if (empty($value) && $value !== 0 && $value !== '0') {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -418,7 +491,7 @@ class Validator
      */
     private function validateInteger($value, $param = null): bool
     {
-        if (empty($value) && $value !== 0 && $value !== '0') {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -440,7 +513,8 @@ class Validator
      */
     private function validateAlpha($value, $param = null): bool
     {
-        if (empty($value)) {
+
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -462,7 +536,7 @@ class Validator
      */
     private function validateAlphanumeric($value, $param = null): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -483,7 +557,7 @@ class Validator
      */
     private function validateUrl($value, $param = null): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -505,6 +579,14 @@ class Validator
      */
     private function validateMatch($value, $param): bool
     {
+        if (!$param) {
+            return false;
+        }
+        
+        if ($this->isEmpty($value)) {
+            return true;
+        }
+
         $compareValue = $this->data[$param] ?? null;
         return $value === $compareValue;
     }
@@ -524,7 +606,7 @@ class Validator
      */
     private function validateIn($value, $param): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -547,7 +629,7 @@ class Validator
      */
     private function validateRegex($value, $param): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -569,7 +651,7 @@ class Validator
      */
     private function validateDate($value, $param = null): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -591,7 +673,7 @@ class Validator
      */
     private function validatePhone($value, $param = null): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -604,11 +686,16 @@ class Validator
      */
     private function validateBetween($value, $param): bool
     {
-        if (empty($value) && $value !== 0 && $value !== '0') {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
         $parts = explode(',', $param);
+        
+        if (count($parts) < 2) {
+            return false;
+        }
+
         $min = (float)($parts[0] ?? 0);
         $max = (float)($parts[1] ?? 0);
 
@@ -636,7 +723,7 @@ class Validator
      */
     private function validateUnique($value, $param): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -649,11 +736,30 @@ class Validator
             return true;
         }
 
-        $db = Database::getInstance();
-        $sql = "SELECT COUNT(*) FROM {$table} WHERE {$column} = :value";
+        // If no database instance provided, skip unique check safely.
+        if ($this->db === null) {
+            throw new \RuntimeException('Database instance is required for unique/exists validation.');
+        }
+
+        // Validate table and column names strictly to avoid injection.
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $table) || !preg_match('/^[A-Za-z0-9_]+$/', $column)) {
+            // Invalid identifier — skip this rule safely.
+            return true;
+        }
+
+        $db = $this->db;
+        $escapedTable = $this->escapeIdentifier($table);
+        $escapedColumn = $this->escapeIdentifier($column);
+
+        if (!$escapedTable || !$escapedColumn) {
+            // If escaping fails for any reason, skip the rule safely.
+            return true;
+        }
+
+        $sql = "SELECT COUNT(*) FROM {$escapedTable} WHERE {$escapedColumn} = :value";
 
         if ($exceptId) {
-            $sql .= " AND id != :except_id";
+            $sql .= " AND `id` != :except_id";
         }
 
         $params = ['value' => $value];
@@ -683,7 +789,7 @@ class Validator
      */
     private function validateExists($value, $param): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -695,8 +801,27 @@ class Validator
             return true;
         }
 
-        $db = Database::getInstance();
-        $sql = "SELECT COUNT(*) FROM {$table} WHERE {$column} = :value";
+        // If no database instance provided, skip exists check safely.
+        if ($this->db === null) {
+            throw new \RuntimeException('Database instance is required for unique/exists validation.');
+        }
+
+        // Validate table and column names strictly to avoid injection.
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $table) || !preg_match('/^[A-Za-z0-9_]+$/', $column)) {
+            // Invalid identifier — skip this rule safely.
+            return true;
+        }
+
+        $db = $this->db;
+        $escapedTable = $this->escapeIdentifier($table);
+        $escapedColumn = $this->escapeIdentifier($column);
+
+        if (!$escapedTable || !$escapedColumn) {
+            // If escaping fails for any reason, skip the rule safely.
+            return true;
+        }
+
+        $sql = "SELECT COUNT(*) FROM {$escapedTable} WHERE {$escapedColumn} = :value";
         $stmt = $db->query($sql, ['value' => $value]);
         $count = $stmt->fetchColumn();
 
@@ -718,7 +843,7 @@ class Validator
      */
     private function validateBefore($value, $param): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -747,7 +872,7 @@ class Validator
      */
     private function validateAfter($value, $param): bool
     {
-        if (empty($value)) {
+        if ($this->isEmpty($value)) {
             return true;
         }
 
@@ -759,5 +884,54 @@ class Validator
         }
 
         return $valueDate > $compareDate;
+    }
+
+    /**
+     * Escape and validate a table or column identifier to prevent SQL injection.
+     * Allows dot-separated identifiers (e.g. schema.table). Returns null if invalid.
+     *
+     * @param string $identifier
+     * @return string|null
+     */
+    private function escapeIdentifier(string $identifier): ?string
+    {
+        $parts = explode('.', $identifier);
+
+        foreach ($parts as &$part) {
+            // Only allow alphanumeric and underscore for identifier parts
+            if (!preg_match('/^[A-Za-z0-9_]+$/', $part)) {
+                return null;
+            }
+
+            // remove any backticks if present and wrap with backticks
+            $part = '`' . str_replace('`', '', $part) . '`';
+        }
+
+        return implode('.', $parts);
+    }
+
+    /**
+     * Determine if a value should be considered empty for validation rules.
+     * Treats null, empty string (after trim), and empty array as empty.
+     * Does NOT treat 0 or "0" as empty.
+     *
+     * @param mixed $value
+     * @return bool
+     */
+    private function isEmpty($value): bool
+    {
+        if (is_null($value)) {
+            return true;
+        }
+
+        if (is_string($value) && trim($value) === '') {
+            return true;
+        }
+
+        if (is_array($value) && empty($value)) {
+            return true;
+        }
+
+        return false;
     }
 }

@@ -19,9 +19,13 @@
  */
 
 namespace App\Core;
-
 class Router
 {
+    /**
+     * ตัวเลือกสำหรับการแก้ไขตัวควบคุมและ middleware ผ่าน Container (ถ้ามี)
+     */
+    private ?Container $container = null;
+
     /**
      * อาร์เรย์ของเส้นทางที่ลงทะเบียนไว้
      * โครงสร้าง: ['GET' => [...], 'POST' => [...], ฯลฯ]
@@ -32,6 +36,23 @@ class Router
         'PUT' => [],
         'DELETE' => [],
     ];
+
+    /**
+     * สร้างอินสแตนซ์ Router
+     * จุดประสงค์: สร้างอินสแตนซ์ Router และกำหนด Container (ถ้ามี)
+     * Router() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างอินสแตนซ์ Router ใหม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $container = new Container();
+     * $router = new Router($container);
+     * ```
+     * 
+     * @param Container|null $container ตัวเลือกสำหรับการแก้ไขตัวควบคุมและ middleware ผ่าน Container (ถ้ามี)
+     */
+    public function __construct(?Container $container = null)
+    {
+        $this->container = $container;
+    }
 
     /**
      * ลงทะเบียนเส้นทาง GET
@@ -198,10 +219,21 @@ class Router
                 }
 
                 $middlewareArgs = is_array($middlewareArgs) ? $middlewareArgs : [$middlewareArgs];
-                $middleware = new $middlewareClass(...$middlewareArgs);
+                // รองรับการแก้ไข middleware ผ่าน Container (ถ้ามี) เฉพาะเมื่อไม่มีอาร์กิวเมนต์กำหนดไว้
+                // ตรวจสอบว่ามีอาร์กิวเมนต์หรือไม่ ถ้าไม่มีให้พยายาม resolve ผ่าน Container
+                if ($this->container instanceof Container && empty($middlewareArgs) && $this->container->has($middlewareClass)) {
+                    $middleware = $this->container->make($middlewareClass); // Resolve ผ่าน Container เฉพาะเมื่อไม่มีอาร์กิวเมนต์กำหนดไว้
+                } else {
+                    $middleware = new $middlewareClass(...$middlewareArgs); // สร้างอินสแตนซ์ด้วยอาร์กิวเมนต์ที่กำหนดไว้ (ถ้ามี) หรือไม่มีเลย
+                }
             } else {
-                $middlewareClass = $middlewareDefinition;
-                $middleware = new $middlewareClass();
+                $middlewareClass = $middlewareDefinition; // รูปแบบเดิมสำหรับกรณีไม่มีอาร์กิวเมนต์
+                // ตรวจสอบว่ามีการแก้ไข middleware ผ่าน Container หรือไม่ และสร้างอินสแตนซ์ตามนั้น
+                if ($this->container instanceof Container && $this->container->has($middlewareClass)) {
+                    $middleware = $this->container->make($middlewareClass);
+                } else {
+                    $middleware = new $middlewareClass();
+                }
             }
 
             $result = $middleware->handle($request);
@@ -227,8 +259,17 @@ class Router
             throw new \Exception("Controller {$controllerClass} not found");
         }
         
-        // สร้างอินสแตนซ์ตัวควบคุม
-        $controller = new $controllerClass();
+        // สร้างอินสแตนซ์ตัวควบคุม (resolve via container when available)
+        if ($this->container instanceof Container && $this->container->has($controllerClass)) {
+            $controller = $this->container->make($controllerClass);
+        } else {
+            $controller = new $controllerClass();
+        }
+
+        // ถ้า controller มีเมธอด setRequest ให้ส่ง Request เข้าไป
+        if (method_exists($controller, 'setRequest')) {
+            $controller->setRequest($request);
+        }
 
         // ตรวจสอบว่าเมธอดมีอยู่ในตัวควบคุม
         if (!method_exists($controller, $methodName)) {
