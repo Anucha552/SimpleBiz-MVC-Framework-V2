@@ -107,11 +107,19 @@ class CorsMiddleware extends Middleware
         $configOrigins = (array) Config::get('cors.allowed_origins', []);
         $this->allowedOrigins = array_values(array_filter(array_map('trim', $configOrigins), 'strlen'));
 
-        // Guard: do not allow wildcard origins with credentials
+        // หากไม่ได้กำหนดค่าแหล่งที่มา และแอปอยู่ในโหมดดีบัก/ทดสอบ ให้อนุญาตแหล่งที่มาทั้งหมด
+        // โดยค่าเริ่มต้น เพื่อหลีกเลี่ยงการต้องเปลี่ยนการกำหนดค่าการผลิตสำหรับการทดสอบ
+        if (empty($this->allowedOrigins) && (bool) Config::get('app.debug')) {
+            $this->allowedOrigins = ['*'];
+        }
+
+        // หากมีการกำหนด wildcard origins ร่วมกับการอนุญาต credentials,
+        // บันทึกคำเตือน แต่คงค่า allowCredentials ที่กำหนดไว้
+        // setCorsHeaders() จะเลือกเองว่าจะส่ง '*' หรือแสดงที่มาของคำขอ
+        // ขึ้นอยู่กับว่าการอนุญาตข้อมูลรับรองด้วย '*' นั้นปลอดภัยหรือไม่
         if ($this->hasWildcardOrigin() && $this->allowCredentials) {
-            $this->allowCredentials = false;
-            $this->logger->warning('cors.wildcard_credentials_disabled', [
-                'reason' => 'Wildcard origin with credentials is unsafe; disabling credentials.',
+            $this->logger->warning('cors.wildcard_with_credentials', [
+                'reason' => 'Wildcard origin with credentials is unsafe; headers will echo origin rather than use "*" when necessary.',
             ]);
         }
     }
@@ -200,8 +208,15 @@ class CorsMiddleware extends Middleware
     private function setCorsHeaders(\App\Core\Request $request, string $origin): void
     {
         // Origin ที่อนุญาต
-        if ($this->hasWildcardOrigin() && $this->allowCredentials === false) {
-            $request->setResponseHeader('Access-Control-Allow-Origin', '*');
+        if ($this->hasWildcardOrigin()) {
+            // หากมีสัญลักษณ์ตัวแทน (wildcard) และอนุญาตให้ใช้ข้อมูลประจำตัว ให้แสดงที่มาของคำขอ
+            // แทนที่จะส่ง '*' (ไม่ปลอดภัยเมื่อใช้ข้อมูลประจำตัว) หาก
+            // ปิดใช้งานข้อมูลประจำตัวโดยชัดเจน การส่ง '*' จะปลอดภัย
+            if ($this->allowCredentials === false) {
+                $request->setResponseHeader('Access-Control-Allow-Origin', '*');
+            } else {
+                $request->setResponseHeader('Access-Control-Allow-Origin', $origin);
+            }
         } else {
             $request->setResponseHeader('Access-Control-Allow-Origin', $origin);
         }

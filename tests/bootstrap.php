@@ -42,4 +42,12 @@ if (file_exists($envFile)) {
 }
 
 // ตั้งค่าการเชื่อมต่อฐานข้อมูลสำหรับโมเดลเมื่อรันเทสต์
+if (file_exists(__DIR__ . '/TestGlobals.php')) {
+    require_once __DIR__ . '/TestGlobals.php';
+}
+
+if (file_exists(__DIR__ . '/TestDoubles.php')) {
+    require_once __DIR__ . '/TestDoubles.php';
+}
+
 \App\Core\Model::setConnection(\App\Core\Database::getInstance());

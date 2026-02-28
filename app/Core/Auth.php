@@ -247,12 +247,14 @@ final class Auth
     {
         Session::start();
 
-        // ลบ remember token
+        // ลบ remember token (ensure we have a valid user id)
         if (self::check()) {
             $userId = Session::get(self::SESSION_KEY);
-            self::removeRememberToken($userId);
-            $logger = new Logger();
-            $logger->security('auth.logout.remember_cleared', ['user_id' => $userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            if ($userId !== null) {
+                self::removeRememberToken((int)$userId);
+                $logger = new Logger();
+                $logger->security('auth.logout.remember_cleared', ['user_id' => $userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            }
         }
 
         // ลบข้อมูล session
@@ -275,8 +277,13 @@ final class Auth
                 'samesite' => (string) Config::get('auth.remember_samesite', 'Lax'),
             ];
 
-            setcookie(self::REMEMBER_COOKIE, '', $cookieOptions);
-            unset($_COOKIE[self::REMEMBER_COOKIE]);
+            if (PHP_SAPI === 'cli') {
+                $_COOKIE[self::REMEMBER_COOKIE] = '';
+                unset($_COOKIE[self::REMEMBER_COOKIE]);
+            } else {
+                setcookie(self::REMEMBER_COOKIE, '', $cookieOptions);
+                unset($_COOKIE[self::REMEMBER_COOKIE]);
+            }
         }
 
         // สร้าง session ใหม่ (logged with context 'logout')
@@ -311,7 +318,9 @@ final class Auth
 
         // ตรวจสอบ session
         if (Session::has(self::SESSION_KEY)) {
-            return true;
+            $id = Session::get(self::SESSION_KEY);
+            self::$user = self::getUserById($id);
+            return self::$user !== null;
         }
 
         // ตรวจสอบ remember me cookie
@@ -429,6 +438,7 @@ final class Auth
     }
 
     /**
+     * ห้ามใช้ใน request lifecycle จริง
      * เข้าสู่ระบบแบบชั่วคราว (สำหรับการทดสอบ)
      * จุดประสงค์: ใช้เพื่อเข้าสู่ระบบแบบชั่วคราวด้วยข้อมูลผู้ใช้ที่ให้มา (สำหรับการทดสอบ)
      * loginTemporary() ควรใช้กับอะไร: การทดสอบ, การดีบัก, หรือสถานการณ์ที่ไม่ต้องการการตรวจสอบสิทธิ์จริง
@@ -574,7 +584,11 @@ final class Auth
         $payload = $userId . '|' . $token;
         $signature = self::signRememberPayload($payload);
 
-        setcookie(self::REMEMBER_COOKIE, $payload . '|' . $signature, $cookieOptions);
+        if (PHP_SAPI === 'cli') {
+            $_COOKIE[self::REMEMBER_COOKIE] = $payload . '|' . $signature;
+        } else {
+            setcookie(self::REMEMBER_COOKIE, $payload . '|' . $signature, $cookieOptions);
+        }
         // do not log tokens or cookie values; log creation abstractly
         $logger->info('auth.remember.set', ['user_id' => $userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
     }

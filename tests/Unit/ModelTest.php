@@ -191,26 +191,26 @@ SQL
         $this->assertTrue(TestModel::usesSoftDeletes());
     }
 
-    // public function testQueryThrowsWhenTableNotSet()
-    // {
-    //     if (!class_exists('\\Tests\\Unit\\BadModel')) {
-    //         eval('namespace Tests\\Unit { class BadModel extends \\App\\Core\\Model {} }');
-    //     }
+    public function testQueryThrowsWhenTableNotSet()
+    {
+        if (!class_exists('\\Tests\\Unit\\BadModel')) {
+            eval('namespace Tests\\Unit { class BadModel extends \\App\\Core\\Model {} }');
+        }
 
-    //     $this->expectException(\RuntimeException::class);
-    //     \Tests\Unit\BadModel::query();
-    // }
+        $this->expectException(\RuntimeException::class);
+        \Tests\Unit\BadModel::query();
+    }
 
-    // public function testCreateThrowsWhenNoDbConnection()
-    // {
-    //     if (!class_exists('\\Tests\\Unit\\NoDbModel')) {
-    //         // redeclare an uninitialized static $db on the child so isset(static::$db) is false for that class
-    //         eval('namespace Tests\\Unit { class NoDbModel extends \\App\\Core\\Model { protected static string $table = "no_db_table"; protected static \\App\\Core\\Database $db; } }');
-    //     }
+    public function testCreateThrowsWhenNoDbConnection()
+    {
+        if (!class_exists('\\Tests\\Unit\\NoDbModel')) {
+            // redeclare an uninitialized static $db on the child so isset(static::$db) is false for that class
+            eval('namespace Tests\\Unit { class NoDbModel extends \\App\\Core\\Model { protected static string $table = "no_db_table"; protected static \\App\\Core\\Database $db; } }');
+        }
 
-    //     $this->expectException(\RuntimeException::class);
-    //     \Tests\Unit\NoDbModel::create(['name' => 'X', 'value' => 'v']);
-    // }
+        $this->expectException(\RuntimeException::class);
+        \Tests\Unit\NoDbModel::create(['name' => 'X', 'value' => 'v']);
+    }
 
     public function testFindReturnsNullWhenNotFound()
     {
@@ -223,15 +223,15 @@ SQL
         $this->assertArrayNotHasKey('updated_at', $p);
     }
 
-    // public function testPrepareInsertRespectsGuardedWhenFillableEmpty()
-    // {
-    //     if (!class_exists('\\Tests\\Unit\\GuardedModel')) {
-    //         eval('namespace Tests\\Unit { class GuardedModel extends \\App\\Core\\Model { protected static string $table = "g_table"; protected static array $guarded = ["id", "secret"]; } }');
-    //     }
+    public function testPrepareInsertRespectsGuardedWhenFillableEmpty()
+    {
+        if (!class_exists('\\Tests\\Unit\\GuardedModel')) {
+            eval('namespace Tests\\Unit { class GuardedModel extends \\App\\Core\\Model { protected static string $table = "g_table"; protected static array $guarded = ["id", "secret"]; } }');
+        }
 
-    //     $prepared = \Tests\Unit\GuardedModel::prepareInsertData(['id' => 5, 'secret' => 's', 'ok' => 1]);
-    //     $this->assertArrayNotHasKey('id', $prepared);
-    //     $this->assertArrayNotHasKey('secret', $prepared);
-    //     $this->assertArrayHasKey('ok', $prepared);
-    // }
+        $prepared = \Tests\Unit\GuardedModel::prepareInsertData(['id' => 5, 'secret' => 's', 'ok' => 1]);
+        $this->assertArrayNotHasKey('id', $prepared);
+        $this->assertArrayNotHasKey('secret', $prepared);
+        $this->assertArrayHasKey('ok', $prepared);
+    }
 }
