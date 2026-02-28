@@ -3,7 +3,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 // ensure sqlite storage DB for constructor
 putenv('DB_CONNECTION=sqlite');
-putenv('DB_DATABASE=storage/database.sqlite');
+putenv('DB_DATABASE=storage/simplebiz_test.sqlite');
 putenv('APP_ENV=testing');
 
 use App\Core\Database;

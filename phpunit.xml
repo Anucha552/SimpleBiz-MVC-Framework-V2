@@ -31,6 +31,6 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_DEBUG" value="true"/>
-        <env name="DB_DATABASE" value="simplebiz_test"/>
+        <env name="DB_DATABASE" value="storage/simplebiz_test.sqlite"/>
     </php>
 </phpunit>

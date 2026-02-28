@@ -21,6 +21,9 @@ composer.lock
 /storage/cache/*
 !/storage/cache/.gitkeep
 
+# ไฟล์ฐานข้อมูล (อาจเก็บข้อมูลที่ละเอียดอ่อน)
+storage/database.sqlite
+
 # ไฟล์ระบบ
 .DS_Store
 Thumbs.db
@@ -43,4 +46,4 @@ desktop.ini
 *.swp
 *.swo
 *~
-[storage/database.sqlite]
+
