@@ -19,6 +19,8 @@
 
 namespace App\Core;
 
+use App\Core\Response;
+
 class ErrorHandler
 {
     /**

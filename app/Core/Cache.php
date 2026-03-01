@@ -849,4 +849,25 @@ class Cache
 
         return $count;
     }
+
+    /**
+     * ฟังก์ชัน reset สำหรับลบ cache ทั้งหมด (สำหรับ testing)
+     * จุดประสงค์: ลบข้อมูล cache ทั้งหมดเพื่อให้สภาพแวดล้อมในการทดสอบสะอาด
+     * reset() ควรใช้กับอะไร: เมื่อคุณต้องการลบข้อมูล cache ทั้งหมดเพื่อให้สภาพแวดล้อมในการทดสอบสะอาดก่อนหรือหลังการทดสอบ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * Cache::reset();
+     * ```
+     * 
+     * @return void ไม่คืนค่าอะไร
+     */
+    public static function reset(): void
+    {
+        // For file-backed cache, flush files
+        try {
+            self::flush();
+        } catch (\Throwable $_) {
+            // ignore
+        }
+    }
 }

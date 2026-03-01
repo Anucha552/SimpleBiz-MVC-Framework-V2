@@ -31,6 +31,10 @@
 
 namespace App\Core;
 
+use App\Core\Config;
+use App\Core\Logger;
+use Throwable;
+
 class Session
 {
     /**
@@ -326,7 +330,7 @@ class Session
                 'user_id' => $userId,
                 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Logging should not interrupt execution
         }
     }

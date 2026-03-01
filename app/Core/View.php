@@ -16,6 +16,9 @@ namespace App\Core;
 use App\Core\Cache;
 use App\Core\Config;
 use App\Core\Logger;
+use RuntimeException;
+use InvalidArgumentException;
+use Throwable;
 
 class View
 {

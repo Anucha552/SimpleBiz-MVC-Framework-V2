@@ -17,6 +17,8 @@ namespace App\Core;
 use App\Core\Database;
 use App\Core\RawExpression;
 use App\Core\Logger;
+use RuntimeException;
+use Throwable;
 
 class QueryBuilder
 {
@@ -538,7 +540,7 @@ class QueryBuilder
         $this->validateSqlBindings($sql);
         try {
             $result = $this->db->fetchAll($sql, $this->bindings) ?: [];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->clear();
             throw $e;
         }
@@ -616,7 +618,7 @@ class QueryBuilder
         try {
             $affected = $this->db->execute($sql, $this->bindings);
             $ok = $affected !== false && $affected >= 0;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $ok = false;
         }
         $this->clear();
@@ -687,11 +689,11 @@ class QueryBuilder
                         'sql' => $sql,
                         'bindings' => $this->bindings,
                     ]);
-                } catch (\Throwable $_) {
+                } catch (Throwable $_) {
                 }
             }
             $this->clear();
-            throw new \RuntimeException('Unsafe query: UPDATE without WHERE clause.');
+            throw new RuntimeException('Unsafe query: UPDATE without WHERE clause.');
         }
         if ($whereSql !== '') {
             $sql .= ' WHERE ' . $whereSql;
@@ -735,7 +737,7 @@ class QueryBuilder
                         'sql' => $sql,
                         'bindings' => $this->bindings,
                     ]);
-                } catch (\Throwable $_) {
+                } catch (Throwable $_) {
                 }
             }
 
@@ -749,7 +751,7 @@ class QueryBuilder
 
         try {
             $count = $this->db->execute($sql, $this->bindings);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $count = 0;
         }
         $this->clear();

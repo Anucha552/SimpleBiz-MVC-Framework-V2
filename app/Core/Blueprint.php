@@ -24,7 +24,12 @@
  * // ผลลัพธ์: คำสั่ง SQL สำหรับสร้างตาราง users พร้อมคอลัมน์และดัชนีที่กำหนด
  */
 
+
 namespace App\Core;
+
+use App\Core\ColumnDefinition;
+use App\Core\ForeignKeyDefinition;
+use App\Core\Config;
 
 class Blueprint
 {

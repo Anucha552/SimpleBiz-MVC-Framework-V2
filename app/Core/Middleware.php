@@ -39,6 +39,11 @@
 
 namespace App\Core;
 
+use App\Core\Auth;
+use App\Core\Request;
+use App\Core\Response;
+use App\Core\Config;
+
 abstract class Middleware
 {
     /**

@@ -19,6 +19,11 @@ use Closure;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionNamedType;
+use ReflectionFunction;
+use ReflectionFunctionAbstract;
+use ReflectionMethod;
+use InvalidArgumentException;
+use RuntimeException;
 
 class Container
 {

@@ -34,6 +34,8 @@
 
 namespace App\Core;
 
+use finfo;
+
 class FileUpload
 {
     /**

@@ -21,6 +21,8 @@
 
 namespace App\Core;
 
+use App\Core\Config;
+
 class ColumnDefinition
 {
     /**
@@ -77,6 +79,33 @@ class ColumnDefinition
      * คุณสมบัติ PRIMARY KEY
      */
     protected bool $primary = false;
+
+    /**
+     * คืนค่าคุณสมบัติ nullable ของคอลัมน์
+     * @return bool
+     */
+    public function isNullable(): bool
+    {
+        return $this->nullable;
+    }
+
+    /**
+     * คืนค่าค่า default ของคอลัมน์
+     * @return mixed
+     */
+    public function getDefault()
+    {
+        return $this->default;
+    }
+
+    /**
+     * คืนค่าคุณสมบัติ unsigned ของคอลัมน์
+     * @return bool
+     */
+    public function isUnsigned(): bool
+    {
+        return $this->unsigned;
+    }
 
     /**
      * สร้างอินสแตนซ์ของ ColumnDefinition

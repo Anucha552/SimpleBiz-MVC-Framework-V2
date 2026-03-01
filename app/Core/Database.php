@@ -31,6 +31,7 @@ use PDO;
 use PDOException;
 use PDOStatement;
 use App\Core\Logger;
+use App\Core\Config;
 
 class Database
 {

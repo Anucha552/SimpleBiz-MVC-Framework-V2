@@ -41,6 +41,11 @@
 
 namespace App\Core;
 
+use App\Core\Config;
+use App\Core\Session;
+use DateTimeImmutable;
+use RuntimeException;
+
 class Logger
 {
     /**
@@ -110,7 +115,7 @@ class Logger
 
         if (!is_dir($logDir)) {
             if (!@mkdir($logDir, 0755, true) && !is_dir($logDir)) {
-                throw new \RuntimeException("Logger: unable to create log directory: {$logDir}");
+                throw new RuntimeException("Logger: unable to create log directory: {$logDir}");
             }
         }
 
@@ -348,7 +353,7 @@ class Logger
         // Keep N calendar days (1 = keep today only). Non-positive = delete anything before today.
         $days = (int) $this->retentionDays;
         $keepDays = $days > 0 ? $days : 1;
-        $cutoffDate = (new \DateTimeImmutable('today'))->modify('-' . ($keepDays - 1) . ' days');
+        $cutoffDate = (new DateTimeImmutable('today'))->modify('-' . ($keepDays - 1) . ' days');
         $cutoffDateStr = $cutoffDate->format('Y-m-d');
 
         // Normalize current log path for safe comparison (realpath may return false if file missing)

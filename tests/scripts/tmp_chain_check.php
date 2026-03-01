@@ -27,3 +27,4 @@ try {
 } catch (Throwable $e) {
     echo 'Error: ' . $e->getMessage() . PHP_EOL;
 }
+

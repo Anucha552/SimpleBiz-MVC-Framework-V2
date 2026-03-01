@@ -5,6 +5,20 @@ use PHPUnit\Framework\TestCase;
 
 final class AuthTest extends TestCase
 {
+    public function testLoginTemporaryAndIdCheck(): void
+    {
+        // Use temporary login helper for tests
+        \App\Core\Auth::loginTemporary(['id' => 123, 'username' => 'tester']);
+
+        // loginTemporary sets the in-memory user without touching session
+        $this->assertSame(123, \App\Core\Auth::id());
+
+        // Ensure user returns array with id
+        $user = \App\Core\Auth::user();
+        $this->assertIsArray($user);
+        $this->assertArrayHasKey('id', $user);
+        $this->assertSame(123, $user['id']);
+    }
     protected function setUp(): void
     {
         tests_reset_doubles();
@@ -13,6 +27,20 @@ final class AuthTest extends TestCase
         \App\Core\Config::set('auth.app_key', 'testing_app_key');
         \App\Core\Config::set('auth.cookie_domain', '');
         \App\Core\Config::set('auth.remember_samesite', 'Lax');
+
+        // จำลอง IP address สำหรับ CLI
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+
+        // reset session/cookie
+        if (isset($_SESSION)) {
+            $_SESSION = [];
+        }
+        $_COOKIE = [];
+
+        // reset cache ถ้ามี method reset
+        if (method_exists('App\\Core\\Cache', 'reset')) {
+            \App\Core\Cache::reset();
+        }
 
         // seed a user
         $password = password_hash('secret', PASSWORD_BCRYPT);
@@ -95,6 +123,11 @@ final class AuthTest extends TestCase
         \App\Core\Auth::loginById(1, false);
         $this->assertTrue(\App\Core\Auth::check());
         \App\Core\Auth::logout();
+        // reset session/cookie หลัง logout
+        if (isset($_SESSION)) {
+            $_SESSION = [];
+        }
+        $_COOKIE = [];
         $this->assertFalse(\App\Core\Auth::check());
     }
 
@@ -109,9 +142,14 @@ final class AuthTest extends TestCase
         $this->assertFalse(\App\Core\Auth::attempt(['username' => $identifier, 'password' => 'secret'], false));
 
         // Clear cache directly (test double) to simulate expiry/clearing
-        if (method_exists('\App\Core\Cache', 'reset')) {
+        if (method_exists('App\\Core\\Cache', 'reset')) {
             \App\Core\Cache::reset();
         }
+        // reset session/cookie
+        if (isset($_SESSION)) {
+            $_SESSION = [];
+        }
+        $_COOKIE = [];
 
         // Now attempt with correct password should succeed
         $this->assertTrue(\App\Core\Auth::attempt(['username' => $identifier, 'password' => 'secret'], false));

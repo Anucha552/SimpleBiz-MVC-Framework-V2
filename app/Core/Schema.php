@@ -23,6 +23,9 @@
 
 namespace App\Core;
 
+use Throwable;
+use RuntimeException;
+
 class Schema
 {
     /**
@@ -60,7 +63,7 @@ class Schema
                 $db->execRaw($sql);
             }
             if ($db->inTransaction()) $db->commit();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
             throw $e;
         }
@@ -94,7 +97,7 @@ class Schema
                 $db->execRaw($sql);
             }
             if ($db->inTransaction()) $db->commit();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
             throw $e;
         }
@@ -136,7 +139,7 @@ class Schema
     {
         $driver = Config::get('database.connection', 'mysql');
         if ($driver === 'sqlite') {
-            throw new \RuntimeException('SQLite does not support DROP COLUMN directly.');
+            throw new RuntimeException('SQLite does not support DROP COLUMN directly.');
         }
 
         $sql = 'ALTER TABLE `' . str_replace('`', '``', $table) . '` DROP COLUMN `' . str_replace('`', '``', $column) . '`';

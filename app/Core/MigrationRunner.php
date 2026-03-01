@@ -21,6 +21,9 @@
 namespace App\Core;
 
 use PDOException;
+use App\Core\Database;
+use App\Core\Logger;
+use App\Core\Migration;
 
 class MigrationRunner
 {

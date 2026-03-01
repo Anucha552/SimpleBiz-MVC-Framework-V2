@@ -37,6 +37,9 @@
  */
 
 namespace App\Core;
+use App\Core\Database;
+use InvalidArgumentException;
+use RuntimeException;
 
 class Validator
 {
@@ -320,7 +323,7 @@ class Validator
         $method = 'validate' . ucfirst($ruleName);
 
         if (!method_exists($this, $method)) {
-            throw new \InvalidArgumentException("Validation rule {$ruleName} does not exist.");
+            throw new InvalidArgumentException("Validation rule {$ruleName} does not exist.");
         }
 
         $result = $this->$method($value, $param);
@@ -738,7 +741,7 @@ class Validator
 
         // If no database instance provided, skip unique check safely.
         if ($this->db === null) {
-            throw new \RuntimeException('Database instance is required for unique/exists validation.');
+            throw new RuntimeException('Database instance is required for unique/exists validation.');
         }
 
         // Validate table and column names strictly to avoid injection.
@@ -803,7 +806,7 @@ class Validator
 
         // If no database instance provided, skip exists check safely.
         if ($this->db === null) {
-            throw new \RuntimeException('Database instance is required for unique/exists validation.');
+            throw new RuntimeException('Database instance is required for unique/exists validation.');
         }
 
         // Validate table and column names strictly to avoid injection.

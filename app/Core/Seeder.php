@@ -26,6 +26,8 @@
 namespace App\Core;
 
 use App\Core\Database;
+use App\Core\Logger;
+use PDOException;
 
 abstract class Seeder
 {
@@ -98,7 +100,7 @@ abstract class Seeder
             $sql = rtrim($sql, ', ');
             
             $this->db->execute($sql, $values);
-        } catch (\PDOException $e) {
+        } catch (PDOException $e) {
             echo "\n";
             echo "┌─ Seeder Error ──────────────────────────────────────┐\n";
             $this->error('เกิดข้อผิดพลาด: ' . $e->getMessage());
@@ -129,7 +131,7 @@ abstract class Seeder
             echo "\n";
             
             // Log error
-            (new \App\Core\Logger())->error('Seeder error', [
+            (new Logger())->error('Seeder error', [
                 'table' => $table,
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),

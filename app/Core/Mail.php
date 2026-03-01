@@ -28,6 +28,9 @@
 
 namespace App\Core;
 
+use App\Core\Config;
+use App\Core\Logger;
+
 class Mail
 {
     /**

@@ -27,6 +27,10 @@
 
 namespace App\Core;
 
+use App\Core\Database;
+use App\Core\Logger;
+use App\Core\Schema;
+use App\Core\Blueprint;
 
 abstract class Migration
 {

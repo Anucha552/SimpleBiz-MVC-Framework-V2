@@ -13,6 +13,10 @@
 
 namespace App\Core;
 
+use App\Core\Router;
+use App\Core\ModuleInterface;
+use RuntimeException;
+
 final class ModuleManager
 {
     /**
@@ -71,13 +75,13 @@ final class ModuleManager
 
             // ตรวจสอบว่าโมดูลมีคลาสที่ถูกต้อง
             if (!class_exists($moduleClass)) {
-                throw new \RuntimeException("Module class not found: {$moduleClass}");
+                throw new RuntimeException("Module class not found: {$moduleClass}");
             }
 
             // สร้างอินสแตนซ์ของโมดูลและตรวจสอบว่าเป็นไปตามสัญญา
             $module = new $moduleClass();
             if (!$module instanceof ModuleInterface) {
-                throw new \RuntimeException("Module must implement ModuleInterface: {$moduleClass}");
+                throw new RuntimeException("Module must implement ModuleInterface: {$moduleClass}");
             }
 
             $module->register($router); // ลงทะเบียนโมดูลกับ Router

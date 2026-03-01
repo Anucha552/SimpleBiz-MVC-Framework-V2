@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/app/Core/Container.php';
+require_once __DIR__ . '/../app/Core/Container.php';
 
 use App\Core\Container;
 
@@ -75,9 +75,9 @@ $db2 = $container->make(Database::class);
 echo "Database is singleton: " . ($db1 === $db2 ? 'true' : 'false') . "\n";
 
 // ---------------- Router integration example ----------------
-require_once __DIR__ . '/app/Core/Router.php';
-require_once __DIR__ . '/app/Core/Request.php';
-require_once __DIR__ . '/app/Core/Response.php';
+require_once __DIR__ . '/../app/Core/Router.php';
+require_once __DIR__ . '/../app/Core/Request.php';
+require_once __DIR__ . '/../app/Core/Response.php';
 use App\Core\Router;
 
 class UserController
@@ -106,3 +106,75 @@ $_SERVER['REQUEST_URI'] = '/user/1';
 
 // Dispatch the request (Router will resolve UserController via the Container)
 $router->dispatch();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

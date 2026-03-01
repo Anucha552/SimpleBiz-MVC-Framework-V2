@@ -6,7 +6,7 @@ namespace App\Core;
 /**
  * Interface ServiceProviderInterface
  *
- * Simple service provider contract for registering services into the Container.
+ * สัญญาผู้ให้บริการแบบง่ายสำหรับการลงทะเบียนบริการลงในคอนเทนเนอร์
  */
 interface ServiceProviderInterface
 {
