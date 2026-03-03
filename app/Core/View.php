@@ -16,6 +16,7 @@ namespace App\Core;
 use App\Core\Cache;
 use App\Core\Config;
 use App\Core\Logger;
+use App\Core\Session;
 use RuntimeException;
 use InvalidArgumentException;
 use Throwable;
@@ -83,6 +84,11 @@ class View
     private static bool $debug = true;
 
     /**
+     * รายการไฟล์ asset ที่ถูกอ้างในระหว่างการเรนเดอร์
+     */
+    private static array $assetDependencies = [];
+
+    /**
      * ระยะเวลาในการแคชผลลัพธ์ของวิว (วินาที) หากตั้งค่าเป็น null จะไม่ใช้การแคช
      */
     private ?int $cacheTtl = null;
@@ -96,6 +102,11 @@ class View
      * ใช้เก็บไฟล์เลย์เอาต์ที่ถูกใช้ในการเรนเดอร์ เพื่อให้สามารถตรวจสอบการเปลี่ยนแปลงของไฟล์และจัดการแคชได้อย่างถูกต้อง
      */
     private array $usedLayoutFiles = [];
+
+    /**
+     * ใช้เก็บไฟล์วิวและคอมโพเนนต์ที่ถูกเรนเดอร์ เพื่อให้สามารถตรวจสอบการเปลี่ยนแปลงของไฟล์และจัดการแคชได้อย่างถูกต้อง
+     */
+    private array $usedViewFiles = [];
 
     /**
      * สร้างอินสแตนซ์ของวิวใหม่ โดยรับชื่อของวิวและข้อมูลที่ต้องการส่งไปยังวิว
@@ -351,6 +362,27 @@ class View
     }
 
     /**
+     * รวมไฟล์วิวย่อยผ่านระบบ View เพื่อให้ cache track ไฟล์ได้
+     * จุดประสงค์: ใช้สำหรับรวมไฟล์วิวย่อยผ่านระบบ View เพื่อให้ cache track ไฟล์ได้ โดยรับชื่อของวิวที่ต้องการรวมและข้อมูลที่ต้องการส่งไปยังวิว ซึ่งจะช่วยให้สามารถจัดการกับการแคชของไฟล์วิวได้อย่างถูกต้องและมีประสิทธิภาพมากขึ้น
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $view->includeView('partials.header', ['title' => 'My Page']);
+     * ```
+     * 
+     * @param string $view ชื่อของวิวที่ต้องการรวม (เช่น 'partials.header' จะถูกแปลงเป็น 'partials/header.php')
+     * @param array $data ข้อมูลที่ต้องการส่งไปยังวิว
+     * @return void ไม่มีการคืนค่า แต่จะแสดงผลลัพธ์ของวิวที่ถูกกำหนดไว้ โดยจะใช้เมธอด renderViewFile() เพื่อเรนเดอร์ไฟล์วิวและแสดงผลลัพธ์ออกมา
+     */
+    public function includeView(string $view, array $data = []): void
+    {
+        $view = self::normalizeTemplateName($view);
+        $data = $this->mergeData($data);
+        $data = $this->applyComposers($view, $data);
+
+        echo $this->renderViewFile($view, $data);
+    }
+
+    /**
      * เรนเดอร์คอมโพเนนต์ที่ถูกกำหนดไว้ โดยรับชื่อของคอมโพเนนต์และข้อมูลที่ต้องการส่งไปยังคอมโพเนนต์ และคืนค่าผลลัพธ์ของการเรนเดอร์คอมโพเนนต์
      * จุดประสงค์: ใช้สำหรับเรนเดอร์คอมโพเนนต์ที่ถูกกำหนดไว้ โดยรับชื่อของคอมโพเนนต์และข้อมูลที่ต้องการส่งไปยังคอมโพเนนต์ และคืนค่าผลลัพธ์ของการเรนเดอร์คอมโพเนนต์ ซึ่งจะช่วยให้สามารถนำคอมโพเนนต์ที่ถูกกำหนดไว้มาใช้ในวิวหรือเลย์เอาต์ได้อย่างง่ายดาย และสามารถส่งข้อมูลไปยังคอมโพเนนต์เพื่อให้แสดงผลตามที่ต้องการได้
      * ตัวอย่างการใช้งาน:
@@ -514,56 +546,56 @@ class View
      */
     public function render(): string
     {
-        $start = microtime(true);
+        // เริ่มต้นจับเวลาการเรนเดอร์เพื่อใช้ในการบันทึก log และตรวจสอบประสิทธิภาพของการเรนเดอร์
+        $start = microtime(true); 
 
         $this->logger->info('view.render.start', ['view' => $this->view]);
+        self::$assetDependencies = [];
 
         try {
             $data = $this->mergeData();
             $data = $this->applyComposers($this->view, $data);
 
-            $viewFile = self::$basePath . '/' . $this->view . '.php';
-            $viewTime = is_file($viewFile) ? filemtime($viewFile) : 0;
+            $hasFlash = $this->hasFlashMessages();
 
+            $viewFile = self::$basePath . '/' . $this->view . '.php';
+            $dataHash = md5(json_encode($data, JSON_PARTIAL_OUTPUT_ON_ERROR));
+            $cacheKey = 'view_' . md5($this->view . $dataHash);
+
+            // ลบแคชเมื่อมีการเปลี่ยนแปลงของไฟล์หรือข้อมูล หรือเมื่อมีข้อความ flash เพื่อให้ได้ผลลัพธ์ที่ถูกต้องและไม่แสดงข้อมูลเก่าที่อาจจะไม่ถูกต้อง
+            if ($hasFlash || $this->cacheTtl === null || self::$debug === true) {
+                // หากมีข้อความ flash หรือการแคชถูกปิดหรือโหมด debug เปิดอยู่ ให้ลบแคชที่เกี่ยวข้องกับวิวนี้เพื่อให้ได้ผลลัพธ์ที่ถูกต้องและไม่แสดงข้อมูลเก่าที่อาจจะไม่ถูกต้อง
+                if (Cache::has($cacheKey)) {
+                    Cache::forget($cacheKey);
+                }
+            }
+
+            // ตรวจสอบแคชก่อนการเรนเดอร์เพื่อให้ได้ผลลัพธ์ที่รวดเร็วขึ้นเมื่อไม่มีการเปลี่ยนแปลงของไฟล์หรือข้อมูล และไม่มีข้อความ flash ที่ต้องแสดง โดยจะตรวจสอบว่าแคชยังคงถูกต้องตามการเปลี่ยนแป
+            if ($this->cacheTtl !== null && self::$debug === false && !$hasFlash) {
+                $cached = Cache::get($cacheKey);
+
+                // หากแคชยังคงถูกต้องตามการเปลี่ยนแปลงของไฟล์หรือข้อมูล และไม่มีข้อความ flash ที่ต้องแสดง ให้ใช้ผลลัพธ์จากแคชเพื่อแสดงผลลัพธ์ได้อย่างรวดเร็ว โดยไม่ต้องเรนเดอร์ใหม่
+                if (is_array($cached) && isset($cached['html'], $cached['deps']) && $this->isCacheValid($cached['deps'])) {
+
+                    // หากแคชยังคงถูกต้องตามการเปลี่ยนแปลงของไฟล์หรือข้อมูล และไม่มีข้อความ flash ที่ต้องแสดง ให้ใช้ผลลัพธ์จากแคชเพื่อแสดงผลลัพธ์ได้อย่างรวดเร็ว โดยไม่ต้องเรนเดอร์ใหม่
+                    $this->resetState();
+                    return $cached['html'];
+                }
+
+                // หากแคชไม่ถูกต้องตามการเปลี่ยนแปลงของไฟล์หรือข้อมูล หรือมีข้อความ flash ที่ต้องแสดง ให้ลบแคชที่เกี่ยวข้องกับวิวนี้เพื่อให้ได้ผลลัพธ์ที่ถูกต้องและไม่แสดงข้อมูลเก่าที่อาจจะไม่ถูกต้อง
+                if ($cached !== null) {
+                    Cache::forget($cacheKey);
+                }
+            }
+
+            // เรนเดอร์วิวและเลย์เอาต์ที่กำหนดไว้ โดยจะจัดการกับการแคชผลลัพธ์และการตรวจสอบการเปลี่ยนแปลงของไฟล์เพื่อให้ได้ผลลัพธ์ที่ถูกต้องและมีประสิทธิภาพ
             $html = $this->renderViewFile($this->view, $data);
             $html = $this->renderLayoutChain($html, $data);
 
-            if ($this->cacheTtl !== null && self::$debug === false) {
-
-                $layoutTimes = '';
-                foreach ($this->usedLayoutFiles as $file) {
-                    $layoutTimes .= is_file($file) ? filemtime($file) : '';
-                }
-
-                $dataHash = md5(json_encode($data, JSON_PARTIAL_OUTPUT_ON_ERROR));
-
-                $cacheKey = 'view_' . md5(
-                    $this->view .
-                    $dataHash .
-                    $viewTime .
-                    $layoutTimes
-                );
-
-                if (Cache::has($cacheKey)) {
-                    if (static::$debug) {
-                            $this->logger->info('view.cache.hit', [
-                            'view' => $this->view,
-                            'key'  => $cacheKey
-                        ]);
-                    }
-
-                    $this->resetState();
-                    return Cache::get($cacheKey);
-                }
-
-                if (static::$debug) {
-                    $this->logger->info('view.cache.miss', [
-                        'view' => $this->view,
-                        'key'  => $cacheKey
-                    ]);
-                }
-
-                Cache::set($cacheKey, $html, $this->cacheTtl);
+            // จัดการกับการแคชผลลัพธ์ของวิวและเลย์เอาต์ที่กำหนดไว้ โดยจะตรวจสอบการเปลี่ยนแปลงของไฟล์และข้อมูลเพื่อให้ได้ผลลัพธ์ที่ถูกต้องและมีประสิทธิภาพ
+            if ($this->cacheTtl !== null && self::$debug === false && !$hasFlash) {
+                $deps = $this->buildCacheDependencies($viewFile);
+                Cache::set($cacheKey, ['html' => $html, 'deps' => $deps], $this->cacheTtl);
             }
 
             $duration = microtime(true) - $start;
@@ -571,6 +603,8 @@ class View
             $this->resetState();
 
             $threshold = (float) Config::get('logging.view_slow_threshold', 0.5);
+            
+            // หากระยะเวลาในการเรนเดอร์เกินค่า threshold ที่กำหนดไว้ในคอนฟิก ให้บันทึก log ในระดับ warning เพื่อแจ้งเตือนว่าการเรนเดอร์ช้า
             if ($duration > $threshold) {
                 $this->logger->warning('view.render.slow', ['view' => $this->view, 'duration' => $duration]);
             }
@@ -674,6 +708,8 @@ class View
      */
     private function renderFile(string $file, array $data): string
     {
+        $this->usedViewFiles[] = $file;
+
         return (function () use ($file, $data) {
             try {
                 extract($data, EXTR_SKIP);
@@ -774,8 +810,115 @@ class View
         $this->slots = [];
         $this->layout = null;
         $this->usedLayoutFiles = [];
+        $this->usedViewFiles = [];
         $this->currentSection = null;
         $this->currentSlot = null;
+        self::$assetDependencies = [];
+    }
+
+    /**
+     * ตรวจสอบว่า cache ยังใช้ได้อยู่หรือไม่โดยดูจากการเปลี่ยนแปลงของไฟล์ที่เกี่ยวข้อง
+     * จุดประสงค์: ใช้สำหรับตรวจสอบว่า cache ยังใช้ได้อยู่หรือไม่โดยดูจากการเปลี่ยนแปลงของไฟล์ที่เกี่ยวข้อง ซึ่งจะช่วยให้สามารถตัดสินใจได้ว่าควรใช้ cache ที่มีอยู่หรือควรทำการเรนเดอร์ใหม่เพื่อให้ได้ผลลัพธ์ที่ถูกต้องและเป็นปัจจุบัน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $valid = $this->isCacheValid($deps);
+     * if ($valid) {
+     *     // ใช้ cache ที่มีอยู่
+     * } else {
+     *     // ทำการเรนเดอร์ใหม่
+     * }
+     * ```
+     * 
+     * @param array $deps รายการของไฟล์ที่เกี่ยวข้องกับการเรนเดอร์ที่ต้องตรวจสอบ (เช่น [{'file' => '/path/to/view.php', 'mtime' => 1234567890}, ...])
+     * @return bool คืนค่าบูลีนที่ระบุว่า cache ยังใช้ได้อยู่หรือไม่ (true หากยังใช้ได้, false หากไม่ใช้ได้) โดยจะตรวจสอบว่าไฟล์ที่เกี่ยวข้องยังคงมีอยู่และไม่ได้ถูกแก้ไขตั้งแต่ครั้งที่ cache ถูกสร้างขึ้น
+     */
+    private function isCacheValid(array $deps): bool
+    {
+        foreach ($deps as $dep) {
+            if (!is_array($dep) || !isset($dep['file'], $dep['mtime'])) {
+                return false;
+            }
+
+            $file = $dep['file'];
+            $mtime = $dep['mtime'];
+            if (!is_string($file) || !is_int($mtime)) {
+                return false;
+            }
+
+            if (!is_file($file) || filemtime($file) !== $mtime) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * สร้างรายการไฟล์ที่ใช้สำหรับตรวจสอบ cache
+     * จุดประสงค์: ใช้สำหรับสร้างรายการไฟล์ที่ใช้สำหรับตรวจสอบ cache โดยจะรวมไฟล์ของวิวหลัก, เลย์เอาต์ที่ถูกใช้, ไฟล์ของวิวที่ถูกใช้, และไฟล์ของ asset ที่ถูกลงทะเบียนไว้ เพื่อให้สามารถตรวจสอบการเปลี่ยนแปลงของไฟล์เหล่านี้ได้อย่างครบถ้วนและแม่นยำ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $deps = $this->buildCacheDependencies($viewFile);
+     * // $deps จะเป็นรายการของไฟล์ที่ใช้สำหรับตรวจสอบ cache เช่น [{'file' => '/path/to/view.php', 'mtime' => 1234567890}, ...]
+     * ```
+     * 
+     * @param string $viewFile เส้นทางของไฟล์ของวิวหลักที่ต้องการสร้างรายการไฟล์สำหรับตรวจสอบ cache (เช่น '/path/to/view.php')
+     * @return array คืนค่ารายการของไฟล์ที่ใช้สำหรับตรวจสอบ cache ในรูปแบบของอาร์เรย์ที่มีโครงสร้างเป็น [{'file' => '/path/to/file.php', 'mtime' => 1234567890}, ...] โดยจะรวมไฟล์ของวิวหลัก, เลย์เอาต์ที่ถูกใช้, ไฟล์ของวิวที่ถูกใช้, และไฟล์ของ asset ที่ถูกลงทะเบียนไว้
+     */
+    private function buildCacheDependencies(string $viewFile): array
+    {
+        $deps = [];
+
+        $allFiles = array_merge([$viewFile], $this->usedLayoutFiles, $this->usedViewFiles, self::$assetDependencies);
+        $allFiles = array_unique($allFiles);
+
+        foreach ($allFiles as $file) {
+            $deps[] = [
+                'file' => $file,
+                'mtime' => is_file($file) ? filemtime($file) : 0,
+            ];
+        }
+
+        return $deps;
+    }
+
+    /**
+     * ลงทะเบียนไฟล์ asset เพื่อใช้ตรวจสอบ cache
+     * จุดประสงค์: ใช้สำหรับลงทะเบียนไฟล์ asset เพื่อใช้ตรวจสอบ cache โดยรับเส้นทางของไฟล์ asset ที่ต้องการลงทะเบียนและเก็บไว้ในรายการของไฟล์ที่เกี่ยวข้องกับการเรนเดอร์ ซึ่งจะช่วยให้สามารถตรวจสอบการเปลี่ยนแปลงของไฟล์ asset ได้อย่างแม่นยำและรวมไว้ในการตัดสินใจว่าจะใช้ cache หรือไม่
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * View::registerAssetDependency('/path/to/asset.js');
+     * ```
+     * 
+     * @param string $filePath เส้นทางของไฟล์ asset ที่ต้องการลงทะเบียน (เช่น '/path/to/asset.js')
+     * @return void ไม่มีการคืนค่า แต่จะเก็บเส้นทางของไฟล์ asset ที่ลงทะเบียนไว้ในรายการของไฟล์ที่เกี่ยวข้องกับการเรนเดอร์เพื่อใช้ในการตรวจสอบ cache
+     */
+    public static function registerAssetDependency(string $filePath): void
+    {
+        if ($filePath === '') {
+            return;
+        }
+
+        self::$assetDependencies[] = $filePath;
+    }
+
+    /**
+     * ตรวจสอบว่ามี flash message ใน session หรือไม่
+     * จุดประสงค์: ใช้สำหรับตรวจสอบว่ามี flash message ใน session หรือไม่ ซึ่งจะช่วยให้สามารถตัดสินใจได้ว่าควรใช้ cache ที่มีอยู่หรือควรทำการเรนเดอร์ใหม่เพื่อให้ได้ผลลัพธ์ที่ถูกต้องและเป็นปัจจุบัน โดยเฉพาะเมื่อมีการใช้ flash message ที่มักจะเปลี่ยนแปลงบ่อยๆ และไม่ควรถูกแคชไว้
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $hasFlash = $this->hasFlashMessages();
+     * if ($hasFlash) {
+     *     // ทำบางอย่างเมื่อมี flash message
+     * }
+     * ```
+     * 
+     * @return bool คืนค่าบูลีนที่ระบุว่ามี flash message ใน session หรือไม่ (true หากมี flash message, false หากไม่มี) โดยจะตรวจสอบข้อมูล flash message ที่เก็บไว้ใน session และคืนค่าตามนั้น
+     */
+    private function hasFlashMessages(): bool
+    {
+        $flash = Session::getAllFlash();
+        return !empty($flash);
     }
 
     /**

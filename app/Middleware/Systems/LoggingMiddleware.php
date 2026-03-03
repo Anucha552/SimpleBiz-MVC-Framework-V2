@@ -74,22 +74,22 @@ class LoggingMiddleware extends Middleware
     public function __construct(bool $detailed = false, bool $logBody = false)
     {
         $this->logger = new Logger();
-        $this->startTime = microtime(true);
-            $this->detailed = $detailed;
-            $this->logBody = $logBody;
+        $this->startTime = 0.0;
+        $this->detailed = $detailed;
+        $this->logBody = $logBody;
 
         // โหลดการตั้งค่าจาก config
-            if (Config::get('logging.detailed', false) === true) {
+        if (Config::get('logging.detailed', false) === true) {
             $this->detailed = true;
         }
-            if (Config::get('logging.request_body', false) === true) {
+        if (Config::get('logging.request_body', false) === true) {
             $this->logBody = true;
         }
     }
 
     /**
-     * จัดการการบันทึกคำขอ
-     * จุดประสงค์: บันทึกข้อมูลคำขอ HTTP ทั้งหมดตามการตั้งค่าที่กำหนด และลงทะเบียน shutdown function เพื่อบันทึกการตอบกลับเมื่อ script จบ
+    * จัดการการบันทึกคำขอ
+    * จุดประสงค์: บันทึกข้อมูลคำขอ HTTP ทั้งหมดตามการตั้งค่าที่กำหนด
      * 
      * @param \App\Core\Request|null $request คำขอที่เข้ามา (สามารถเป็น null ได้)
      * @return bool|Response คืนค่า true เพื่อดำเนินการต่อ, false เพื่อหยุด หรือ Response เพื่อส่งกลับทันที
@@ -101,13 +101,30 @@ class LoggingMiddleware extends Middleware
             return true;
         }
 
+        $this->startTime = microtime(true);
+
         // บันทึกข้อมูลคำขอ
         $this->logRequest();
 
-        // ลงทะเบียน shutdown function เพื่อบันทึกการตอบกลับ
-        register_shutdown_function([$this, 'logResponse']);
-
         return true;
+    }
+
+    /**
+     * ทำงานหลังจากตัวควบคุมเสร็จสิ้น เพื่อบันทึกผลการตอบกลับ
+     *
+     * @param \App\Core\Request|null $request คำขอที่เข้ามา (สามารถเป็น null ได้)
+     * @param \App\Core\Response|string|null $response การตอบกลับที่ได้จากตัวควบคุม (สามารถเป็น null หรือ string ได้)
+     * @return \App\Core\Response|string|null คืนค่าการตอบกลับที่ได้รับมา (สามารถเป็น null หรือ string ได้) เพื่อส่งกลับไปยังผู้ใช้
+     */
+    public function after(?\App\Core\Request $request = null, \App\Core\Response|string|null $response = null): \App\Core\Response|string|null
+    {
+        if ($this->shouldSkipLogging()) {
+            return $response;
+        }
+
+        $this->logResponse($response instanceof \App\Core\Response ? $response : null);
+
+        return $response;
     }
 
     /**
@@ -140,7 +157,7 @@ class LoggingMiddleware extends Middleware
         $data = [
             'method' => $_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN',
             'uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
-            'ip' => $this->getClientIP(),
+            'ip' => $this->getClientIp(),
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
         ];
 
@@ -167,15 +184,15 @@ class LoggingMiddleware extends Middleware
     }
 
     /**
-     * บันทึกการตอบกลับ (เรียกเมื่อ script จบ)
-     * จุดประสงค์: บันทึกข้อมูลการตอบกลับ HTTP ทั้งหมดตามการตั้งค่าที่กำหนด เช่น status code, execution time, memory usage และคำขอที่ช้า
+    * บันทึกการตอบกลับ (เรียกจาก after())
+    * จุดประสงค์: บันทึกข้อมูลการตอบกลับ HTTP ทั้งหมดตามการตั้งค่าที่กำหนด เช่น status code, execution time, memory usage และคำขอที่ช้า
      * 
      * @return void ไม่มีค่าที่ส่งกลับ
      */
-    public function logResponse(): void
+    private function logResponse(?\App\Core\Response $response): void
     {
         $executionTime = microtime(true) - $this->startTime;
-        $statusCode = http_response_code();
+        $statusCode = $response ? $response->getStatusCode() : http_response_code();
 
         $data = [
             'status_code' => $statusCode,
@@ -282,13 +299,14 @@ class LoggingMiddleware extends Middleware
     {
         $units = ['B', 'KB', 'MB', 'GB'];
         $unitIndex = 0;
-        
-        while ($bytes >= 1024 && $unitIndex < count($units) - 1) {
-            $bytes /= 1024;
+        $value = (float) $bytes;
+
+        while ($value >= 1024 && $unitIndex < count($units) - 1) {
+            $value /= 1024;
             $unitIndex++;
         }
 
-        return round($bytes, 2) . ' ' . $units[$unitIndex];
+        return sprintf('%.2f %s (%d B)', $value, $units[$unitIndex], $bytes);
     }
 
     /**

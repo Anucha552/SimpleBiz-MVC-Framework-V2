@@ -308,21 +308,24 @@ class Session
     }
 
     /**
-     * Regenerate session and log the event with context (login|remember|logout).
-     * This helper preserves the original `regenerate()` behavior and adds a
-     * contextual logging option without exposing session identifiers.
-     *
-     * @param string $context One of 'login','remember','logout' or custom
-     * @param int|null $userId User id to include in log (nullable)
-     * @param bool $deleteOldSession Passed to session_regenerate_id()
-     * @return void
+     * สร้าง session ID ใหม่พร้อมกับบริบทสำหรับการบันทึก structured log
+     * จุดประสงค์: ใช้สำหรับสร้าง session ID ใหม่พร้อมกับบริบทสำหรับการบันทึก structured log ซึ่งจะช่วยให้สามารถติดตามเหตุการณ์ที่เกี่ยวข้องกับ session ได้อย่างมีประสิทธิภาพและปลอดภัย โดยไม่เปิดเผย session ID
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * Session::regenerateWithContext('login', $userId);
+     * ```
+     * 
+     * @param string $context กำหนดบริบทของเหตุการณ์ (เช่น 'login', 'logout', 'password_change')
+     * @param int|null $userId กำหนดรหัสผู้ใช้ที่เกี่ยวข้องกับเหตุการณ์ (nullable)
+     * @param bool $deleteOldSession กำหนดว่าจะลบ session เก่าออกหรือไม่ (ค่าเริ่มต้นคือ true)
+     * @return void ไม่มีค่าที่ส่งกลับ
      */
     public static function regenerateWithContext(string $context, ?int $userId = null, bool $deleteOldSession = true): void
     {
         self::ensureStarted();
         session_regenerate_id($deleteOldSession);
 
-        // Structured logging: do not log session id
+        // บันทึก structured log โดยไม่เปิดเผย session ID
         try {
             $logger = new Logger();
             $logger->info('auth.session.regenerated', [
@@ -331,7 +334,7 @@ class Session
                 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
             ]);
         } catch (Throwable $e) {
-            // Logging should not interrupt execution
+            // การบันทึกข้อผิดพลาดไม่ควรขัดขวางการทำงาน
         }
     }
 
@@ -396,13 +399,13 @@ class Session
     /**
      * รับ flash messages ทั้งหมด
      * จุดประสงค์: รับ flash messages ทั้งหมด
-     * allFlash() ควรใช้กับอะไร: เมื่อต้องการรับ flash messages ทั้งหมด
+     * getAllFlash() ควรใช้กับอะไร: เมื่อต้องการรับ flash messages ทั้งหมด ในรูปแบบของอาร์เรย์
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $allMessages = Session::allFlash();
+     * $flashMessages = Session::getAllFlash();
      * ```
      * 
-     * @return array คืนค่าอาร์เรย์ของ flash messages ทั้งหมด
+     * @return array คืนค่าอาร์เรย์ของ flash messages ทั้งหมด โดยมีโครงสร้างเป็น ['key' => 'value', ...] ซึ่งจะรวม flash messages ที่ตั้งค่าไว้ในคำขอปัจจุบันและยังไม่ถูกลบออกจาก session
      */
     public static function getAllFlash(): array
     {

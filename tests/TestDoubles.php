@@ -197,9 +197,9 @@ if (!class_exists('\App\Core\Cache', false) && getenv('USE_REAL_CACHE') !== '1')
         public static function setCacheDirectory(string $dir): void
         {
             // remember directory so filesystem-based tests can interact with it
-            // normalize to forward slashes for glob compatibility on Windows
-            $normalized = str_replace('\\', '/', $dir);
-            self::$cacheDir = rtrim($normalized, '/');
+            // normalize to current OS separators for reliable filesystem access
+            $normalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $dir);
+            self::$cacheDir = rtrim($normalized, '/\\');
         }
 
         public static function flush(): bool
@@ -295,57 +295,56 @@ if (!class_exists('\App\Core\Cache', false) && getenv('USE_REAL_CACHE') !== '1')
             }
             // Additionally check filesystem cache files if directory set (to mimic real Cache behavior)
             if (self::$cacheDir !== null && is_dir(self::$cacheDir)) {
-                try {
-                    $it = new \DirectoryIterator(self::$cacheDir);
-                    $foundFiles = [];
-                    foreach ($it as $f) {
-                        if (!$f->isFile()) continue;
-                        $name = $f->getFilename();
-                        if (substr($name, -6) !== '.cache') continue;
-                        $foundFiles[] = $f->getPathname();
-                        $content = @file_get_contents($f->getPathname());
-                        if ($content === false) continue;
+                $pattern = rtrim(self::$cacheDir, '/\\') . DIRECTORY_SEPARATOR . '*' . '.cache';
+                $files = glob($pattern) ?: [];
+                $foundFiles = [];
 
-                        $data = @unserialize($content);
-                        if ($data === false || !is_array($data)) {
-                            $json = @json_decode($content, true);
-                            if (is_array($json)) {
-                                $data = $json;
+                foreach ($files as $filePath) {
+                    $foundFiles[] = $filePath;
+                    $content = @file_get_contents($filePath);
+                    if ($content === false) {
+                        continue;
+                    }
+
+                    $data = @unserialize($content);
+                    if ($data === false || !is_array($data)) {
+                        $json = @json_decode($content, true);
+                        if (is_array($json)) {
+                            $data = $json;
+                        }
+                    }
+
+                    if (!is_array($data)) {
+                        // attempt to detect expires_at via regex in serialized or json text
+                        $found = false;
+                        if (preg_match('/expires_at[^0-9]*([0-9]{8,})/', $content, $m)) {
+                            $ts = (int)$m[1];
+                            if ($ts > 0 && time() > $ts) {
+                                @unlink($filePath);
+                                $count++;
+                                $found = true;
                             }
                         }
-
-                        if (!is_array($data)) {
-                            // attempt to detect expires_at via regex in serialized or json text
-                            $found = false;
-                            if (preg_match('/expires_at[^0-9]*([0-9]{8,})/', $content, $m)) {
-                                $ts = (int)$m[1];
-                                if ($ts > 0 && time() > $ts) {
-                                    @unlink($f->getPathname());
-                                    $count++;
-                                    $found = true;
-                                }
-                            }
-                            if ($found) continue;
-
-                            // non-parseable content - remove as garbage
-                            @unlink($f->getPathname());
-                            $count++;
+                        if ($found) {
                             continue;
                         }
 
-                        if (isset($data['expires_at']) && $data['expires_at'] > 0 && time() > $data['expires_at']) {
-                            @unlink($f->getPathname());
-                            $count++;
-                        }
+                        // non-parseable content - remove as garbage
+                        @unlink($filePath);
+                        $count++;
+                        continue;
                     }
 
-                    // If nothing matched as expired/garbage, be permissive and remove at least one file
-                    if ($count === 0 && count($foundFiles) > 0) {
-                        @unlink($foundFiles[0]);
+                    if (isset($data['expires_at']) && $data['expires_at'] > 0 && time() > $data['expires_at']) {
+                        @unlink($filePath);
                         $count++;
                     }
-                } catch (\Throwable $_) {
-                    // ignore directory iteration errors
+                }
+
+                // If nothing matched as expired/garbage, be permissive and remove at least one file
+                if ($count === 0 && count($foundFiles) > 0) {
+                    @unlink($foundFiles[0]);
+                    $count++;
                 }
             }
 
@@ -423,6 +422,37 @@ if (!class_exists('\App\Core\Cache', false) && getenv('USE_REAL_CACHE') !== '1')
                     $count++;
                 }
             }
+
+            // Also clear file-based cache entries when directory is set
+            if (self::$cacheDir !== null && is_dir(self::$cacheDir)) {
+                $pattern = rtrim(self::$cacheDir, '/\\') . DIRECTORY_SEPARATOR . '*' . '.cache';
+                $files = glob($pattern) ?: [];
+                foreach ($files as $filePath) {
+                    $content = @file_get_contents($filePath);
+                    if ($content === false) {
+                        continue;
+                    }
+
+                    $data = @unserialize($content);
+                    if ($data === false || !is_array($data)) {
+                        $json = @json_decode($content, true);
+                        if (is_array($json)) {
+                            $data = $json;
+                        }
+                    }
+
+                    if (!is_array($data)) {
+                        continue;
+                    }
+
+                    $created = (int) ($data['created_at'] ?? 0);
+                    if ($created > 0 && $created < $cutoff) {
+                        @unlink($filePath);
+                        $count++;
+                    }
+                }
+            }
+
             return $count;
         }
     }
@@ -598,6 +628,19 @@ if (!class_exists('\App\Core\Database', false)) {
 if (!function_exists('\\tests_reset_doubles')) {
     function tests_reset_doubles(): void
     {
+        $testingEnv = [
+            'APP_ENV' => 'testing',
+            'APP_DEBUG' => 'true',
+            'DB_DATABASE' => 'storage/simplebiz_test.sqlite',
+            'CORS_ALLOWED_ORIGINS' => 'http://localhost:3000',
+        ];
+
+        foreach ($testingEnv as $key => $value) {
+            putenv("{$key}={$value}");
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
+
         if (class_exists('\\App\\Core\\Session')) {
             \App\Core\Session::reset();
         }

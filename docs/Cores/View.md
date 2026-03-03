@@ -149,6 +149,14 @@ $this->partial('partials/navbar');
 <?= $this->component('components/button', [
     'text' => 'Save'
 ]) ?>
+
+## includeView (รวมไฟล์ผ่าน View system)
+
+ใช้เมื่ออยาก include view ย่อย และให้ระบบ cache/compose จัดการให้
+
+``` php
+$this->includeView('partials/navbar', ['title' => 'My Page']);
+```
 ```
 
 ------------------------------------------------------------------------
@@ -188,6 +196,8 @@ View::composer('home/*', function ($view, $data) {
 ```
 
 รองรับ wildcard เช่น `home/*`
+
+หมายเหตุ: `includeView()` จะเรียก composer ด้วยเหมือน view ปกติ
 
 ------------------------------------------------------------------------
 

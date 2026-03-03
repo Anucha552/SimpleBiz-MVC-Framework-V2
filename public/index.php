@@ -354,9 +354,22 @@ $container->singleton(App\Core\Logger::class, function($c) { return new App\Core
 // สร้าง router instance พร้อม Container เพื่อให้ Router สามารถ resolve controllers/middleware ผ่าน DI
 $router = new App\Core\Router($container);
 
-// โหลดการกำหนด route
-require __DIR__ . '/../routes/web.php';
-require __DIR__ . '/../routes/api.php';
+// โหลดการกำหนด route (ใช้ cache ถ้ามี)
+$routesCacheFile = __DIR__ . '/../storage/cache/routes/routes_cached.php';
+
+if (is_file($routesCacheFile)) {
+    $cachedRoutes = require $routesCacheFile;
+
+    if (is_array($cachedRoutes) && isset($cachedRoutes['routes']) && is_array($cachedRoutes['routes'])) {
+        $router->setRoutes($cachedRoutes['routes']);
+    } else {
+        require __DIR__ . '/../routes/web.php';
+        require __DIR__ . '/../routes/api.php';
+    }
+} else {
+    require __DIR__ . '/../routes/web.php';
+    require __DIR__ . '/../routes/api.php';
+}
 
 // โหลด modules (ส่วนเสริม)
 (new App\Core\ModuleManager())->registerEnabled($router);
@@ -386,23 +399,58 @@ if ($isApiRequest) {
 }
 
 // เรียกใช้ global middleware
+$executedGlobalMiddleware = [];
 foreach ($globalMiddleware as $middlewareClass) {
     $middleware = new $middlewareClass();
 
     $result = $middleware->handle($request);
 
     if ($result instanceof App\Core\Response) {
+        $executedGlobalMiddleware[] = $middleware;
+
+        for ($i = count($executedGlobalMiddleware) - 1; $i >= 0; $i--) {
+            $candidate = $executedGlobalMiddleware[$i];
+            if (method_exists($candidate, 'after')) {
+                $afterResult = $candidate->after($request, $result);
+                if ($afterResult instanceof App\Core\Response) {
+                    $result = $afterResult;
+                } elseif (is_string($afterResult) && $afterResult !== '') {
+                    $result = App\Core\Response::html($afterResult);
+                }
+            }
+        }
+
         $result->withHeaders($request->getResponseHeaders(), false)->send();
         exit;
     }
 
     if ($result === false) {
+        $executedGlobalMiddleware[] = $middleware;
+
+        for ($i = count($executedGlobalMiddleware) - 1; $i >= 0; $i--) {
+            $candidate = $executedGlobalMiddleware[$i];
+            if (method_exists($candidate, 'after')) {
+                $candidate->after($request, null);
+            }
+        }
         exit;
     }
+
+    $executedGlobalMiddleware[] = $middleware;
 }
 
 // ส่งคำขอ (ข้อผิดพลาดจะถูกจัดการโดย global handlers)
 $router->dispatch($request);
+
+// เรียก after hook ของ global middleware (ย้อนลำดับ)
+if (!empty($executedGlobalMiddleware)) {
+    for ($i = count($executedGlobalMiddleware) - 1; $i >= 0; $i--) {
+        $candidate = $executedGlobalMiddleware[$i];
+        if (method_exists($candidate, 'after')) {
+            $candidate->after($request, null);
+        }
+    }
+}
 
 // ปิด/flush output buffer ถ้าทำงานปกติ (ErrorHandler จะเคลียร์บัฟเฟอร์แล้ว exit)
 if (ob_get_level()) {

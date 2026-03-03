@@ -1,6 +1,11 @@
 <?php
 
+use App\Helpers\SeoHelper;
 use App\Helpers\UrlHelper;
+
+if (SeoHelper::canonical() === null) {
+    SeoHelper::setCanonical(UrlHelper::current(false));
+}
 
 ?>
 
@@ -9,9 +14,10 @@ use App\Helpers\UrlHelper;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="<?= UrlHelper::asset('assets/img/logo/logo.png') ?>">
-    <link rel="stylesheet" href="<?= UrlHelper::asset('assets/css/bootstrap.min.css') ?>">
-    <title><?= $this->yield('title', 'Employee Management') ?></title>
+    <link rel="icon" type="image/png" href="<?= UrlHelper::assetVersioned('assets/img/logo/logo.png'); ?>">
+    <link rel="stylesheet" href="<?= UrlHelper::assetVersioned('assets/css/bootstrap.min.css') ?>">
+    <?= SeoHelper::renderMetaTags($this->yield('title', 'Employee Management')) ?>
+    <?= SeoHelper::renderJsonLd() ?>
 </head>
 <body class="d-flex flex-column min-vh-100">
     <header>
@@ -55,6 +61,6 @@ use App\Helpers\UrlHelper;
         </div>
     </footer>
 
-    <script src="<?= UrlHelper::asset('assets/js/bootstrap.bundle.min.js') ?>"></script>
+    <script src="<?= UrlHelper::assetVersioned('assets/js/bootstrap.bundle.min.js') ?>"></script>
 </body>
 </html>

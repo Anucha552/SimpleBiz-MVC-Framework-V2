@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>405 - Method Not Allowed</title>
     <?php use App\Helpers\UrlHelper; ?>
-	<link rel="icon" type="image/png" href="<?php echo UrlHelper::asset('assets/img/logo/logo.png'); ?>">
+    <link rel="icon" type="image/png" href="<?php echo UrlHelper::assetVersioned('assets/img/logo/logo.png'); ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {

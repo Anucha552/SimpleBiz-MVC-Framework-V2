@@ -38,6 +38,38 @@ class Router
     ];
 
     /**
+     * โหลดชุด routes ที่ถูก cache ไว้
+     * @param array $routes รูปแบบเดียวกับ $this->routes
+     * @return void
+     */
+    public function setRoutes(array $routes): void
+    {
+        $normalized = [
+            'GET' => [],
+            'POST' => [],
+            'PUT' => [],
+            'DELETE' => [],
+        ];
+
+        foreach ($normalized as $method => $_) {
+            if (isset($routes[$method]) && is_array($routes[$method])) {
+                $normalized[$method] = $routes[$method];
+            }
+        }
+
+        $this->routes = $normalized;
+    }
+
+    /**
+     * ส่งคืน routes ทั้งหมด (สำหรับ cache)
+     * @return array
+     */
+    public function getRoutes(): array
+    {
+        return $this->routes;
+    }
+
+    /**
      * สร้างอินสแตนซ์ Router
      * จุดประสงค์: สร้างอินสแตนซ์ Router และกำหนด Container (ถ้ามี)
      * Router() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างอินสแตนซ์ Router ใหม่
@@ -203,6 +235,8 @@ class Router
         }
 
         // เรียกใช้ลูกโซ่ middleware
+        $executedMiddleware = [];
+
         foreach ($route['middleware'] as $middlewareDefinition) {
             if (is_array($middlewareDefinition)) {
                 $middlewareClass = $middlewareDefinition[0] ?? null;
@@ -248,6 +282,8 @@ class Router
             if ($result === false) {
                 return;
             }
+
+            $executedMiddleware[] = $middleware;
         }
 
         // แยกตัวควบคุมและเมธอด
@@ -288,19 +324,60 @@ class Router
         }
 
         // เรียกเมธอดของตัวควบคุมพร้อมพารามิเตอร์ที่สร้างขึ้นใน Controller
-        $result = call_user_func_array([$controller, $methodName], $params);
-        
-        // รองรับ controller ที่ return Response หรือ string (ไม่บังคับ)
-        if ($result instanceof Response) {
-            $result->withHeaders($request->getResponseHeaders(), false)->send();
-            return;
-        }
+        try {
+            $result = call_user_func_array([$controller, $methodName], $params);
+        } catch (\Throwable $e) {
+            $logger = new \App\Core\Logger();
+            $logger->error('controller.exception', [
+                'controller' => $controllerClass,
+                'method' => $methodName,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'route' => $_SERVER['REQUEST_URI'] ?? '',
+            ]);
 
-        // รองรับกรณีที่ controller คืนค่าเป็นสตริง (HTML)
-        if (is_string($result) && $result !== '') {
-            Response::html($result)
+            $isApiRequest = preg_match('#^/api(/|$)#', $_SERVER['REQUEST_URI'] ?? '');
+            if ($isApiRequest) {
+                ErrorHandler::response(500, 'เกิดข้อผิดพลาดระหว่างประมวลผล กรุณาลองใหม่อีกครั้ง')
+                    ->withHeaders($request->getResponseHeaders(), false)
+                    ->send();
+                return;
+            }
+
+            Session::flash('error', 'เกิดข้อผิดพลาดระหว่างประมวลผล กรุณาลองใหม่อีกครั้ง');
+            \App\Helpers\UrlHelper::back('/')
                 ->withHeaders($request->getResponseHeaders(), false)
                 ->send();
+            return;
+        }
+        
+        $response = null;
+
+        // รองรับ controller ที่ return Response หรือ string (ไม่บังคับ)
+        if ($result instanceof Response) {
+            $response = $result;
+        } elseif (is_string($result) && $result !== '') {
+            $response = Response::html($result);
+        }
+
+        // เรียก after hook ของ middleware (ย้อนลำดับ)
+        if (!empty($executedMiddleware)) {
+            for ($i = count($executedMiddleware) - 1; $i >= 0; $i--) {
+                $middleware = $executedMiddleware[$i];
+                if (method_exists($middleware, 'after')) {
+                    $afterResult = $middleware->after($request, $response);
+                    if ($afterResult instanceof Response) {
+                        $response = $afterResult;
+                    } elseif (is_string($afterResult) && $afterResult !== '') {
+                        $response = Response::html($afterResult);
+                    }
+                }
+            }
+        }
+
+        if ($response instanceof Response) {
+            $response->withHeaders($request->getResponseHeaders(), false)->send();
         }
     }
 

@@ -53,22 +53,22 @@ class Controller
     }
 
     /**
-     * แสดงผลวิวพร้อมข้อมูลและคืนค่า Response พร้อมกำหนด Cache
-     * จุดประสงค์: แสดงผลวิว HTML โดยส่งข้อมูลไปยังวิวและคืนค่า Response
-     * responseView() ควรใช้กับอะไร: เมื่อคุณต้องการแสดงผลหน้าวิวพร้อมข้อมูลและคืนค่า Response ในตัวควบคุม
+     * ฟังก์ชั่น responseView สำหรับส่งกลับ Response พร้อมวิว
+     * จุดประสงค์: สร้าง Response ที่มีเนื้อหาเป็นวิว HTML
+     * responseView() ควรใช้กับอะไร: เมื่อคุณต้องการส่งกลับ Response ที่มีเนื้อหาเป็นวิว HTML จากตัวควบคุม
      * ตัวอย่างการใช้งาน:
      * ```php
-     * return $this->responseView('home', ['name' => 'John'], 'main_layout', 200);
+     * return $this->responseView('home', ['name' => 'John'], 'layouts/main', 200, 60);
      * ```
-     *
+     * 
      * @param string $view กำหนดชื่อวิวที่จะโหลด
      * @param array $data กำหนดข้อมูลที่จะส่งไปยังวิว
-     * @param string|null $layout กำหนดชื่อเลย์เอาต์ (ถ้ามี)
-     * @param int $statusCode กำหนดรหัสสถานะ HTTP เช่น 200, 404
-     * @param int|null $cacheSeconds กำหนดเวลาการแคชในหน่วยวินาที (ถ้ามี)
-     * @return Response คืนค่า Response HTML
+     * @param string|null $layout กำหนดชื่อเลย์เอาต์ที่จะใช้ (ถ้ามี)
+     * @param int|null $cacheSeconds กำหนดเวลาที่จะเก็บแคช์ของวิวในวินาที (ถ้ามี)
+     * @param int|null $statusCode กำหนดรหัสสถานะ HTTP ของการตอบกลับ (เริ่มต้นที่ 200)
+     * @return Response คืนค่า Response ที่มีเนื้อหาเป็นวิว HTML
      */
-    protected function responseView(string $view, array $data = [], ?string $layout = null, int $statusCode = 200, ?int $cacheSeconds = null): Response {
+    protected function responseView(string $view, array $data = [], ?string $layout = null, ?int $cacheSeconds = null,int $statusCode = 200): Response {
         $engine = new View($view, $data);
 
         if ($layout) {
@@ -356,7 +356,7 @@ class Controller
      */
     protected function asset(string $path): string
     {
-        return UrlHelper::asset($path);
+        return UrlHelper::assetVersioned($path);
     }
 
     /**

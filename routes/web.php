@@ -30,6 +30,7 @@
 
 use App\Middleware\AuthMiddleware;
 use App\Middleware\CsrfMiddleware;
+use App\Middleware\ValidationMiddleware;
 
 // กำหนดตัวแปร Path เริ่มต้นสำหรับ Web
 $webBasePath = 'App\\Controllers\\Web\\';
@@ -40,6 +41,11 @@ $webBasePath = 'App\\Controllers\\Web\\';
 
 $router->get('/', $webBasePath . 'WebController@index');
 
+//เปิด SEO endpoints ตัวอย่างการใช้งาน
+$router->get('/sitemap.xml', $webBasePath . 'SeoController@sitemap');
+$router->get('/robots.txt', $webBasePath . 'SeoController@robots');
+// ปิด SEO endpoints ตัวอย่างการใช้งาน
+
 // แสดงรายการพนักงานทั้งหมด (หน้า List)
 $router->get('/employees',  $webBasePath . 'EmployeeController@index');
 
@@ -48,7 +54,15 @@ $router->get('/employees/create', $webBasePath . 'EmployeeController@create');
 
 // รับข้อมูลจาก Form แล้วบันทึกพนักงานใหม่ลงฐานข้อมูล
 $router->post('/employees', $webBasePath . 'EmployeeController@store', [
-    CsrfMiddleware::class
+    CsrfMiddleware::class,
+    [ValidationMiddleware::class, [[
+        'first_name' => 'required|max:100',
+        'last_name' => 'required|max:100',
+        'department' => 'required|integer',
+        'salary' => 'required|numeric',
+        'email' => 'required|email|max:150',
+        'phone' => 'required|phone',
+    ], 'กรุณากรอกข้อมูลให้ถูกต้องครบถ้วน']]
 ]);
 
 // แสดงรายละเอียดพนักงาน 1 คน ตาม id
@@ -64,7 +78,15 @@ $router->get('/employees/{id}/edit', $webBasePath . 'EmployeeController@edit');
 
 // รับข้อมูลที่แก้ไขแล้ว แล้วอัปเดตลงฐานข้อมูล
 $router->post('/employees/{id}/update', $webBasePath . 'EmployeeController@update', [
-    CsrfMiddleware::class
+    CsrfMiddleware::class,
+    [ValidationMiddleware::class, [[
+        'first_name' => 'required|max:100',
+        'last_name' => 'required|max:100',
+        'department' => 'required|integer',
+        'salary' => 'required|numeric',
+        'email' => 'required|email|max:150',
+        'phone' => 'required|phone',
+    ], 'กรุณากรอกข้อมูลให้ถูกต้องครบถ้วน']]
 ]);
 
 // ลบพนักงานตาม id (มาจากปุ่มลบในหน้าเว็บ)

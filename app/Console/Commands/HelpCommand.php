@@ -144,6 +144,10 @@ class HelpCommand extends BaseCommand
         echo ConsoleColor::WHITE . "    ลบ cache ทั้งหมด\n";
         echo ConsoleColor::CYAN . "    ตัวอย่าง: php console cache:clear\n" . ConsoleColor::RESET . "\n";
 
+        echo ConsoleColor::GREEN . "  cache:clear-expired" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::WHITE . "    ลบ cache ที่หมดอายุเท่านั้น\n";
+        echo ConsoleColor::CYAN . "    ตัวอย่าง: php console cache:clear-expired\n" . ConsoleColor::RESET . "\n";
+
         echo ConsoleColor::GREEN . "  cache:warm" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    เตรียม cache ล่วงหน้า (routes + config)\n";
         echo ConsoleColor::CYAN . "    ตัวอย่าง: php console cache:warm\n" . ConsoleColor::RESET . "\n";
@@ -151,10 +155,6 @@ class HelpCommand extends BaseCommand
         echo ConsoleColor::GREEN . "  config:cache" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    Cache configuration files\n";
         echo ConsoleColor::CYAN . "    ตัวอย่าง: php console config:cache\n" . ConsoleColor::RESET . "\n";
-
-        echo ConsoleColor::GREEN . "  view:cache" . ConsoleColor::RESET . "\n";
-        echo ConsoleColor::WHITE . "    Compile view files ล่วงหน้า\n";
-        echo ConsoleColor::CYAN . "    ตัวอย่าง: php console view:cache\n" . ConsoleColor::RESET . "\n";
 
         echo ConsoleColor::GREEN . "  optimize" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    เพิ่มประสิทธิภาพแอปพลิเคชันสำหรับ production\n";
@@ -215,6 +215,8 @@ class HelpCommand extends BaseCommand
         echo ConsoleColor::WHITE . "    ย่อคำสั่ง serve (php console s)\n" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::GREEN . "  c:c" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    ย่อคำสั่ง cache:clear\n" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::GREEN . "  c:ce" . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::WHITE . "    ย่อคำสั่ง cache:clear-expired\n" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::GREEN . "  t, t:u, t:f" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "    ย่อคำสั่ง test (all/unit/feature)\n" . ConsoleColor::RESET;
 

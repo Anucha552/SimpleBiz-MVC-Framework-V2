@@ -53,6 +53,11 @@ class ValidationMiddleware extends Middleware
     private array $messages = [];
 
     /**
+     * ข้อความกำหนด error ตาม flash error
+     */
+    private ?string $messagesError = null;
+
+    /**
      * Constructor
      * จุดประสงค์: สร้างอินสแตนซ์ ValidationMiddleware ใหม่และเตรียมตัวบันทึกเหตุการณ์สำหรับการตรวจสอบข้อมูล
      * คัวอย่างการใช้งาน:
@@ -70,10 +75,11 @@ class ValidationMiddleware extends Middleware
      * @param array $rules กฎการตรวจสอบในรูปแบบ associative array เช่น ['email' => 'required|email', 'password' => 'required|min:6']
      * @param array $messages ข้อความ error แบบกำหนดเองในรูปแบบ associative array เช่น ['email.required' => 'Email is required', 'email.email' => 'Email is not valid']
      */
-    public function __construct(array $rules = [], array $messages = [])
+    public function __construct(array $rules = [], ?string $messagesError = null, array $messages = [])
     {
         $this->logger = new Logger();
         $this->rules = $rules;
+        $this->messagesError =  $messagesError;
         $this->messages = $messages;
     }
 
@@ -93,7 +99,7 @@ class ValidationMiddleware extends Middleware
 
         // รับข้อมูลตาม HTTP method
         $data = $this->getRequestData();
-
+  
         // สร้าง Validator และตรวจสอบข้อมูลตามกฎ
         $validator = new Validator($data, $this->rules, null, $this->messages);
         
@@ -116,7 +122,7 @@ class ValidationMiddleware extends Middleware
             }
 
             // เก็บ errors ใน session และเปลี่ยนเส้นทางกลับ
-            return $this->handleWebValidationError($errors, $data);
+            return $this->handleWebValidationError($errors, $data, $this->messagesError);
         }
 
         // ตรวจสอบผ่าน
@@ -171,11 +177,17 @@ class ValidationMiddleware extends Middleware
      * @param array $oldInput ข้อมูลเดิมที่ผู้ใช้กรอก
      * @return \App\Core\Response การตอบกลับที่เหมาะสมสำหรับกรณีข้อผิดพลาดการตรวจสอบข้อมูล
      */
-    private function handleWebValidationError(array $errors, array $oldInput): Response
+    private function handleWebValidationError(array $errors, array $oldInput, ?string $messagesError): Response
     {
         // เก็บข้อผิดพลาดและข้อมูลเดิมใน session แบบ flash
         Session::start();
         Session::flash('validation_errors', $errors);
+        
+        // ถ้ามีข้อความ error แบบกำหนดเอง ให้เก็บใน session ด้วย
+        if ($messagesError !== null) {
+            Session::flash('error', $messagesError);
+        }
+        
         Session::flashInput($this->sanitizeOldInput($oldInput));
 
         // เปลี่ยนเส้นทางกลับไปหน้าเดิม

@@ -123,6 +123,26 @@ class CheckCommand extends BaseCommand
             }
         }
 
+        echo "\n" . ConsoleColor::YELLOW . "━━━ Runtime Checks ━━━\n" . ConsoleColor::RESET;
+
+        $storageCheckPath = $this->path('storage/.check_write');
+        $storagePayload = 'check:' . microtime(true);
+        if (is_dir($this->path('storage'))) {
+            $written = @file_put_contents($storageCheckPath, $storagePayload);
+            $readBack = $written !== false ? @file_get_contents($storageCheckPath) : false;
+            if ($written !== false && $readBack === $storagePayload) {
+                $this->success("storage/ - อ่าน/เขียนได้");
+                $passed++;
+            } else {
+                $this->error("storage/ - อ่าน/เขียนไม่ได้");
+                $failed++;
+            }
+            @unlink($storageCheckPath);
+        } else {
+            $this->error("storage/ - ไม่พบโฟลเดอร์");
+            $failed++;
+        }
+
         echo "\n" . ConsoleColor::YELLOW . "━━━ Configuration ━━━\n" . ConsoleColor::RESET;
 
         if (file_exists($this->path('.env'))) {
@@ -173,6 +193,14 @@ class CheckCommand extends BaseCommand
                     $this->info("  Host: " . ($config['DB_HOST'] ?? 'ไม่ระบุ'));
                     $this->info("  Database/Path: " . ($config['DB_DATABASE'] ?? 'ไม่ระบุ'));
                     $passed++;
+
+                    if ($this->checkDatabaseConnection()) {
+                        $this->success("Database Connection: เชื่อมต่อได้จริง");
+                        $passed++;
+                    } else {
+                        $this->error("Database Connection: เชื่อมต่อไม่ได้");
+                        $failed++;
+                    }
                 } else {
                     $this->warning("Database Config: ยังไม่ครบถ้วน");
                     $warnings++;

@@ -1,14 +1,12 @@
 <?php
 /**
- * ตังใช้งานไม่ถูกต้อง
- * 
  * class CacheWarmCommand
  * 
  * จุดประสงค์: เป็นคำสั่ง CLI ที่ใช้สำหรับเตรียม cache ของแอปพลิเคชัน โดยจะทำการสร้างไฟล์ cache สำหรับ routes และ config เพื่อเพิ่มประสิทธิภาพในการโหลดข้อมูลในครั้งถัดไปที่แอปพลิเคชันถูกเรียกใช้
  * 
  * การใช้งาน:
  * ```bash
- * php console.php cache:warm
+ * php console cache:warm
  * ```
  */
 
@@ -54,7 +52,7 @@ class CacheWarmCommand extends BaseCommand
         $cacheDir = $this->path('storage/cache');
 
         // สร้างโฟลเดอร์ cache และโฟลเดอร์ย่อยสำหรับ routes และ config หากยังไม่มี
-        $dirs = ['routes', 'config', 'views'];
+        $dirs = ['routes', 'config'];
         foreach ($dirs as $dir) {
             $path = $cacheDir . '/' . $dir;
 
@@ -71,17 +69,37 @@ class CacheWarmCommand extends BaseCommand
 
         $this->info("  - กำลัง cache routes...");
 
-        // สร้างไฟล์ cache สำหรับ routes โดยเก็บข้อมูลเมตาของ routes เช่น เวลาที่ cache ถูกสร้างขึ้น และสถานะของไฟล์ routes ที่ถูก cache
-        $routeMetadata = [
-            'web' => file_exists($this->path('routes/web.php')),
-            'api' => file_exists($this->path('routes/api.php')),
+        // สร้างไฟล์ cache สำหรับ routes โดยรวบรวมเส้นทางทั้งหมดจาก routes/web.php และ routes/api.php
+        $router = new \App\Core\Router();
+        $routesLoaded = false;
+
+        foreach (['web' => $this->path('routes/web.php'), 'api' => $this->path('routes/api.php')] as $type => $file) {
+            if (!file_exists($file)) {
+                continue;
+            }
+
+            $routesLoaded = true;
+            try {
+                require $file;
+            } catch (\Throwable $e) {
+                $this->error("โหลด routes/{$type}.php ไม่สำเร็จ: " . $e->getMessage());
+                echo "\n";
+                return;
+            }
+        }
+
+        if (!$routesLoaded) {
+            $this->warning("ไม่พบไฟล์ routes/web.php หรือ routes/api.php");
+        }
+
+        $routeCachePayload = [
             'cached_at' => time(),
+            'routes' => $router->getRoutes(),
         ];
 
-        // เขียนข้อมูลเมตาของ routes ลงในไฟล์ cache โดยใช้ฟังก์ชัน var_export เพื่อแปลงข้อมูลเป็นรูปแบบที่สามารถนำกลับมาใช้ได้ใน PHP
         file_put_contents(
             $cacheDir . '/routes/routes_cached.php',
-            "<?php\nreturn " . var_export($routeMetadata, true) . ";"
+            "<?php\nreturn " . var_export($routeCachePayload, true) . ";"
         );
         
 

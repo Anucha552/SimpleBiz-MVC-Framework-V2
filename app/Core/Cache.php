@@ -37,6 +37,21 @@ class Cache
     private static bool $cacheDirNormalized = false;
 
     /**
+     * ป้องกันการทำ garbage collection ซ้ำภายในคำขอเดียวกัน
+     */
+    private static bool $gcRan = false;
+
+    /**
+     * จำกัดจำนวนไฟล์ cache สูงสุด (null = ไม่จำกัด)
+     */
+    private static ?int $maxFiles = 100;
+
+    /**
+     * จำกัดขนาดรวมสูงสุดของ cache (หน่วยไบต์, null = ไม่จำกัด)
+     */
+    private static ?int $maxTotalBytes = null;
+
+    /**
      * นามสกุลไฟล์ cache สำหรับระบุไฟล์ cache
      */
     private const CACHE_EXTENSION = '.cache';
@@ -102,6 +117,8 @@ class Cache
      */
     public static function set(string $key, $value, int $ttl = self::DEFAULT_TTL): bool
     {
+        self::maybeGarbageCollect();
+        self::maybeEnforceLimits();
         $filePath = self::getCacheFilePath($key);
         
         // สร้างโฟลเดอร์ถ้ายังไม่มี
@@ -139,6 +156,7 @@ class Cache
      */
     public static function get(string $key, $default = null)
     {
+        self::maybeGarbageCollect();
         // รับ path ของไฟล์ cache
         $filePath = self::getCacheFilePath($key);
 
@@ -179,13 +197,17 @@ class Cache
      */
     public static function has(string $key): bool
     {
+        self::maybeGarbageCollect();
         $filePath = self::getCacheFilePath($key);
 
+        // ตรวจสอบว่าไฟล์มีอยู่หรือไม่
         if (!file_exists($filePath)) {
             return false;
         }
 
         $cacheData = self::readCacheFile($filePath);
+
+        // ถ้าไม่สามารถอ่านข้อมูล cache ได้หรือข้อมูลไม่ถูกต้อง ให้ถือว่าไม่มี cache
         if (!is_array($cacheData)) {
             return false;
         }
@@ -582,6 +604,26 @@ class Cache
         ];
     }
 
+    /**
+     * ตั้งค่าเพดานจำนวนไฟล์และขนาดรวมของ cache
+     * ใส่ null เพื่อปิดการจำกัด
+     * จุดประสงค์: ให้ผู้ใช้สามารถตั้งค่าขีดจำกัดของจำนวนไฟล์และขนาดรวมของ cache ได้
+     * setCacheLimits() ควรใช้กับอะไร: เมื่อคุณต้องการจำกัดจำนวนไฟล์ cache และขนาดรวมของ cache เพื่อป้องกันการใช้พื้นที่เก็บข้อมูลมากเกินไป
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * Cache::setCacheLimits(100, 104857600); // จำกัดที่ 100 ไฟล์และ 100 MB
+     * ```
+     * 
+     * @param int|null $maxFiles กำหนดจำนวนไฟล์ cache สูงสุด (null = ไม่จำกัด)
+     * @param int|null $maxTotalBytes กำหนดขนาดรวมสูงสุดของ cache (หน่วยไบต์, null = ไม่จำกัด)
+      * @return void ไม่คืนค่าอะไร
+     */
+    public static function setCacheLimits(?int $maxFiles = null, ?int $maxTotalBytes = null): void
+    {
+        self::$maxFiles = $maxFiles !== null ? max(0, $maxFiles) : null;
+        self::$maxTotalBytes = $maxTotalBytes !== null ? max(0, $maxTotalBytes) : null;
+    }
+
     // ========== Helper Methods ==========
 
     /**
@@ -666,12 +708,29 @@ class Cache
     private static function resolvePath(string $path): string
     {
         if (self::isAbsolutePath($path)) {
-            return rtrim($path, '/\\');
+            return self::normalizeDirectorySeparators(rtrim($path, '/\\'));
         }
 
         $projectRoot = dirname(__DIR__, 2);
         $combined = $projectRoot . DIRECTORY_SEPARATOR . ltrim($path, '/\\');
-        return rtrim($combined, '/\\');
+        return self::normalizeDirectorySeparators(rtrim($combined, '/\\'));
+    }
+
+    /**
+     * ฟังก์ชั่น normalizeDirectorySeparators() สำหรับแปลง path ให้ใช้ DIRECTORY_SEPARATOR และลบเครื่องหมาย / หรือ \ ที่ส่วนท้าย
+     * normalizeDirectorySeparators() ควรใช้กับอะไร: เมื่อต้องการให้ path มีรูปแบบที่สอดคล้องกันระหว่างระบบปฏิบัติการต่าง ๆ
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $normalizedPath = Cache::normalizeDirectorySeparators('path/to/directory');
+     * ```
+     * 
+     * @param string $path กำหนด path ที่ต้องการแปลง
+     * @return string คืนค่า path ที่ถูกแปลงให้ใช้ DIRECTORY_SEPARATOR และไม่มีเครื่องหมาย / หรือ \ ที่ส่วนท้าย
+     */
+    private static function normalizeDirectorySeparators(string $path): string
+    {
+        $normalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+        return rtrim($normalized, '/\\');
     }
 
     /**
@@ -748,6 +807,60 @@ class Cache
         }
 
         return round($bytes, 2) . ' ' . $units[$i];
+    }
+
+    /**
+     * เก็บกวาด cache หมดอายุแบบสุ่มเพื่อลดภาระต่อคำขอ
+     */
+    private static function maybeGarbageCollect(): void
+    {
+        if (self::$gcRan) {
+            return;
+        }
+
+        self::$gcRan = true;
+
+        // 5% chance ต่อคำขอ เพื่อลดต้นทุน
+        if (random_int(1, 100) > 5) {
+            return;
+        }
+
+        self::clearExpired();
+    }
+
+    /**
+     * ตรวจสอบและบังคับเพดาน cache เมื่อมีการอ่าน/เขียน
+     */
+    private static function maybeEnforceLimits(): void
+    {
+        if (self::$maxFiles === null && self::$maxTotalBytes === null) {
+            return;
+        }
+
+        self::enforceLimits();
+    }
+
+    /**
+     * ลบ cache เก่าเมื่อเกินเพดาน โดยเคลียร์หมดอายุก่อน
+     */
+    private static function enforceLimits(): void
+    {
+        self::normalizeCacheDirectory();
+
+        // ถ้าโฟลเดอร์ cache ไม่มีอยู่ ก็ไม่ต้องทำอะไร
+        if (!is_dir(self::$cacheDir)) {
+            return;
+        }
+        $stats = self::stats();
+        $overFiles = self::$maxFiles !== null && $stats['total_files'] > self::$maxFiles;
+        $overSize = self::$maxTotalBytes !== null && $stats['total_size'] > self::$maxTotalBytes;
+
+        // ถ้าไม่เกินเพดานทั้งสอง ก็ไม่ต้องทำอะไร
+        if (!$overFiles && !$overSize) {
+            return;
+        }
+
+        self::clearExpired();
     }
 
     /**

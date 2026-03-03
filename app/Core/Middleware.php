@@ -62,7 +62,31 @@ abstract class Middleware
      * 
      * @return bool|Response True เพื่อดำเนินการต่อ, false เพื่อหยุด, หรือ Response เพื่อส่งกลับทันที
      */
-        abstract public function handle(?Request $request = null): bool|Response;
+    abstract public function handle(?Request $request = null): bool|Response;
+
+    /**
+     * ทำงานหลังจากตัวควบคุมเสร็จสิ้น (post-processing)
+     * จุดประสงค์: ใช้สำหรับ log, ปรับแต่ง response, หรือ cleanup หลังจบคำขอ
+     * after() ควรใช้กับอะไร: เมื่อคุณต้องการทำงานหลังจาก controller คืนค่าแล้ว
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * public function after(?Request $request = null, Response|string|null $response = null): Response|string|null {
+     *     // ตัวอย่าง: เพิ่ม header เพิ่มเติมถ้ามี response
+     *     if ($response instanceof Response) {
+     *         return $response->withHeader('X-Processed-By', 'MyMiddleware');
+     *     }
+     *     return $response;
+     * }
+     * ```
+     *
+     * @param Request|null $request คำขอที่ส่งเข้ามา
+     * @param Response|string|null $response ผลลัพธ์จาก controller (ถ้ามี)
+     * @return Response|string|null ส่งคืน response เดิมหรือ response ใหม่ (ถ้ามี)
+     */
+    public function after(?Request $request = null, Response|string|null $response = null): Response|string|null
+    {
+        return $response;
+    }
 
     /**
      * ตรวจสอบว่าผู้ใช้ยืนยันตัวตนหรือไม่

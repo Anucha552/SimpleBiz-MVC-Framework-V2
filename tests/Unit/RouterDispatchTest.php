@@ -101,6 +101,7 @@ final class RouterDispatchTest extends TestCase
     public function testCorsMiddlewareAggregatesHeadersAndRouterEmitsThem(): void
     {
         \App\Core\Response::clearLastSentHeaders();
+        \App\Core\Config::set('cors.allowed_origins', ['http://localhost:3000']);
 
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/api/v1/cors-test';

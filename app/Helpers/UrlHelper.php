@@ -344,24 +344,41 @@ class UrlHelper
     }
 
     /**
-     * สร้าง URL สำหรับ asset (css, js, images)
-     * จุดประสงค์: ใช้เพื่อสร้าง URL สำหรับไฟล์ asset เช่น CSS, JavaScript, หรือรูปภาพ
+     * สร้าง URL สำหรับ asset พร้อม version จาก mtime (สำหรับ cache busting)
+     * จุดประสงค์: บังคับให้เบราว์เซอร์โหลดไฟล์ใหม่เมื่อไฟล์ถูกแก้ไข
      * ตัวอย่างการใช้งาน:
      * ```php
-     * $assetUrl = UrlHelper::asset('css/style.css');
+     * $assetUrl = UrlHelper::assetVersioned('assets/js/app.js'); // ผลลัพธ์: http://example.com/assets/js/app.js?v=1627890123
      * ```
-     * 
-     * ผลลัพธ์: คืนค่า URL ของ asset เช่น http://example.com/css/style.css
-     * 
-     * returns string URL ของ asset
-     * 
-     * @param string $path
-     * @return string
+     *
+     * @param string $path เส้นทางของ asset ที่ต้องการสร้าง URL
+     * @return string URL ของ asset ที่มี version ต่อท้าย (เช่น http://example.com/assets/js/app.js?v=1627890123)
      */
-    public static function asset(string $path): string
+    public static function assetVersioned(string $path): string
     {
         $path = ltrim($path, '/'); // ลบ slash นำหน้าออกถ้ามี
-        return self::base() . '/' . $path; // สร้าง URL เต็มสำหรับ asset 
+        $url = self::base() . '/' . $path; // สร้าง URL เต็มสำหรับ asset
+
+        // ตรวจสอบว่า $path เป็น URL ที่มี scheme หรือไม่ ถ้าใช่ ให้คืนค่า URL เดิม
+        if (parse_url($path, PHP_URL_SCHEME) !== null) {
+            return $url;
+        }
+
+        $projectRoot = dirname(__DIR__, 2);
+        $publicFile = $projectRoot . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . ltrim($path, '/\\');
+
+        if (!is_file($publicFile)) {
+            return $url;
+        }
+
+        $mtime = filemtime($publicFile) ?: 0;
+
+        if (class_exists('App\\Core\\View') && method_exists('App\\Core\\View', 'registerAssetDependency')) {
+            \App\Core\View::registerAssetDependency($publicFile);
+        }
+
+        $separator = strpos($url, '?') === false ? '?' : '&';
+        return $url . $separator . 'v=' . $mtime;
     }
 
     /**

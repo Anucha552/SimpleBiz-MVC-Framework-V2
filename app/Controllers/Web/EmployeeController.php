@@ -37,11 +37,14 @@ class EmployeeController extends Controller
      */
     public function index(): Response
     {
-        return $this->responseView('employees/index', [
+        $thml = $this->responseView('employees/index', [
             'employees' => $this->employeeModel->getAllEmployees()
         ],
-            'layouts/main'
+            'layouts/main',
+            3600
         );
+
+        return $thml;
     }
 
     /**
@@ -49,9 +52,7 @@ class EmployeeController extends Controller
      */
     public function create(): Response
     {
-        return $this->responseView('employees/create', [
-
-        ], 'layouts/main');
+        return $this->responseView('employees/create', [], 'layouts/main', 3600);
     }
 
     /**
@@ -59,12 +60,16 @@ class EmployeeController extends Controller
      */
     public function store(): Response
     {
-        // ตรวจสอบข้อมูลที่ส่งมาจากฟอร์ม และดึงเฉพาะฟิลด์ที่ต้องการ
-        $data = $this->checkValidationAndGetData('กรุณากรอกข้อมูลให้ถูกต้องครบถ้วน');
-        if ($data === false) {
-            // ถ้าข้อมูลไม่ผ่านการตรวจสอบ จะถูกจัดการในฟังก์ชัน checkValidationAndGetData แล้ว และเราจะไม่ดำเนินการต่อ
-            return $this->back();
-        }
+        // รับข้อมูลจากฟอร์ม
+        $data = $this->only([
+            'first_name',
+            'last_name',
+            'department',
+            'salary',
+            'email',
+            'phone'
+        ]);
+
         // เตรียมข้อมูลสำหรับบันทึก (เอาเฉพาะคอลัมน์ที่โมเดลรองรับ)
         $saveData = [
             'first_name' => $data['first_name'] ?? '',
@@ -105,7 +110,7 @@ class EmployeeController extends Controller
         $employee = $this->employeeModel->getEmployeeById((int)$id); // ดึงข้อมูลพนักงานตาม id
 
         // ถ้าไม่พบข้อมูลพนักงานที่ต้องการ จะแจ้งเตือนและกลับไปยังหน้ารายการพนักงาน
-        if (count($employee) === 0) {
+        if (empty($employee)) {
             $this->flash('error', 'ไม่พบข้อมูลพนักงานที่คุณต้องการ');
             return $this->redirect('/employees');
         }
@@ -113,7 +118,7 @@ class EmployeeController extends Controller
         // แสดงรายละเอียดพนักงานในหน้า show
         return $this->responseView('employees/show', [
             'employee' => $employee
-        ], 'layouts/main');
+        ], 'layouts/main', 3600);
     }
 
     /**
@@ -124,7 +129,7 @@ class EmployeeController extends Controller
         $employee = $this->employeeModel->getEmployeeById((int)$id); // ดึงข้อมูลพนักงานตาม id
 
         // ถ้าไม่พบข้อมูลพนักงานที่ต้องการ จะแจ้งเตือนและกลับไปยังหน้ารายการพนักงาน
-        if (count($employee) === 0) {
+        if (empty($employee)) {
             $this->flash('error', 'ไม่พบข้อมูลพนักงานที่คุณต้องการ');
             return $this->redirect('/employees');
         }
@@ -135,7 +140,7 @@ class EmployeeController extends Controller
         return $this->responseView('employees/edit', [
             'employee' => $employee,
             'id' => $id
-        ], 'layouts/main');
+        ], 'layouts/main', 3600);
     }
 
     /**
@@ -143,21 +148,46 @@ class EmployeeController extends Controller
      */
     public function update($id): Response
     {
-        // ตรวจสอบข้อมูลที่ส่งมาจากฟอร์ม และดึงเฉพาะฟิลด์ที่ต้องการ
-        $data = $this->checkValidationAndGetData('กรุณากรอกข้อมูลให้ถูกต้องครบถ้วน');
-        if ($data === false) {
-            // ถ้าข้อมูลไม่ผ่านการตรวจสอบ จะถูกจัดการในฟังก์ชัน checkValidationAndGetData แล้ว และเราจะไม่ดำเนินการต่อ
+        $employee = $this->employeeModel->getEmployeeById((int)$id);
+
+        if (empty($employee)) {
+            $this->flash('error', 'ไม่พบข้อมูลพนักงานที่คุณต้องการ');
+            return $this->redirect('/employees');
+        }
+
+        // รับข้อมูลจากฟอร์ม
+        $data = $this->only([
+            'first_name',
+            'last_name',
+            'department',
+            'salary',
+            'email',
+            'phone'
+        ]);
+
+        $departmentId = $data['department'] ?? null;
+        if ($departmentId === null || $departmentId === '') {
+            $departmentId = $employee['department_id'] ?? null;
+        }
+
+        if (!is_numeric($departmentId) || (int)$departmentId <= 0) {
+            $this->flash('error', 'กรุณาเลือกแผนกให้ถูกต้อง');
             return $this->back();
         }
-        
+
+        $salary = $data['salary'] ?? null;
+        if ($salary === null || $salary === '') {
+            $salary = $employee['salary'] ?? 0;
+        }
+
         // เตรียมข้อมูลสำหรับอัปเดต (เอาเฉพาะคอลัมน์ที่โมเดลรองรับ)
         $updateData = [
-            'first_name' => $data['first_name'] ?? '',
-            'last_name' => $data['last_name'] ?? '',
-            'department_id' => (int)($data['department'] ?? 0),
-            'email' => $data['email'] ?? '',
-            'phone' => $data['phone'] ?? '',
-            'salary' => (int)($data['salary'] ?? 0),
+            'first_name' => $data['first_name'] !== '' ? $data['first_name'] : ($employee['first_name'] ?? ''),
+            'last_name' => $data['last_name'] !== '' ? $data['last_name'] : ($employee['last_name'] ?? ''),
+            'department_id' => (int)$departmentId,
+            'email' => $data['email'] !== '' ? $data['email'] : ($employee['email'] ?? ''),
+            'phone' => $data['phone'] !== '' ? $data['phone'] : ($employee['phone'] ?? ''),
+            'salary' => is_numeric($salary) ? (float)$salary : ($employee['salary'] ?? 0),
         ];
 
         // อัปเดตข้อมูลพนักงานตาม id
@@ -197,44 +227,6 @@ class EmployeeController extends Controller
     }
 
     /**
-     * ฟังก์ชันช่วยเหลือสำหรับดึงเฉพาะฟิลด์ที่ต้องการจาก Request
-     * และตรวจสอบข้อมูลที่ส่งมาว่ามีฟิลด์ที่ต้องการหรือไม่
-     */
-    private function checkValidationAndGetData(string $messege): bool|array
-    {
-        // รับข้อมูลจากฟอร์ม
-        $data = $this->only([
-            'first_name',
-            'last_name',
-            'department',
-            'salary',
-            'email',
-            'phone'
-        ]);
-
-        // กำหนดกฎการตรวจสอบความถูกต้อง
-        $rules = [
-            'first_name' => 'required|max:100',
-            'last_name' => 'required|max:100',
-            'department' => 'required|integer',
-            'salary' => 'required|numeric',
-            'email' => 'required|email|max:150',
-            'phone' => 'required|phone',
-        ];
-
-        // ตรวจสอบ ถ้าไม่ผ่านจะ flash errors + old input และ redirect กลับอัตโนมัติ
-        $validator = new Validator($data, $rules);
-        if ($validator->fails()) {
-            $this->flash('error', $messege);
-            $this->flashInput($data); // เก็บข้อมูลที่ผู้ใช้กรอกไว้ใน session เพื่อใช้ในฟอร์มอีกครั้ง
-            $this->flash('validation_errors', $validator->errors()); // เก็บ error แยก
-            return false;
-        }
-
-        return $data;
-    }
-
-    /**
      * ค้นหาพนักงานตามชื่อหรือแผนก
      */
     public function search(): Response
@@ -255,7 +247,8 @@ class EmployeeController extends Controller
         return $this->responseView('employees/index', [
             'employees' => $employees
             ],
-                'layouts/main'
+                'layouts/main',
+                3600
             );
     }
 }

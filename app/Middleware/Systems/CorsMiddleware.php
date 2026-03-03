@@ -109,7 +109,8 @@ class CorsMiddleware extends Middleware
 
         // หากไม่ได้กำหนดค่าแหล่งที่มา และแอปอยู่ในโหมดดีบัก/ทดสอบ ให้อนุญาตแหล่งที่มาทั้งหมด
         // โดยค่าเริ่มต้น เพื่อหลีกเลี่ยงการต้องเปลี่ยนการกำหนดค่าการผลิตสำหรับการทดสอบ
-        if (empty($this->allowedOrigins) && (bool) Config::get('app.debug')) {
+        $env = env('APP_ENV', 'development', 'string');
+        if (empty($this->allowedOrigins) && ((bool) Config::get('app.debug') || $env === 'testing')) {
             $this->allowedOrigins = ['*'];
         }
 

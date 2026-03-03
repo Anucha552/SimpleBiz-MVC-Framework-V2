@@ -78,6 +78,16 @@ use App\Core\Response;
 class __NAME__ extends Middleware
 {
     /**
+     * กำหนดค่าเริ่มต้นหรือบริการที่ต้องการ
+     * กรณีจะส่งพารามิเตอร์ตอนสร้าง Route ให้เพิ่มพารามิเตอร์ใน 
+     * constructor และจัดการตามต้องการ
+     */
+    public function __construct()
+    {
+        // คุณสามารถเพิ่มการตั้งค่าเริ่มต้นหรือบริการที่ต้องการได้ที่นี่
+    }
+
+    /**
      * จัดการคำขอ
      *
      * @param Request|null $request
@@ -89,8 +99,21 @@ class __NAME__ extends Middleware
 
         return true;
     }
-}
 
+    /**
+     * ทำงานหลังจากตัวควบคุมเสร็จสิ้น (post-processing)
+     * จุดประสงค์: ใช้สำหรับ log, ปรับแต่ง response, หรือ cleanup หลังจบคำขอ
+     * 
+     * @param Request|null $request คำขอที่ส่งเข้ามา
+     * @param Response|string|null $response ผลลัพธ์จาก controller (ถ้ามี)
+     * @return Response|string|null ส่งคืน response เดิมหรือ response ใหม่ (ถ้ามี)
+     */
+    public function after(?Request $request = null, Response|string|null $response = null): Response|string|null
+    {
+        return $response;
+    }
+
+}
 PHP;
 
         return str_replace('__NAME__', $name, $template);

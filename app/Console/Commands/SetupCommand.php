@@ -60,20 +60,34 @@ class SetupCommand extends BaseCommand
             $appName = ucwords(str_replace(['-', '_'], ' ', $projectName));
         }
 
-        echo ConsoleColor::CYAN . "ชื่อ Database (ถ้าไม่ระบุจะใช้ชื่อโปรเจค): " . ConsoleColor::RESET;
-        $dbName = trim(fgets(STDIN));
-        if ($dbName === '') {
-            $dbName = str_replace(['-', ' '], '_', strtolower($projectName));
-        }
+        echo ConsoleColor::CYAN . "เลือกชนิดฐานข้อมูล (1) MySQL/MariaDB (2) SQLite [1]: " . ConsoleColor::RESET;
+        $dbChoice = trim(fgets(STDIN));
+        $dbConnection = ($dbChoice === '2') ? 'sqlite' : 'mysql';
 
-        echo ConsoleColor::CYAN . "Database Username [root]: " . ConsoleColor::RESET;
-        $dbUser = trim(fgets(STDIN));
-        if ($dbUser === '') {
-            $dbUser = 'root';
-        }
+        if ($dbConnection === 'sqlite') {
+            echo ConsoleColor::CYAN . "SQLite database path [storage/database.sqlite]: " . ConsoleColor::RESET;
+            $dbName = trim(fgets(STDIN));
+            if ($dbName === '') {
+                $dbName = 'storage/database.sqlite';
+            }
+            $dbUser = '';
+            $dbPassword = '';
+        } else {
+            echo ConsoleColor::CYAN . "ชื่อ Database (ถ้าไม่ระบุจะใช้ชื่อโปรเจค): " . ConsoleColor::RESET;
+            $dbName = trim(fgets(STDIN));
+            if ($dbName === '') {
+                $dbName = str_replace(['-', ' '], '_', strtolower($projectName));
+            }
 
-        echo ConsoleColor::CYAN . "Database Password [เว้นว่าง]: " . ConsoleColor::RESET;
-        $dbPassword = trim(fgets(STDIN));
+            echo ConsoleColor::CYAN . "Database Username [root]: " . ConsoleColor::RESET;
+            $dbUser = trim(fgets(STDIN));
+            if ($dbUser === '') {
+                $dbUser = 'root';
+            }
+
+            echo ConsoleColor::CYAN . "Database Password [เว้นว่าง]: " . ConsoleColor::RESET;
+            $dbPassword = trim(fgets(STDIN));
+        }
 
         echo "\n";
 
@@ -92,8 +106,19 @@ class SetupCommand extends BaseCommand
 
             $gitMode = ($gitChoice === '2') ? 'reinit' : 'change-remote';
 
-            echo ConsoleColor::CYAN . "GitHub Repository URL (เช่น https://github.com/yourusername/yourrepo.git): " . ConsoleColor::RESET;
-            $gitRemoteUrl = trim(fgets(STDIN));
+            while (true) {
+                echo ConsoleColor::CYAN . "GitHub Repository URL (เช่น https://github.com/yourusername/yourrepo.git): " . ConsoleColor::RESET;
+                $gitRemoteUrl = trim(fgets(STDIN));
+                if ($gitRemoteUrl === '') {
+                    $this->warning("กรุณาระบุ Git remote URL");
+                    continue;
+                }
+                if (!$this->isValidGitRemoteUrl($gitRemoteUrl)) {
+                    $this->warning("รูปแบบ Git remote URL ไม่ถูกต้อง (รองรับ https หรือ ssh)");
+                    continue;
+                }
+                break;
+            }
         }
 
         echo "\n";
@@ -104,7 +129,7 @@ class SetupCommand extends BaseCommand
         $this->updateComposerJson($vendorName, $projectName, $projectDescription);
 
         $this->info("2. กำลังสร้างไฟล์ .env...");
-        $this->createEnvFile($appName, $dbName, $dbUser, $dbPassword);
+        $this->createEnvFile($appName, $dbConnection, $dbName, $dbUser, $dbPassword);
 
         $this->info("3. กำลังสร้าง APP_KEY...");
         $appKey = $this->generateAppKey();
@@ -131,7 +156,16 @@ class SetupCommand extends BaseCommand
         }
 
         $this->info("{$step}. กำลังอัปเดต Composer dependencies...");
-        passthru("composer update --quiet");
+        if (!file_exists($this->path('composer.json'))) {
+            $this->warning("  [!] ไม่พบ composer.json ข้ามการอัปเดต dependencies");
+        } elseif ($this->hasComposer()) {
+            passthru("composer update --quiet", $composerExitCode);
+            if ($composerExitCode !== 0) {
+                $this->warning("  [!] Composer update ไม่สำเร็จ");
+            }
+        } else {
+            $this->warning("  [!] ไม่พบ composer ข้ามการอัปเดต dependencies");
+        }
         $step++;
 
         if ($gitRemoteUrl !== '' && is_dir($this->path('.git'))) {
@@ -153,14 +187,12 @@ class SetupCommand extends BaseCommand
         echo ConsoleColor::WHITE . "  ชื่อโปรเจค: " . ConsoleColor::CYAN . $projectName . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "  Composer name: " . ConsoleColor::CYAN . "{$vendorName}/{$projectName}" . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "  ชื่อแอป: " . ConsoleColor::CYAN . $appName . ConsoleColor::RESET . "\n";
+        echo ConsoleColor::WHITE . "  DB Connection: " . ConsoleColor::CYAN . $dbConnection . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "  Database: " . ConsoleColor::CYAN . $dbName . ConsoleColor::RESET . "\n";
         echo ConsoleColor::WHITE . "  APP_KEY: " . ConsoleColor::CYAN . $appKey . ConsoleColor::RESET . "\n";
         echo "\n";
 
         if ($shouldRenameFolder) {
-            $this->updateAppUrlForRename($currentFolderName, $projectName);
-            $this->updateRootHtaccessForRename($currentFolderName, $projectName);
-
             $parentDir = dirname($currentFolderPath);
             $newFolderPath = $parentDir . DIRECTORY_SEPARATOR . $projectName;
 
@@ -173,6 +205,8 @@ class SetupCommand extends BaseCommand
             }
 
             if (@rename($currentFolderPath, $newFolderPath)) {
+                $this->updateAppUrlForRename($currentFolderName, $projectName, $newFolderPath);
+                $this->updateRootHtaccessForRename($currentFolderName, $projectName, $newFolderPath);
                 $this->success("เปลี่ยนชื่อโฟลเดอร์สำเร็จ: {$newFolderPath}");
                 $this->info("ขั้นตอนถัดไป: cd \"{$newFolderPath}\" แล้วรันคำสั่งต่อไปตามต้องการ");
             } else {
@@ -194,6 +228,10 @@ class SetupCommand extends BaseCommand
         }
 
         $composer = json_decode(file_get_contents($composerFile), true);
+        if (!is_array($composer) || json_last_error() !== JSON_ERROR_NONE) {
+            $this->error("ไม่สามารถอ่าน composer.json ได้ (JSON ผิดรูปแบบ)");
+            return;
+        }
 
         $composer['name'] = strtolower($vendor) . '/' . strtolower($project);
         if ($description !== '') {
@@ -205,7 +243,7 @@ class SetupCommand extends BaseCommand
         $this->success("  [OK] อัปเดต composer.json แล้ว");
     }
 
-    private function createEnvFile(string $appName, string $dbName, string $dbUser, string $dbPassword): void
+    private function createEnvFile(string $appName, string $dbConnection, string $dbName, string $dbUser, string $dbPassword): void
     {
         $envExample = $this->path('.env.example');
         $envFile = $this->path('.env');
@@ -217,6 +255,7 @@ class SetupCommand extends BaseCommand
 
         $content = file_get_contents($envExample);
         $content = preg_replace('/APP_NAME=.*/', 'APP_NAME="' . $appName . '"', $content);
+        $content = preg_replace('/DB_CONNECTION=.*/', 'DB_CONNECTION=' . $dbConnection, $content);
         $content = preg_replace('/DB_DATABASE=.*/', 'DB_DATABASE=' . $dbName, $content);
         $content = preg_replace('/DB_USERNAME=.*/', 'DB_USERNAME=' . $dbUser, $content);
         $content = preg_replace('/DB_PASSWORD=.*/', 'DB_PASSWORD=' . $dbPassword, $content);
@@ -248,9 +287,11 @@ class SetupCommand extends BaseCommand
         $this->success("  [OK] สร้าง APP_KEY แล้ว");
     }
 
-    private function updateAppUrlForRename(string $oldFolder, string $newFolder): void
+    private function updateAppUrlForRename(string $oldFolder, string $newFolder, ?string $basePath = null): void
     {
-        $envFile = $this->path('.env');
+        $envFile = $basePath === null
+            ? $this->path('.env')
+            : $basePath . DIRECTORY_SEPARATOR . '.env';
         if (!file_exists($envFile)) {
             return;
         }
@@ -280,9 +321,11 @@ class SetupCommand extends BaseCommand
         }
     }
 
-    private function updateRootHtaccessForRename(string $oldFolder, string $newFolder): void
+    private function updateRootHtaccessForRename(string $oldFolder, string $newFolder, ?string $basePath = null): void
     {
-        $htaccess = $this->path('.htaccess');
+        $htaccess = $basePath === null
+            ? $this->path('.htaccess')
+            : $basePath . DIRECTORY_SEPARATOR . '.htaccess';
         if (!file_exists($htaccess)) {
             return;
         }
@@ -312,10 +355,12 @@ class SetupCommand extends BaseCommand
         }
 
         $content = file_get_contents($readmeFile);
-        $content = preg_replace('/# SimpleBiz MVC Framework V2/', '# ' . $appName, $content, 1);
+        $safeAppName = $this->escapePregReplacement($appName);
+        $safeDescription = $this->escapePregReplacement($description);
+        $content = preg_replace('/# SimpleBiz MVC Framework V2/', '# ' . $safeAppName, $content, 1);
 
         if ($description !== '') {
-            $content = preg_replace('/\*\*เฟรมเวิร์ก MVC สำหรับระบบอีคอมเมิร์ซ[^*]+\*\*/', '**' . $description . '**', $content, 1);
+            $content = preg_replace('/\*\*เฟรมเวิร์ก MVC สำหรับระบบอีคอมเมิร์ซ[^*]+\*\*/', '**' . $safeDescription . '**', $content, 1);
         }
 
         file_put_contents($readmeFile, $content);
@@ -340,31 +385,38 @@ class SetupCommand extends BaseCommand
     private function getDefaultGitignore(): string
     {
         return <<<'EOT'
-}
+# SimpleBiz MVC Framework V2 - .gitignore
+#
+# จุดประสงค์: ป้องกันไม่ให้ไฟล์ที่ละเอียดอ่อนและไฟล์ที่สร้างขึ้นถูก commit
 
-# Environment files
+# การตั้งค่าสภาพแวดล้อม (เก็บข้อมูลการเข้าถึง)
 .env
 .env.*
 !.env.example
+.env.testing
+!.env.testing.example
 
-# Composer
+# Composer dependencies
 /vendor/
 composer.lock
 
-# Logs
+# บันทึก (อาจเก็บข้อมูลที่ละเอียดอ่อน)
 /storage/logs/*.log
 /storage/logs/*.txt
 
-# Cache
+# Cache files
 /storage/cache/*
 !/storage/cache/.gitkeep
 
-# System files
+# ไฟล์ฐานข้อมูล (อาจเก็บข้อมูลที่ละเอียดอ่อน)
+storage/database.sqlite
+
+# ไฟล์ระบบ
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# IDE
+# ไฟล์ IDE
 .vscode/
 .idea/
 *.sublime-project
@@ -375,19 +427,12 @@ desktop.ini
 .phpunit.result.cache
 /.phpunit.cache/
 
-# Temporary files
+# ไฟล์ชั่วคราว
 *.tmp
 *.temp
 *.swp
 *.swo
 *~
-
-# Node modules (if using)
-node_modules/
-
-# Build files
-/build/
-/dist/
 EOT;
     }
 
@@ -398,8 +443,15 @@ EOT;
             return;
         }
 
+        $safeUrl = escapeshellarg($newUrl);
         exec("git remote remove origin 2>&1", $output, $returnCode);
-        exec("git remote add origin {$newUrl} 2>&1", $output, $returnCode);
+        if ($returnCode === 0) {
+            $this->success("  [OK] ลบ Git remote เดิมแล้ว");
+        } else {
+            $this->warning("  [!] ไม่สามารถลบ Git remote เดิมได้ (อาจไม่มี origin อยู่แล้ว)");
+        }
+
+        exec("git remote add origin {$safeUrl} 2>&1", $output, $returnCode);
 
         if ($returnCode === 0) {
             $this->success("  [OK] เปลี่ยน Git remote เป็น {$newUrl} แล้ว");
@@ -420,11 +472,46 @@ EOT;
             $this->error("  [X] ไม่สามารถเริ่มต้น Git ได้");
             return;
         }
+        $this->success("  [OK] เริ่มต้น Git repository แล้ว");
 
-        exec("git remote add origin {$newUrl} 2>&1");
-        exec("git branch -M main 2>&1");
+        $safeUrl = escapeshellarg($newUrl);
+        exec("git remote add origin {$safeUrl} 2>&1", $output, $returnCode);
+        if ($returnCode === 0) {
+            $this->success("  [OK] ตั้งค่า Git remote แล้ว");
+        } else {
+            $this->error("  [X] ไม่สามารถตั้งค่า Git remote ได้");
+        }
 
-        $this->success("  [OK] เริ่มต้น Git repository ใหม่แล้ว");
+        exec("git branch -M main 2>&1", $output, $returnCode);
+        if ($returnCode === 0) {
+            $this->success("  [OK] ตั้งค่า branch main แล้ว");
+        } else {
+            $this->error("  [X] ไม่สามารถตั้งค่า branch main ได้");
+        }
+    }
+
+    private function isValidGitRemoteUrl(string $url): bool
+    {
+        if (preg_match('/^https?:\/\//i', $url) === 1) {
+            return preg_match('/^https?:\/\/[\w.-]+(?::\d+)?\/[\w.\/-]+(?:\.git)?\/?$/i', $url) === 1;
+        }
+
+        if (preg_match('/^ssh:\/\//i', $url) === 1) {
+            return preg_match('/^ssh:\/\/git@[\w.-]+(?::\d+)?\/[\w.\/-]+(?:\.git)?\/?$/i', $url) === 1;
+        }
+
+        return preg_match('/^git@[\w.-]+:[\w.\/-]+(?:\.git)?\/?$/i', $url) === 1;
+    }
+
+    private function escapePregReplacement(string $value): string
+    {
+        return str_replace(['\\', '$'], ['\\\\', '\\$'], $value);
+    }
+
+    private function hasComposer(): bool
+    {
+        exec("composer --version 2>&1", $output, $returnCode);
+        return $returnCode === 0;
     }
 
     private function commitAndPush(string $projectName): void
@@ -436,7 +523,8 @@ EOT;
         }
 
         $commitMessage = "Initial setup for {$projectName}";
-        exec('git commit -m "' . $commitMessage . '" 2>&1', $output, $returnCode);
+        $safeCommitMessage = escapeshellarg($commitMessage);
+        exec("git commit -m {$safeCommitMessage} 2>&1", $output, $returnCode);
         if ($returnCode !== 0) {
             $this->warning("  [!] ไม่มีการเปลี่ยนแปลงให้ commit หรือเกิดข้อผิดพลาด");
             return;
