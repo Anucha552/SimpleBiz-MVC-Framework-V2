@@ -1,5 +1,6 @@
 <?php
 
+use App\Helpers\CookieConsentHelper;
 use App\Helpers\SeoHelper;
 use App\Helpers\UrlHelper;
 
@@ -61,6 +62,8 @@ if (SeoHelper::canonical() === null) {
         </div>
     </footer>
 
+
+    <?= CookieConsentHelper::render(); ?>
     <script src="<?= UrlHelper::assetVersioned('assets/js/bootstrap.bundle.min.js') ?>"></script>
 </body>
 </html>

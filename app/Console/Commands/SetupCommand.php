@@ -24,6 +24,7 @@ class SetupCommand extends BaseCommand
         echo "\n";
 
         $alreadySetup = $this->isAlreadySetup();
+        $minimalSetup = false;
         if ($alreadySetup) {
             $this->warning("ตรวจพบว่ามีการตั้งค่าแล้ว (พบไฟล์ .setup)");
             echo ConsoleColor::YELLOW . "ต้องการรัน setup ใหม่หรือไม่? (y/n) [n]: " . ConsoleColor::RESET;
@@ -33,10 +34,74 @@ class SetupCommand extends BaseCommand
                 return;
             }
             echo "\n";
-            $this->info("กำลังรัน setup ใหม่...");
+            $this->info("กำลังรัน setup ใหม่ (ตั้งค่าเฉพาะที่จำเป็น)...");
             echo "\n";
+            $minimalSetup = true;
         } else {
-            $this->success("ยังไม่เคยตั้งค่าโปรเจค (ไม่พบ .env หรือ APP_KEY)");
+            $this->success("ยังไม่เคยตั้งค่าโปรเจค (ไม่พบไฟล์ .setup)");
+        }
+
+        if ($minimalSetup) {
+            $envExists = $this->envExists();
+            $appName = '';
+
+            if (!$envExists) {
+                echo ConsoleColor::CYAN . "ชื่อแอปพลิเคชัน (สำหรับแสดงผล เช่น My Bookstore) [My App]: " . ConsoleColor::RESET;
+                $appName = trim(fgets(STDIN));
+                if ($appName === '') {
+                    $appName = 'My App';
+                }
+            }
+
+            echo ConsoleColor::CYAN . "เลือกชนิดฐานข้อมูล (1) MySQL/MariaDB (2) SQLite [1]: " . ConsoleColor::RESET;
+            $dbChoice = trim(fgets(STDIN));
+            $dbConnection = ($dbChoice === '2') ? 'sqlite' : 'mysql';
+
+            if ($dbConnection === 'sqlite') {
+                echo ConsoleColor::CYAN . "SQLite database path [storage/database.sqlite]: " . ConsoleColor::RESET;
+                $dbName = trim(fgets(STDIN));
+                if ($dbName === '') {
+                    $dbName = 'storage/database.sqlite';
+                }
+                $dbUser = '';
+                $dbPassword = '';
+            } else {
+                echo ConsoleColor::CYAN . "ชื่อ Database [app_db]: " . ConsoleColor::RESET;
+                $dbName = trim(fgets(STDIN));
+                if ($dbName === '') {
+                    $dbName = 'app_db';
+                }
+
+                echo ConsoleColor::CYAN . "Database Username [root]: " . ConsoleColor::RESET;
+                $dbUser = trim(fgets(STDIN));
+                if ($dbUser === '') {
+                    $dbUser = 'root';
+                }
+
+                echo ConsoleColor::CYAN . "Database Password [เว้นว่าง]: " . ConsoleColor::RESET;
+                $dbPassword = trim(fgets(STDIN));
+            }
+
+            echo "\n";
+            $this->info("กำลังตั้งค่าเฉพาะที่จำเป็น...");
+            echo "\n";
+
+            if ($envExists) {
+                $this->info("1. กำลังอัปเดตค่า DB ใน .env...");
+                $this->updateEnvDbValues($dbConnection, $dbName, $dbUser, $dbPassword);
+            } else {
+                $this->info("1. กำลังสร้างไฟล์ .env...");
+                $this->createEnvFile($appName, $dbConnection, $dbName, $dbUser, $dbPassword);
+            }
+
+            $this->info("2. กำลังสร้าง APP_KEY...");
+            $appKey = $this->generateAppKey();
+            $this->updateEnvKey($appKey);
+
+            echo "\n";
+            $this->success("✓ ตั้งค่าเฉพาะที่จำเป็นเสร็จสมบูรณ์!");
+            echo "\n";
+            return;
         }
 
         echo ConsoleColor::CYAN . "ชื่อโปรเจค (เช่น mybookstore, restaurant-ordering): " . ConsoleColor::RESET;
@@ -302,6 +367,48 @@ class SetupCommand extends BaseCommand
         file_put_contents($envFile, $content);
 
         $this->success("  [OK] สร้างไฟล์ .env แล้ว");
+    }
+
+    private function envExists(): bool
+    {
+        return file_exists($this->path('.env'));
+    }
+
+    private function updateEnvDbValues(string $dbConnection, string $dbName, string $dbUser, string $dbPassword): void
+    {
+        $envFile = $this->path('.env');
+
+        if (!file_exists($envFile)) {
+            $this->error("ไม่พบไฟล์ .env");
+            return;
+        }
+
+        $content = file_get_contents($envFile);
+        if ($content === false) {
+            $this->error("ไม่สามารถอ่านไฟล์ .env ได้");
+            return;
+        }
+
+        $content = $this->upsertEnvValue($content, 'DB_CONNECTION', $dbConnection);
+        $content = $this->upsertEnvValue($content, 'DB_DATABASE', $dbName);
+        $content = $this->upsertEnvValue($content, 'DB_USERNAME', $dbUser);
+        $content = $this->upsertEnvValue($content, 'DB_PASSWORD', $dbPassword);
+
+        file_put_contents($envFile, $content);
+
+        $this->success("  [OK] อัปเดตค่า DB ใน .env แล้ว");
+    }
+
+    private function upsertEnvValue(string $content, string $key, string $value): string
+    {
+        $pattern = '/^' . preg_quote($key, '/') . '=.*/m';
+        $replacement = $key . '=' . $value;
+
+        if (preg_match($pattern, $content) === 1) {
+            return preg_replace($pattern, $replacement, $content) ?? $content;
+        }
+
+        return rtrim($content, "\n") . "\n" . $replacement . "\n";
     }
 
     private function generateAppKey(): string
