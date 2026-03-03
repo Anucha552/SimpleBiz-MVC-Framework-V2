@@ -23,6 +23,22 @@ class SetupCommand extends BaseCommand
         $this->info("[SETUP] SimpleBiz Framework Project Setup");
         echo "\n";
 
+        $alreadySetup = $this->isAlreadySetup();
+        if ($alreadySetup) {
+            $this->warning("ตรวจพบว่ามีการตั้งค่าแล้ว (พบไฟล์ .setup)");
+            echo ConsoleColor::YELLOW . "ต้องการรัน setup ใหม่หรือไม่? (y/n) [n]: " . ConsoleColor::RESET;
+            $confirmSetup = strtolower(trim(fgets(STDIN)));
+            if ($confirmSetup !== 'y' && $confirmSetup !== 'yes') {
+                $this->info("ยกเลิกการรัน setup");
+                return;
+            }
+            echo "\n";
+            $this->info("กำลังรัน setup ใหม่...");
+            echo "\n";
+        } else {
+            $this->success("ยังไม่เคยตั้งค่าโปรเจค (ไม่พบ .env หรือ APP_KEY)");
+        }
+
         echo ConsoleColor::CYAN . "ชื่อโปรเจค (เช่น mybookstore, restaurant-ordering): " . ConsoleColor::RESET;
         $projectName = trim(fgets(STDIN));
 
@@ -181,6 +197,7 @@ class SetupCommand extends BaseCommand
 
         echo "\n";
         $this->success("✓ ตั้งค่าโปรเจคเสร็จสมบูรณ์!");
+        $this->writeSetupMarker($projectName);
         echo "\n";
 
         echo ConsoleColor::GREEN . ConsoleColor::BOLD . "สรุปข้อมูลโปรเจค:\n" . ConsoleColor::RESET;
@@ -241,6 +258,28 @@ class SetupCommand extends BaseCommand
         file_put_contents($composerFile, json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
         $this->success("  [OK] อัปเดต composer.json แล้ว");
+    }
+
+    private function isAlreadySetup(): bool
+    {
+        return file_exists($this->getSetupMarkerPath());
+    }
+
+    private function getSetupMarkerPath(): string
+    {
+        return $this->path('.setup');
+    }
+
+    private function writeSetupMarker(string $projectName): void
+    {
+        $markerPath = $this->getSetupMarkerPath();
+        if (file_exists($markerPath)) {
+            return;
+        }
+
+        $content = "project_name=" . $projectName . "\n";
+        $content .= "setup_at=" . date('Y-m-d H:i:s') . "\n";
+        @file_put_contents($markerPath, $content);
     }
 
     private function createEnvFile(string $appName, string $dbConnection, string $dbName, string $dbUser, string $dbPassword): void
