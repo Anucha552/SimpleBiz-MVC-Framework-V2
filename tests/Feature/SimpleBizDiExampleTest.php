@@ -5,49 +5,6 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 
-// Simple DI example classes for the test (unique names to avoid collisions)
-interface TestUserRepositoryInterfaceX
-{
-    public function findUser(int $id): array;
-}
-
-class TestDatabaseX
-{
-    public function __construct() {}
-}
-
-class TestUserRepositoryX implements TestUserRepositoryInterfaceX
-{
-    private TestDatabaseX $db;
-
-    public function __construct(TestDatabaseX $db)
-    {
-        $this->db = $db;
-    }
-
-    public function findUser(int $id): array
-    {
-        return ['id' => $id, 'name' => 'User ' . $id];
-    }
-}
-
-class TestUserServiceX
-{
-    private TestUserRepositoryInterfaceX $repo;
-    private TestDatabaseX $db;
-
-    public function __construct(TestUserRepositoryInterfaceX $repo, TestDatabaseX $db)
-    {
-        $this->repo = $repo;
-        $this->db = $db;
-    }
-
-    public function getUser(int $id): array
-    {
-        return $this->repo->findUser($id);
-    }
-}
-
 class SimpleBizDiExampleTest extends TestCase
 {
     public function test_container_resolves_service_and_singleton_database(): void

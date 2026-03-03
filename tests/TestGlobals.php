@@ -28,7 +28,21 @@ if (!function_exists('tests_reset_doubles')) {
             \App\Core\Cache::reset();
         }
         if (class_exists('\App\Core\Database')) {
-            \App\Core\Database::getInstance()->reset();
+            try {
+                $rc = new \ReflectionClass('\App\Core\Database');
+                if ($rc->hasProperty('instance')) {
+                    $prop = $rc->getProperty('instance');
+                    $prop->setAccessible(true);
+                    $prop->setValue(null, null);
+                }
+            } catch (\Throwable $e) {
+                // ignore reflection errors
+            }
+            $db = \App\Core\Database::getInstance();
+            $reset = [$db, 'reset'];
+            if (is_callable($reset)) {
+                $reset();
+            }
         }
         // ensure auth state cleared
         if (class_exists('\App\Core\Auth')) {

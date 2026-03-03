@@ -1,7 +1,13 @@
 <?php
 declare(strict_types=1);
 
-use PHPUnit\Framework\TestCase;
+namespace Tests\Unit;
+
+use RuntimeException;
+use Tests\Doubles\Config as TestConfig;
+use Tests\Doubles\Database as TestDatabase;
+use Tests\TestCase;
+use function tests_reset_doubles;
 
 final class AuthTest extends TestCase
 {
@@ -23,10 +29,10 @@ final class AuthTest extends TestCase
     {
         tests_reset_doubles();
         // configure app debug and app key
-        \App\Core\Config::set('app.debug', true);
-        \App\Core\Config::set('auth.app_key', 'testing_app_key');
-        \App\Core\Config::set('auth.cookie_domain', '');
-        \App\Core\Config::set('auth.remember_samesite', 'Lax');
+        TestConfig::set('app.debug', true);
+        TestConfig::set('auth.app_key', 'testing_app_key');
+        TestConfig::set('auth.cookie_domain', '');
+        TestConfig::set('auth.remember_samesite', 'Lax');
 
         // จำลอง IP address สำหรับ CLI
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
@@ -44,7 +50,7 @@ final class AuthTest extends TestCase
 
         // seed a user
         $password = password_hash('secret', PASSWORD_BCRYPT);
-        \App\Core\Database::getInstance()->seedUsers([
+        TestDatabase::getInstance()->seedUsers([
             ['id' => 1, 'username' => 'johndoe', 'email' => 'john@example.com', 'password' => $password, 'status' => 'active', 'deleted_at' => null]
         ]);
     }
@@ -82,7 +88,7 @@ final class AuthTest extends TestCase
 
     public function testLoginTemporaryThrowsInProduction(): void
     {
-        \App\Core\Config::set('app.debug', false);
+        TestConfig::set('app.debug', false);
         $this->expectException(RuntimeException::class);
         \App\Core\Auth::loginTemporary(['id' => 99]);
     }
@@ -108,7 +114,7 @@ final class AuthTest extends TestCase
 
     public function testRememberFailsWhenAppKeyMissing(): void
     {
-        \App\Core\Config::set('auth.app_key', '');
+        TestConfig::set('auth.app_key', '');
         $userId = 1;
         $rawToken = bin2hex(random_bytes(64));
         $payload = $userId . '|' . $rawToken;

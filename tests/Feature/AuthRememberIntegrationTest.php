@@ -6,9 +6,11 @@ namespace Tests\Feature;
 
 use App\Core\Auth;
 use App\Core\Config;
-use App\Core\Database;
 use App\Core\Session;
+use Tests\Doubles\Config as TestConfig;
+use Tests\Doubles\Database as TestDatabase;
 use Tests\TestCase;
+use function tests_reset_doubles;
 
 final class AuthRememberIntegrationTest extends TestCase
 {
@@ -21,17 +23,17 @@ final class AuthRememberIntegrationTest extends TestCase
 
         $this->setEnv('APP_KEY', 'testing_app_key');
 
-        Config::set('app.debug', false);
-        Config::set('app.env', 'production');
-        Config::set('auth.app_key', 'testing_app_key');
-        Config::set('auth.cookie_domain', '');
-        Config::set('auth.remember_samesite', 'Lax');
+        TestConfig::set('app.debug', false);
+        TestConfig::set('app.env', 'production');
+        TestConfig::set('auth.app_key', 'testing_app_key');
+        TestConfig::set('auth.cookie_domain', '');
+        TestConfig::set('auth.remember_samesite', 'Lax');
 
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         $_COOKIE = [];
 
         $password = password_hash('secret', PASSWORD_BCRYPT);
-        Database::getInstance()->seedUsers([
+        TestDatabase::getInstance()->seedUsers([
             [
                 'id' => 1,
                 'username' => 'johndoe',
@@ -54,7 +56,7 @@ final class AuthRememberIntegrationTest extends TestCase
         $userId = 1;
         $rawToken = bin2hex(random_bytes(64));
         $hashed = hash('sha256', $rawToken);
-        Database::getInstance()->execute(
+        TestDatabase::getInstance()->execute(
             'UPDATE users SET remember_token = :token WHERE id = :id',
             ['token' => $hashed, 'id' => $userId]
         );

@@ -1,11 +1,15 @@
 <?php
 declare(strict_types=1);
 
-use Tests\TestCase;
-use App\Core\Authorization;
+namespace Tests\Unit;
+
 use App\Core\Auth;
-use App\Core\Session;
+use App\Core\Authorization;
 use App\Core\Database;
+use App\Core\Session;
+use ReflectionClass;
+use Tests\TestCase;
+use function tests_reset_doubles;
 
 final class AuthorizationTest extends TestCase
 {
@@ -16,7 +20,7 @@ final class AuthorizationTest extends TestCase
             tests_reset_doubles();
         }
         // clear any static user in Auth
-        $rc = new ReflectionClass(App\Core\Auth::class);
+        $rc = new ReflectionClass(Auth::class);
         $prop = $rc->getProperty('user');
         $prop->setAccessible(true);
         $prop->setValue(null, null);
@@ -111,14 +115,12 @@ final class AuthorizationTest extends TestCase
     {
         $this->setAuthUser(['id' => 8, 'role' => null]);
 
-        $db = new class extends Database {
-            public function query(string $sql, array $params = []) {
-                return new class {
-                    public function fetchColumn() { return 1; }
-                };
-            }
-            public function fetch(string $sql, array $params = []) { return false; }
-        };
+        $stmt = $this->createMock(\PDOStatement::class);
+        $stmt->method('fetchColumn')->willReturn(1);
+
+        $db = $this->createMock(Database::class);
+        $db->method('query')->willReturn($stmt);
+        $db->method('fetch')->willReturn(false);
 
         $rc = new ReflectionClass(Database::class);
         $prop = $rc->getProperty('instance');
@@ -130,7 +132,7 @@ final class AuthorizationTest extends TestCase
 
     private function setAuthUser(array $user): void
     {
-        $rc = new ReflectionClass(App\Core\Auth::class);
+        $rc = new ReflectionClass(Auth::class);
         $prop = $rc->getProperty('user');
         $prop->setAccessible(true);
         $prop->setValue(null, $user);
@@ -140,24 +142,20 @@ final class AuthorizationTest extends TestCase
     {
         $this->setAuthUser(['id' => 9, 'permissions' => '["p1"]', 'role_id' => 20]);
 
-        $db = new class extends Database {
-            public function fetchAll(string $sql, array $params = []) {
-                if (stripos($sql, 'user_permissions') !== false) {
-                    return [ ['permission' => 'db1'], ['permission' => 'p1'] ];
-                }
-                if (stripos($sql, 'user_roles') !== false) {
-                    return [ ['id' => 20] ];
-                }
-                if (stripos($sql, 'role_permissions') !== false) {
-                    return [ ['permission' => 'role_perm'] ];
-                }
-                return [];
+        $db = $this->createMock(Database::class);
+        $db->method('fetchAll')->willReturnCallback(function (string $sql): array {
+            if (stripos($sql, 'user_permissions') !== false) {
+                return [ ['permission' => 'db1'], ['permission' => 'p1'] ];
             }
-
-            public function fetch(string $sql, array $params = []) {
-                return false;
+            if (stripos($sql, 'user_roles') !== false) {
+                return [ ['id' => 20] ];
             }
-        };
+            if (stripos($sql, 'role_permissions') !== false) {
+                return [ ['permission' => 'role_perm'] ];
+            }
+            return [];
+        });
+        $db->method('fetch')->willReturn(false);
 
         $rc = new ReflectionClass(Database::class);
         $prop = $rc->getProperty('instance');
@@ -192,7 +190,7 @@ final class AuthorizationTest extends TestCase
 
     public function testLogOnceDeduplicatesEntries(): void
     {
-        $rc = new ReflectionClass(App\Core\Authorization::class);
+        $rc = new ReflectionClass(Authorization::class);
         $seen = $rc->getProperty('seenLogs');
         $seen->setAccessible(true);
         $seen->setValue(null, []);

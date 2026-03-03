@@ -1,9 +1,12 @@
 <?php
+declare(strict_types=1);
 
-use PHPUnit\Framework\TestCase;
+namespace Tests\Unit;
+
 use App\Core\Blueprint;
 use App\Core\ColumnDefinition;
 use App\Core\ForeignKeyDefinition;
+use Tests\TestCase;
 
 class BlueprintTest extends TestCase
 {

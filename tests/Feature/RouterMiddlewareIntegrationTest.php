@@ -7,15 +7,6 @@ namespace Tests\Feature;
 use App\Core\Router;
 use Tests\TestCase;
 
-// A simple controller defined in global scope for router dispatch testing
-class TestDummyController
-{
-    public function show($id = null)
-    {
-        return 'ITEM:' . ($id ?? 'none');
-    }
-}
-
 final class RouterMiddlewareIntegrationTest extends TestCase
 {
     public function testNamedParamIsPassedToController(): void
