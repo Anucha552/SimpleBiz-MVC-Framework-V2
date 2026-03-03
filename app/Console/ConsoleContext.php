@@ -19,6 +19,7 @@ namespace App\Console;
 
 use Exception;
 use App\Core\Database;
+use App\Core\Model;
 
 class ConsoleContext
 {
@@ -127,6 +128,7 @@ class ConsoleContext
         try {
             $db = Database::getInstance();
             $db->fetchColumn('SELECT 1');
+            Model::setConnection($db);
 
             return true;
         } catch (Exception $e) {
@@ -135,7 +137,7 @@ class ConsoleContext
 
             echo ConsoleColor::YELLOW . "[TIP] วิธีแก้ไข:" . ConsoleColor::RESET . "\n";
             echo "  1. ตรวจสอบค่า DB_CONNECTION/DB_DATABASE ในไฟล์ .env\n";
-            echo "  2. ถ้าใช้ mysql ให้ตรวจสอบว่า server ทำงานอยู่\n";
+            echo "  2. ถ้าใช้ mysql หรือ mysqli ให้ตรวจสอบว่า server ทำงานอยู่\n";
             echo "  3. ถ้าใช้ sqlite ให้ตรวจสอบว่า path เข้าถึงได้\n";
             echo "  4. ตรวจสอบ username/password ในไฟล์ .env (เฉพาะ mysql)\n\n";
 

@@ -63,9 +63,6 @@ if (file_exists(__DIR__ . '/config/env.php')) {
     require_once __DIR__ . '/config/env.php';
 }
 
-// ตั้งค่าการเชื่อมต่อฐานข้อมูลสำหรับโมเดลเมื่อรันคำสั่งใน CLI
-\App\Core\Model::setConnection(\App\Core\Database::getInstance());
-
 // สร้าง instance ของ ConsoleIO, ConsoleContext และ CommandRegistry จากนั้นเรียกใช้ ConsoleRunner เพื่อรันคำสั่งที่ถูกเรียกผ่าน CLI
 $io = new \App\Console\ConsoleIO();
 $context = new \App\Console\ConsoleContext(__DIR__, $io);

@@ -11,7 +11,7 @@ namespace App\Models;
 
 use App\Core\Model;
 
-class Employees extends Model
+class Employee extends Model
     {
     /**
      * ชื่อตารางในฐานข้อมูล

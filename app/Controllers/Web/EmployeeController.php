@@ -10,7 +10,7 @@ namespace App\Controllers\Web;
 use App\Core\Controller;
 use App\Core\Response;
 use App\Core\Request;
-use App\Models\Employees;
+use App\Models\Employee as Employees;
 use App\Helpers\NumberHelper;
 use App\Core\Validator;
 
