@@ -58,11 +58,7 @@ class SetupCommand extends BaseCommand
             $dbConnection = ($dbChoice === '2') ? 'sqlite' : 'mysql';
 
             if ($dbConnection === 'sqlite') {
-                echo ConsoleColor::CYAN . "SQLite database path [storage/database.sqlite]: " . ConsoleColor::RESET;
-                $dbName = trim(fgets(STDIN));
-                if ($dbName === '') {
-                    $dbName = 'storage/database.sqlite';
-                }
+                $dbName =  'storage/database.sqlite';
                 $dbUser = '';
                 $dbPassword = '';
             } else {
@@ -146,11 +142,7 @@ class SetupCommand extends BaseCommand
         $dbConnection = ($dbChoice === '2') ? 'sqlite' : 'mysql';
 
         if ($dbConnection === 'sqlite') {
-            echo ConsoleColor::CYAN . "SQLite database path [storage/database.sqlite]: " . ConsoleColor::RESET;
-            $dbName = trim(fgets(STDIN));
-            if ($dbName === '') {
-                $dbName = 'storage/database.sqlite';
-            }
+            $dbName =  'storage/database.sqlite';
             $dbUser = '';
             $dbPassword = '';
         } else {
