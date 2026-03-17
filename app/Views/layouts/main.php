@@ -62,8 +62,8 @@ if (SeoHelper::canonical() === null) {
         </div>
     </footer>
 
-
-    <?= CookieConsentHelper::render(); ?>
+    <!-- แสดงข้อความแจ้งเตือนเกี่ยวกับคุกกี้ -->
+    <!-- <?= CookieConsentHelper::render(); ?> -->
     <script src="<?= UrlHelper::assetVersioned('assets/js/bootstrap.bundle.min.js') ?>"></script>
 </body>
 </html>

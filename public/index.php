@@ -23,12 +23,6 @@
  * - การแสดงข้อผิดพลาดถูกปิดในสภาพแวดล้อมจริง
  */
 
-// เริ่ม session ให้ใช้งานได้แม้ก่อนโหลด autoloader
-// (ใช้สำหรับหน้า setup/errors ก่อน require vendor/autoload.php)
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 // เปิด output buffering เพื่อให้สามารถควบคุมการส่งออกทั้งหมดได้
 // (ErrorHandler จะล้าง buffer ก่อนแสดงหน้า error ดังนั้นจะไม่ซ้อนกัน)
 if (!ob_get_level()) {
@@ -265,6 +259,16 @@ if (file_exists($envPath)) {
 
 // โหลดการตั้งค่าแอปพลิเคชัน
 $config = require __DIR__ . '/../config/app.php';
+
+// ตรวจสอบว่า APP_KEY ถูกตั้งค่าใน production
+if (($config['env'] ?? 'development') === 'production') {
+    $appKey = env('APP_KEY', '', 'string');
+    if (!is_string($appKey) || strlen(trim($appKey)) < 16) {
+        http_response_code(500);
+        echo 'ค่า APP_KEY หายไปหรือสั้นเกินไป โปรดตั้งค่า APP_KEY ที่ปลอดภัยในไฟล์ .env (อย่างน้อย 64 ตัวอักษร) และรีสตาร์ทเซิร์ฟเวอร์';
+        exit;
+    }
+}
 
 // ตั้งค่าการรายงานข้อผิดพลาดตามสภาพแวดล้อม
 if ($config['env'] === 'production') {

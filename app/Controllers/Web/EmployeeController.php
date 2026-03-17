@@ -12,7 +12,6 @@ use App\Core\Response;
 use App\Core\Request;
 use App\Models\Employee as Employees;
 use App\Helpers\NumberHelper;
-use App\Core\Validator;
 
 class EmployeeController extends Controller
 {
@@ -32,6 +31,7 @@ class EmployeeController extends Controller
     {
         $this->request = $request;
     }
+
     /**
      * แสดงรายการพนักงานทั้งหมด (หน้า List)
      */
@@ -165,16 +165,19 @@ class EmployeeController extends Controller
             'phone'
         ]);
 
+        // ตรวจสอบและเตรียมข้อมูลสำหรับอัปเดต (เอาเฉพาะคอลัมน์ที่โมเดลรองรับ)
         $departmentId = $data['department'] ?? null;
         if ($departmentId === null || $departmentId === '') {
             $departmentId = $employee['department_id'] ?? null;
         }
 
+        // ตรวจสอบว่า department_id เป็นตัวเลขและมีค่ามากกว่า 0 หรือไม่
         if (!is_numeric($departmentId) || (int)$departmentId <= 0) {
             $this->flash('error', 'กรุณาเลือกแผนกให้ถูกต้อง');
             return $this->back();
         }
 
+        // ตรวจสอบและเตรียมข้อมูลเงินเดือน
         $salary = $data['salary'] ?? null;
         if ($salary === null || $salary === '') {
             $salary = $employee['salary'] ?? 0;

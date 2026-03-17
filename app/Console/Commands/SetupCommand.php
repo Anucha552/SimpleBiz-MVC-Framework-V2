@@ -170,7 +170,16 @@ class SetupCommand extends BaseCommand
         $gitMode = '';
         $gitRemoteUrl = '';
 
-        if ($manageGit === 'y' || $manageGit === 'yes') {
+        if ($manageGit !== 'y' && $manageGit !== 'yes') {
+            if (is_dir($this->path('.git'))) {
+                echo ConsoleColor::YELLOW . "ไม่ตั้งค่า GitHub แต่ลบโฟลเดอร์ .git ทิ้งหรือไม่? (y/n) [n]: " . ConsoleColor::RESET;
+                $removeGitAnswer = strtolower(trim(fgets(STDIN)));
+                if ($removeGitAnswer === 'y' || $removeGitAnswer === 'yes' || $removeGitAnswer === 'ใช่') {
+                    $this->removeDirectory($this->path('.git'));
+                    $this->success("  [OK] ลบโฟลเดอร์ .git แล้ว (เริ่มใหม่แบบไม่ผูกประวัติเดิม)");
+                }
+            }
+        } else {
             echo ConsoleColor::YELLOW . "\nเลือกวิธีการ:\n" . ConsoleColor::RESET;
             echo ConsoleColor::WHITE . "  1. เปลี่ยน remote URL (เก็บประวัติ commits เดิม)\n" . ConsoleColor::RESET;
             echo ConsoleColor::WHITE . "  2. เริ่ม Git ใหม่ทั้งหมด (ลบประวัติเก่า)\n" . ConsoleColor::RESET;
