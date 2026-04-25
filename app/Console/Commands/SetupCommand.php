@@ -208,7 +208,10 @@ class SetupCommand extends BaseCommand
         echo "\n";
 
         $this->info("1. กำลังแก้ไข composer.json...");
-        $this->updateComposerJson($vendorName, $projectName, $projectDescription);
+        if (!$this->updateComposerJson($vendorName, $projectName, $projectDescription)) {
+            $this->warning("ยกเลิกการตั้งค่าเพื่อป้องกันความเสียหายของ composer.json");
+            return;
+        }
 
         $this->info("2. กำลังสร้างไฟล์ .env...");
         $this->createEnvFile($appName, $dbConnection, $dbName, $dbUser, $dbPassword);
@@ -301,19 +304,25 @@ class SetupCommand extends BaseCommand
         }
     }
 
-    private function updateComposerJson(string $vendor, string $project, string $description): void
+    private function updateComposerJson(string $vendor, string $project, string $description): bool
     {
         $composerFile = $this->path('composer.json');
 
         if (!file_exists($composerFile)) {
             $this->error("ไม่พบไฟล์ composer.json");
-            return;
+            return false;
         }
 
-        $composer = json_decode(file_get_contents($composerFile), true);
+        $composerContent = file_get_contents($composerFile);
+        if ($composerContent === false) {
+            $this->error("ไม่สามารถอ่านไฟล์ composer.json ได้");
+            return false;
+        }
+
+        $composer = json_decode($composerContent, true);
         if (!is_array($composer) || json_last_error() !== JSON_ERROR_NONE) {
             $this->error("ไม่สามารถอ่าน composer.json ได้ (JSON ผิดรูปแบบ)");
-            return;
+            return false;
         }
 
         $composer['name'] = strtolower($vendor) . '/' . strtolower($project);
@@ -321,9 +330,23 @@ class SetupCommand extends BaseCommand
             $composer['description'] = $description;
         }
 
-        file_put_contents($composerFile, json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        try {
+            $encodedComposer = json_encode(
+                $composer,
+                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+            );
+        } catch (\JsonException $e) {
+            $this->error("ไม่สามารถแปลง composer.json เป็น JSON ได้: " . $e->getMessage());
+            return false;
+        }
+
+        if (file_put_contents($composerFile, $encodedComposer) === false) {
+            $this->error("ไม่สามารถเขียนไฟล์ composer.json ได้");
+            return false;
+        }
 
         $this->success("  [OK] อัปเดต composer.json แล้ว");
+        return true;
     }
 
     private function isAlreadySetup(): bool
