@@ -176,7 +176,7 @@ class SetupCommand extends BaseCommand
                 $removeGitAnswer = strtolower(trim(fgets(STDIN)));
                 if ($removeGitAnswer === 'y' || $removeGitAnswer === 'yes' || $removeGitAnswer === 'ใช่') {
                     $this->removeDirectory($this->path('.git'));
-                    $this->success("  [OK] ลบโฟลเดอร์ .git แล้ว (เริ่มใหม่แบบไม่ผูกประวัติเดิม)");
+                    $this->success("ลบโฟลเดอร์ .git แล้ว (เริ่มใหม่แบบไม่ผูกประวัติเดิม)");
                 }
             }
         } else {
@@ -242,14 +242,14 @@ class SetupCommand extends BaseCommand
 
         $this->info("{$step}. กำลังอัปเดต Composer dependencies...");
         if (!file_exists($this->path('composer.json'))) {
-            $this->warning("  [!] ไม่พบ composer.json ข้ามการอัปเดต dependencies");
+            $this->warning("ไม่พบ composer.json ข้ามการอัปเดต dependencies");
         } elseif ($this->hasComposer()) {
             passthru("composer update --quiet", $composerExitCode);
             if ($composerExitCode !== 0) {
-                $this->warning("  [!] Composer update ไม่สำเร็จ");
+                $this->warning("Composer update ไม่สำเร็จ");
             }
         } else {
-            $this->warning("  [!] ไม่พบ composer ข้ามการอัปเดต dependencies");
+            $this->warning("ไม่พบ composer ข้ามการอัปเดต dependencies");
         }
         $step++;
 
@@ -345,7 +345,7 @@ class SetupCommand extends BaseCommand
             return false;
         }
 
-        $this->success("  [OK] อัปเดต composer.json แล้ว");
+        $this->success("อัปเดต composer.json แล้ว");
         return true;
     }
 
@@ -390,7 +390,7 @@ class SetupCommand extends BaseCommand
 
         file_put_contents($envFile, $content);
 
-        $this->success("  [OK] สร้างไฟล์ .env แล้ว");
+        $this->success("สร้างไฟล์ .env แล้ว");
     }
 
     private function envExists(): bool
@@ -420,7 +420,7 @@ class SetupCommand extends BaseCommand
 
         file_put_contents($envFile, $content);
 
-        $this->success("  [OK] อัปเดตค่า DB ใน .env แล้ว");
+        $this->success("อัปเดตค่า DB ใน .env แล้ว");
     }
 
     private function upsertEnvValue(string $content, string $key, string $value): string
@@ -454,7 +454,7 @@ class SetupCommand extends BaseCommand
 
         file_put_contents($envFile, $content);
 
-        $this->success("  [OK] สร้าง APP_KEY แล้ว");
+        $this->success("สร้าง APP_KEY แล้ว");
     }
 
     private function updateAppUrlForRename(string $oldFolder, string $newFolder, ?string $basePath = null): void
@@ -487,7 +487,7 @@ class SetupCommand extends BaseCommand
         if ($newUrl !== $appUrl) {
             $content = preg_replace('/^APP_URL=.*$/m', 'APP_URL=' . $newUrl, $content);
             file_put_contents($envFile, $content);
-            $this->success("  [OK] อัปเดต APP_URL ใน .env เป็น {$newUrl}");
+            $this->success("อัปเดต APP_URL ใน .env เป็น {$newUrl}");
         }
     }
 
@@ -511,7 +511,7 @@ class SetupCommand extends BaseCommand
 
         if ($newContent !== $content) {
             file_put_contents($htaccess, $newContent);
-            $this->success("  [OK] อัปเดตไฟล์ .htaccess ที่รากโปรเจคให้ใช้ชื่อโฟลเดอร์ใหม่");
+            $this->success("อัปเดตไฟล์ .htaccess ที่รากโปรเจคให้ใช้ชื่อโฟลเดอร์ใหม่");
         }
     }
 
@@ -520,7 +520,7 @@ class SetupCommand extends BaseCommand
         $readmeFile = $this->path('README.md');
 
         if (!file_exists($readmeFile)) {
-            $this->warning("  [!] ไม่พบไฟล์ README.md");
+            $this->warning("ไม่พบไฟล์ README.md");
             return;
         }
 
@@ -535,7 +535,7 @@ class SetupCommand extends BaseCommand
 
         file_put_contents($readmeFile, $content);
 
-        $this->success("  [OK] อัปเดต README.md แล้ว");
+        $this->success("อัปเดต README.md แล้ว");
     }
 
     private function ensureGitignore(): void
@@ -545,11 +545,11 @@ class SetupCommand extends BaseCommand
         if (!file_exists($gitignoreFile)) {
             $content = $this->getDefaultGitignore();
             file_put_contents($gitignoreFile, $content);
-            $this->success("  [OK] สร้างไฟล์ .gitignore แล้ว");
+            $this->success("สร้างไฟล์ .gitignore แล้ว");
             return;
         }
 
-        $this->success("  [OK] .gitignore มีอยู่แล้ว");
+        $this->success(".gitignore มีอยู่แล้ว");
     }
 
     private function getDefaultGitignore(): string
@@ -609,24 +609,24 @@ EOT;
     private function changeGitRemote(string $newUrl): void
     {
         if (!is_dir($this->path('.git'))) {
-            $this->warning("  [!] ไม่พบ Git repository, ข้ามขั้นตอนนี้");
+            $this->warning("ไม่พบ Git repository, ข้ามขั้นตอนนี้");
             return;
         }
 
         $safeUrl = escapeshellarg($newUrl);
         exec("git remote remove origin 2>&1", $output, $returnCode);
         if ($returnCode === 0) {
-            $this->success("  [OK] ลบ Git remote เดิมแล้ว");
+            $this->success("ลบ Git remote เดิมแล้ว");
         } else {
-            $this->warning("  [!] ไม่สามารถลบ Git remote เดิมได้ (อาจไม่มี origin อยู่แล้ว)");
+            $this->warning("ไม่สามารถลบ Git remote เดิมได้ (อาจไม่มี origin อยู่แล้ว)");
         }
 
         exec("git remote add origin {$safeUrl} 2>&1", $output, $returnCode);
 
         if ($returnCode === 0) {
-            $this->success("  [OK] เปลี่ยน Git remote เป็น {$newUrl} แล้ว");
+            $this->success("เปลี่ยน Git remote เป็น {$newUrl} แล้ว");
         } else {
-            $this->error("  [X] ไม่สามารถเปลี่ยน Git remote ได้");
+            $this->error("ไม่สามารถเปลี่ยน Git remote ได้");
         }
     }
 
@@ -634,29 +634,29 @@ EOT;
     {
         if (is_dir($this->path('.git'))) {
             $this->removeDirectory($this->path('.git'));
-            $this->success("  [OK] ลบ Git repository เดิมแล้ว");
+            $this->success("ลบ Git repository เดิมแล้ว");
         }
 
         exec("git init 2>&1", $output, $returnCode);
         if ($returnCode !== 0) {
-            $this->error("  [X] ไม่สามารถเริ่มต้น Git ได้");
+            $this->error("ไม่สามารถเริ่มต้น Git ได้");
             return;
         }
-        $this->success("  [OK] เริ่มต้น Git repository แล้ว");
+        $this->success("เริ่มต้น Git repository แล้ว");
 
         $safeUrl = escapeshellarg($newUrl);
         exec("git remote add origin {$safeUrl} 2>&1", $output, $returnCode);
         if ($returnCode === 0) {
-            $this->success("  [OK] ตั้งค่า Git remote แล้ว");
+            $this->success("ตั้งค่า Git remote แล้ว");
         } else {
-            $this->error("  [X] ไม่สามารถตั้งค่า Git remote ได้");
+            $this->error("ไม่สามารถตั้งค่า Git remote ได้");
         }
 
         exec("git branch -M main 2>&1", $output, $returnCode);
         if ($returnCode === 0) {
-            $this->success("  [OK] ตั้งค่า branch main แล้ว");
+            $this->success("ตั้งค่า branch main แล้ว");
         } else {
-            $this->error("  [X] ไม่สามารถตั้งค่า branch main ได้");
+            $this->error("ไม่สามารถตั้งค่า branch main ได้");
         }
     }
 
@@ -688,7 +688,7 @@ EOT;
     {
         exec("git add . 2>&1", $output, $returnCode);
         if ($returnCode !== 0) {
-            $this->error("  [X] ไม่สามารถ add ไฟล์ได้");
+            $this->error("ไม่สามารถ add ไฟล์ได้");
             return;
         }
 
@@ -696,19 +696,19 @@ EOT;
         $safeCommitMessage = escapeshellarg($commitMessage);
         exec("git commit -m {$safeCommitMessage} 2>&1", $output, $returnCode);
         if ($returnCode !== 0) {
-            $this->warning("  [!] ไม่มีการเปลี่ยนแปลงให้ commit หรือเกิดข้อผิดพลาด");
+            $this->warning("ไม่มีการเปลี่ยนแปลงให้ commit หรือเกิดข้อผิดพลาด");
             return;
         }
 
-        $this->success("  [OK] Commit สำเร็จ");
+        $this->success("Commit สำเร็จ");
 
         echo ConsoleColor::CYAN . "  กำลัง push ไปยัง GitHub..." . ConsoleColor::RESET . "\n";
         passthru("git push -u origin main 2>&1", $returnCode);
 
         if ($returnCode === 0) {
-            $this->success("  [OK] Push สำเร็จ!");
+            $this->success("Push สำเร็จ!");
         } else {
-            $this->warning("  [!] Push ไม่สำเร็จ (อาจต้อง authenticate หรือสร้าง repository บน GitHub ก่อน)");
+            $this->warning("Push ไม่สำเร็จ (อาจต้อง authenticate หรือสร้าง repository บน GitHub ก่อน)");
             $this->info("    คุณสามารถ push เองภายหลังด้วย: git push -u origin main");
         }
     }
