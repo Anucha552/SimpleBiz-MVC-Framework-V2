@@ -36,8 +36,18 @@ class UrlHelper
      */
     public static function base(): string
     {
+        // 1. Try to get from config (APP_URL in .env)
+        $configUrl = \App\Core\Config::get('app.url');
+        
+        // Use config URL if it's set and not the default 'http://localhost' 
+        // OR if we are in a non-web environment (CLI)
+        if (!empty($configUrl) && ($configUrl !== 'http://localhost' || PHP_SAPI === 'cli')) {
+            return rtrim($configUrl, '/');
+        }
+
+        // 2. Dynamic fallback for local development
         $protocol = self::isSecure() ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost'; // ใช้ localhost เป็นค่าเริ่มต้นถ้าไม่มี HTTP_HOST
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         
         return "{$protocol}://{$host}";
     }

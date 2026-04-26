@@ -624,11 +624,10 @@ class Request
      */
     public function url(): string
     {
-        $protocol = $this->isSecure() ? 'https' : 'http';
-        $host = $this->server['HTTP_HOST'] ?? 'localhost';
+        $base = \App\Helpers\UrlHelper::base();
         $uri = $this->server['REQUEST_URI'] ?? '/';
 
-        return "{$protocol}://{$host}{$uri}";
+        return rtrim($base, '/') . '/' . ltrim($uri, '/');
     }
 
     /**

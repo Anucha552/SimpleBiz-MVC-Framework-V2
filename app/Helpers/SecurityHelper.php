@@ -873,8 +873,13 @@ class SecurityHelper
      */
     public static function forceHttps(): void
     {
-        if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] !== 'on') {
-            $redirect = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        if (!UrlHelper::isSecure()) {
+            $base = UrlHelper::base();
+            $uri = $_SERVER['REQUEST_URI'] ?? '/';
+            
+            // Ensure we are using https scheme
+            $redirect = str_replace('http://', 'https://', $base) . $uri;
+            
             header('Location: ' . $redirect, true, 301);
             exit;
         }

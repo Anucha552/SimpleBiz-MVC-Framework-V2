@@ -474,14 +474,13 @@ class SetupCommand extends BaseCommand
         $appUrlRaw = trim($m[1]);
         $appUrl = trim($appUrlRaw, " \t\n\r\"'");
 
-        if (strpos($appUrl, $oldFolder) !== false) {
-            $newUrl = str_replace($oldFolder, $newFolder, $appUrl);
+        // Only replace if the old folder name is actually part of the URL path
+        if (strpos($appUrl, '/' . $oldFolder) !== false) {
+            $newUrl = str_replace('/' . $oldFolder, '/' . $newFolder, $appUrl);
         } else {
-            if (strpos($appUrl, 'localhost') !== false || strpos($appUrl, '127.') === 0) {
-                $newUrl = rtrim($appUrl, '/') . '/' . $newFolder;
-            } else {
-                $newUrl = $appUrl;
-            }
+            // Otherwise, don't try to guess. Let the user update it manually if needed,
+            // or keep it as is (e.g., if it's just 'http://localhost' or a custom domain)
+            $newUrl = $appUrl;
         }
 
         if ($newUrl !== $appUrl) {
