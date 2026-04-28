@@ -223,13 +223,13 @@ final class Auth
         $logger->info('login.created', ['user_id' => $userId]);
 
         $db = Database::getInstance();
-        $db->execute(
-            "UPDATE users SET last_login_at = NOW(), last_login_ip = :ip WHERE id = :id",
-            [
-                'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
-                'id' => $userId
-            ]
-        );
+        $driver = method_exists($db, 'getDriverName') ? $db->getDriverName() : 'mysql';
+        $dateFunc = $driver === 'sqlite' ? 'CURRENT_TIMESTAMP' : 'NOW()';
+        $sql = "UPDATE users SET last_login_at = $dateFunc, last_login_ip = :ip WHERE id = :id";
+        $db->execute($sql, [
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+            'id' => $userId
+        ]);
     }
 
     /**
