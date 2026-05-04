@@ -19,6 +19,8 @@
 
 namespace App\Core;
 
+use App\Core\Config;
+
 class Request
 {
     /**
@@ -661,17 +663,43 @@ class Request
      */
     public function ip(): string
     {
-        // ตรวจสอบ proxy headers ก่อน
-        if (!empty($this->server['HTTP_X_FORWARDED_FOR'])) {
-            return $this->server['HTTP_X_FORWARDED_FOR'];
+        return self::resolveClientIp($this->server);
+    }
+
+    /**
+     * แก้ไข IP ของผู้ใช้จาก server array โดยเชื่อ proxy headers เฉพาะ proxy ที่ไว้ใจได้
+     *
+     * @param array<string, mixed> $server
+     */
+    public static function resolveClientIp(array $server): string
+    {
+        $remoteAddr = $server['REMOTE_ADDR'] ?? 'unknown';
+        $remoteAddr = is_string($remoteAddr) && $remoteAddr !== '' ? trim($remoteAddr) : 'unknown';
+        $trustedProxies = (array) Config::get('app.trusted_proxies', []);
+
+        if (in_array($remoteAddr, $trustedProxies, true)) {
+            $forwarded = $server['HTTP_X_FORWARDED_FOR'] ?? '';
+            if (is_string($forwarded) && $forwarded !== '') {
+                $parts = array_map('trim', explode(',', $forwarded));
+                foreach ($parts as $part) {
+                    if ($part !== '') {
+                        return $part;
+                    }
+                }
+            }
+
+            $realIp = $server['HTTP_X_REAL_IP'] ?? '';
+            if (is_string($realIp) && $realIp !== '') {
+                return trim($realIp);
+            }
+
+            $clientIp = $server['HTTP_CLIENT_IP'] ?? '';
+            if (is_string($clientIp) && $clientIp !== '') {
+                return trim($clientIp);
+            }
         }
 
-        // ตรวจสอบ HTTP_CLIENT_IP
-        if (!empty($this->server['HTTP_CLIENT_IP'])) {
-            return $this->server['HTTP_CLIENT_IP'];
-        }
-
-        return $this->server['REMOTE_ADDR'] ?? '0.0.0.0';
+        return $remoteAddr !== '' ? $remoteAddr : 'unknown';
     }
 
     /**

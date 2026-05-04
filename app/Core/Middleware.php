@@ -174,26 +174,6 @@ abstract class Middleware
      */
     protected function getClientIp(): string
     {
-        $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        $trustedProxies = (array) Config::get('app.trusted_proxies', []);
-
-        $isTrustedProxy = in_array($remoteAddr, $trustedProxies, true);
-
-        if ($isTrustedProxy) {
-            $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
-            if (is_string($forwarded) && $forwarded !== '') {
-                $parts = array_map('trim', explode(',', $forwarded));
-                if (!empty($parts[0])) {
-                    return $parts[0];
-                }
-            }
-
-            $realIp = $_SERVER['HTTP_X_REAL_IP'] ?? '';
-            if (is_string($realIp) && $realIp !== '') {
-                return trim($realIp);
-            }
-        }
-
-        return is_string($remoteAddr) && $remoteAddr !== '' ? $remoteAddr : 'unknown';
+        return Request::resolveClientIp($_SERVER);
     }
 }

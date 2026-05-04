@@ -222,11 +222,11 @@ class Logger
         // รับบริบทคำขอ (หลีกเลี่ยงการ start session ใน logger)
         $userId = 'guest';
         if (Session::isStarted()) {
-            $userId = Session::get('user_id', 'guest');
-        } elseif (isset($_SESSION) && is_array($_SESSION) && isset($_SESSION['user_id'])) {
-            $userId = $_SESSION['user_id'];
+            $userId = Session::get('_auth_user_id', 'guest');
+        } elseif (isset($_SESSION) && is_array($_SESSION)) {
+            $userId = $_SESSION['_auth_user_id'] ?? 'guest';
         }
-        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $ip = Request::resolveClientIp($_SERVER);
         $route = $_SERVER['REQUEST_URI'] ?? 'unknown';
         $method = $_SERVER['REQUEST_METHOD'] ?? 'unknown';
         $requestId = $_SERVER['HTTP_X_REQUEST_ID'] ?? 'unknown';

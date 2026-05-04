@@ -105,7 +105,7 @@ final class Auth
         }
 
         // ใช้ IP address ของผู้ใช้สำหรับการบล็อกการโจมตีแบบ brute-force
-        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $ip = \App\Core\Request::resolveClientIp($_SERVER);
         $logger = new Logger();
 
         // ตรวจสอบการล็อกอินแบบ brute-force
@@ -201,7 +201,7 @@ final class Auth
                 $logger->error('auth.app_key.missing', ['note' => 'APP_KEY missing, remember-me disabled']);
             } else {
                 self::setRememberToken($userId);
-                $logger->info('auth.remember.created', ['user_id' => $userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+                $logger->info('auth.remember.created', ['user_id' => $userId, 'ip' => \App\Core\Request::resolveClientIp($_SERVER)]);
             }
         }
 
@@ -227,7 +227,7 @@ final class Auth
         $dateFunc = $driver === 'sqlite' ? 'CURRENT_TIMESTAMP' : 'NOW()';
         $sql = "UPDATE users SET last_login_at = $dateFunc, last_login_ip = :ip WHERE id = :id";
         $db->execute($sql, [
-            'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+            'ip' => \App\Core\Request::resolveClientIp($_SERVER),
             'id' => $userId
         ]);
     }
@@ -253,7 +253,7 @@ final class Auth
             if ($userId !== null) {
                 self::removeRememberToken((int)$userId);
                 $logger = new Logger();
-                $logger->security('auth.logout.remember_cleared', ['user_id' => $userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+                $logger->security('auth.logout.remember_cleared', ['user_id' => $userId, 'ip' => \App\Core\Request::resolveClientIp($_SERVER)]);
             }
         }
 
@@ -290,7 +290,7 @@ final class Auth
         Session::regenerateWithContext('logout', isset($userId) ? (int)$userId : null);
         // log logout event
         $logger = new Logger();
-        $logger->security('auth.logout', ['user_id' => $userId ?? null, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+        $logger->security('auth.logout', ['user_id' => $userId ?? null, 'ip' => \App\Core\Request::resolveClientIp($_SERVER)]);
     }
 
     /**
@@ -590,7 +590,7 @@ final class Auth
             setcookie(self::REMEMBER_COOKIE, $payload . '|' . $signature, $cookieOptions);
         }
         // do not log tokens or cookie values; log creation abstractly
-        $logger->info('auth.remember.set', ['user_id' => $userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+        $logger->info('auth.remember.set', ['user_id' => $userId, 'ip' => \App\Core\Request::resolveClientIp($_SERVER)]);
     }
 
     /**
@@ -630,7 +630,7 @@ final class Auth
             $signature = $parts[2];
             if (!self::isRememberSignatureValid($userId . '|' . $token, $signature)) {
                 // invalid signature -> possible tampering
-                $logger->security('auth.remember.invalid_signature', ['user_id' => is_numeric($userId) ? (int)$userId : null, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+                $logger->security('auth.remember.invalid_signature', ['user_id' => is_numeric($userId) ? (int)$userId : null, 'ip' => \App\Core\Request::resolveClientIp($_SERVER)]);
                 return false;
             }
         } elseif (self::getAppKey() !== '') {
@@ -650,7 +650,7 @@ final class Auth
         $row = $db->fetch("SELECT remember_token FROM users WHERE id = :id LIMIT 1", ['id' => $userId]);
 
         if (!$row) {
-            $logger->security('auth.remember.unknown_user', ['user_id' => is_numeric($userId) ? (int)$userId : null, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            $logger->security('auth.remember.unknown_user', ['user_id' => is_numeric($userId) ? (int)$userId : null, 'ip' => \App\Core\Request::resolveClientIp($_SERVER)]);
             return false;
         }
 
@@ -658,13 +658,13 @@ final class Auth
 
         if ($storedToken === null) {
             // token cleared server-side or expired
-            $logger->security('auth.remember.expired', ['user_id' => (int)$userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            $logger->security('auth.remember.expired', ['user_id' => (int)$userId, 'ip' => \App\Core\Request::resolveClientIp($_SERVER)]);
             return false;
         }
 
         // Compare stored hash with presented token hash without logging sensitive values
         if (!is_string($storedToken) || !hash_equals($storedToken, $hashedToken)) {
-            $logger->security('auth.remember.mismatch', ['user_id' => (int)$userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            $logger->security('auth.remember.mismatch', ['user_id' => (int)$userId, 'ip' => \App\Core\Request::resolveClientIp($_SERVER)]);
             return false;
         }
 
@@ -679,7 +679,7 @@ final class Auth
         self::setRememberToken((int) $userId);
 
         // log token rotation (do not include token)
-        $logger->security('auth.remember.rotated', ['user_id' => (int)$userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+        $logger->security('auth.remember.rotated', ['user_id' => (int)$userId, 'ip' => \App\Core\Request::resolveClientIp($_SERVER)]);
 
 
         // Load user cache
@@ -688,7 +688,7 @@ final class Auth
         self::cacheUserPermissions(self::$user);
 
         // security log for successful remember login
-        $logger->security('auth.remember.login', ['user_id' => (int)$userId, 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+        $logger->security('auth.remember.login', ['user_id' => (int)$userId, 'ip' => \App\Core\Request::resolveClientIp($_SERVER)]);
 
         return true;
     }

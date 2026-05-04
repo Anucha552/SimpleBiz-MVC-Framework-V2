@@ -331,7 +331,7 @@ class Session
             $logger->info('auth.session.regenerated', [
                 'context' => $context,
                 'user_id' => $userId,
-                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+                'ip' => Request::resolveClientIp($_SERVER),
             ]);
         } catch (Throwable $e) {
             // การบันทึกข้อผิดพลาดไม่ควรขัดขวางการทำงาน
