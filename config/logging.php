@@ -13,6 +13,7 @@
 require_once __DIR__ . '/env.php';
 
 $env = env('APP_ENV', 'development', 'string');
+$enabled = env('LOG_ENABLED', true, 'bool');
 $detailed = env('LOG_DETAILED', false, 'bool');
 $requestBody = env('LOG_REQUEST_BODY', false, 'bool');
 if ($env === 'production') {
@@ -21,6 +22,7 @@ if ($env === 'production') {
 }
 
 return [
+    'enabled' => $enabled,
     'max_log_size' => env('MAX_LOG_SIZE', 0, 'int'),
     'retention_days' => env('LOG_RETENTION_DAYS', 7, 'int'),
     'detailed' => $detailed,

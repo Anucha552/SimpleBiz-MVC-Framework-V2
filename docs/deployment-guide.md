@@ -104,6 +104,7 @@ APP_TIMEZONE=Asia/Bangkok
 APP_COOKIE_DOMAIN=.yourdomain.com
 
 ######################### Logging #########################
+LOG_ENABLED=true                # ตั้งเป็น false เพื่อปิดการเขียน log ทั้งหมด
 MAX_LOG_SIZE=10485760          # 10MB
 LOG_RETENTION_DAYS=30          # 30 วัน
 LOG_DETAILED=false

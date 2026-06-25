@@ -98,10 +98,12 @@ $logger->warning('rate_limit.exceeded', [
 สามารถตั้งค่าในไฟล์ config เช่น:
 ```php
 'logging' => [
+    'enabled' => true,
     'max_log_size' => 1048576, // 1MB
     'retention_days' => 7,
 ],
 ```
+- **enabled**: เปิด/ปิดการเขียน log ทั้งหมด (`LOG_ENABLED=false` จะไม่สร้างหรือเขียนไฟล์ log)
 - **max_log_size**: กำหนดขนาดไฟล์สูงสุด (bytes) ถ้าเกินจะหมุนไฟล์เป็น:
   - 2026-03-01-001.log
   - 2026-03-01-002.log

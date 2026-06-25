@@ -87,6 +87,11 @@ class Logger
     ];
 
     /**
+     * @var bool เปิด/ปิดการบันทึกล็อก
+     */ 
+    private bool $enabled;
+
+    /**
      * สร้างอินสแตนซ์ logger
      * จุดประสงค์: กำหนดค่าเริ่มต้นสำหรับ logger รวมถึงไฟล์ล็อก ขนาดสูงสุด และการเก็บรักษา
      * ตัวอย่างการใช้งาน:
@@ -105,10 +110,16 @@ class Logger
         } else {
             $this->logFile = $this->normalizeLogPath($logFile);
         }
+        $this->enabled = (bool) Config::get('logging.enabled', true);
         // ค่าเริ่มต้นจาก config ถ้ามี (หน่วยเป็น bytes สำหรับ max_log_size)
         $this->maxFileSize = (int) Config::get('logging.max_log_size', 0); // 0 = ไม่ตรวจขนาด
         // จำนวนวันที่เก็บไฟล์ก่อนลบ (days) สำหรับการทำความสะอาดไฟล์เก่า
         $this->retentionDays = (int) Config::get('logging.retention_days', 7);
+
+        // ตรวจสอบว่า logger ถูกเปิดใช้งานหรือไม่
+        if (!$this->enabled) {
+            return;
+        }
         
         // ตรวจสอบว่ามีไดเรกทอรีล็อกหรือไม่ — สร้างและตรวจสอบสิทธิ์
         $logDir = dirname($this->logFile);
@@ -217,6 +228,11 @@ class Logger
      */
     private function log(string $level, string $event, array $context): void
     {
+        // ถ้า logger ถูกปิดใช้งาน ให้ข้ามการบันทึก
+        if (!$this->enabled) {
+            return;
+        }
+
         $timestamp = date('Y-m-d H:i:s');
         
         // รับบริบทคำขอ (หลีกเลี่ยงการ start session ใน logger)
