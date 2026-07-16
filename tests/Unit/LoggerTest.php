@@ -1,5 +1,7 @@
 <?php
 
+namespace Tests\Unit;
+
 use App\Core\Logger;
 use PHPUnit\Framework\TestCase;
 
