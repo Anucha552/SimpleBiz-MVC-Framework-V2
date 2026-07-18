@@ -318,7 +318,7 @@ final class Auth
 
         // ตรวจสอบ session
         if (Session::has(self::SESSION_KEY)) {
-            $id = Session::get(self::SESSION_KEY);
+            $id = (int) Session::get(self::SESSION_KEY);
             self::$user = self::getUserById($id);
             return self::$user !== null;
         }
