@@ -31,6 +31,9 @@ use App\Core\ColumnDefinition;
 use App\Core\ForeignKeyDefinition;
 use App\Core\Config;
 
+/**
+ * @method self check(string $expression, ?string $name = null)
+ */
 class Blueprint
 {
     /**
@@ -57,6 +60,11 @@ class Blueprint
      * รายการคีย์ต่างประเทศ (foreign key definitions)
      */
     protected array $foreignKeys = [];
+
+    /**
+     * รายการเงื่อนไข CHECK ของตาราง
+     */
+    protected array $checks = [];
 
     /**
      * สร้างอินสแตนซ์ของ Blueprint สำหรับตารางที่ระบุ
@@ -787,6 +795,24 @@ class Blueprint
     }
 
     /**
+     * เพิ่มเงื่อนไข CHECK ให้กับตาราง เพื่อกำหนดข้อจำกัดในการเก็บข้อมูล
+     * จุดประสงค์: สร้างเงื่อนไข CHECK เพื่อกำหนดข้อจำกัดในการเก็บข้อมูลในตาราง
+     * check() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างเงื่อนไข CHECK เพื่อกำหนดข้อจำกัดในการเก็บข้อมูลในตาราง
+     *
+     * @param string $expression นิพจน์ SQL ของเงื่อนไข
+     * @param string|null $name ชื่อ constraint
+     * @return \App\Core\Blueprint
+     */
+    public function check(string $expression, ?string $name = null): self
+    {
+        $this->checks[] = [
+            'expression' => $expression,
+            'name' => $name,
+        ];
+        return $this;
+    }
+
+    /**
      * หน้ากากชื่อคอลัมน์เพื่อป้องกัน SQL Injection
      * จุดประสงค์: ป้องกันการโจมตี SQL Injection โดยการหน้ากากชื่อคอลัมน์
      * escapeName() ควรใช้กับอะไร: เมื่อคุณต้องการป้องกัน SQL Injection ในชื่อคอลัมน์
@@ -896,6 +922,13 @@ class Blueprint
                     $parts[] = "INDEX ({$cols})";
                 }
             }
+        }
+
+        foreach ($this->checks as $check) {
+            $constraint = $check['name'] !== null
+                ? 'CONSTRAINT ' . $this->escapeName($check['name']) . ' '
+                : '';
+            $parts[] = $constraint . 'CHECK (' . $check['expression'] . ')';
         }
 
         // add foreign key constraints
