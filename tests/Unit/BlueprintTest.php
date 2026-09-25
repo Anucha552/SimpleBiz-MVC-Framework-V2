@@ -63,6 +63,8 @@ class BlueprintTest extends TestCase
         $bool = $bp->boolean('b', true, 1);
         $this->assertEquals(1, $bool->getDefault());
         $this->assertTrue($bool->isNullable());
+        $this->assertStringContainsString('DEFAULT 0', $bp->boolean('is_primary')->default(false)->toSqlDefinition());
+        $this->assertStringContainsString('DEFAULT 1', $bp->boolean('is_enabled')->default(true)->toSqlDefinition());
         $dec = $bp->decimal('d', 8, 3, false, 0.1);
         $this->assertEquals(0.1, $dec->getDefault());
         $float = $bp->float('f', true, 2.2);

@@ -43,7 +43,7 @@ class ColumnDefinition
     /**
      * ค่าเริ่มต้นของคอลัมน์
      */
-    protected $default = null;
+    protected string|int|float|bool|null $default = null;
 
     /**
      * ค่าดิบของค่าเริ่มต้น
@@ -93,7 +93,7 @@ class ColumnDefinition
      * คืนค่าค่า default ของคอลัมน์
      * @return mixed
      */
-    public function getDefault()
+    public function getDefault(): string|int|float|bool|null
     {
         return $this->default;
     }
@@ -135,7 +135,7 @@ class ColumnDefinition
      * ```
      * 
      * @param bool $value กำหนดว่าคอลัมน์เป็น NULLABLE หรือ NOT NULL
-     * @return App\Core\ColumnDefinition
+     * @return self
      */
     public function nullable(bool $value = true): self
     {
@@ -155,9 +155,9 @@ class ColumnDefinition
      * 
      * @param mixed $value กำหนดค่าเริ่มต้นของคอลัมน์
      * @param bool $raw กำหนดว่าค่าที่ระบุเป็นค่าดิบหรือไม่
-     * @return App\Core\ColumnDefinition
+     * @return self
      */
-    public function default($value, bool $raw = false): self
+    public function default(string|int|float|bool|null $value, bool $raw = false): self
     {
         $this->default = $value;
         $this->defaultIsRaw = $raw;
@@ -175,7 +175,7 @@ class ColumnDefinition
      * ```
      * 
      * @param bool $value กำหนดว่าคอลัมน์เป็น UNSIGNED หรือไม่
-     * @return App\Core\ColumnDefinition
+     * @return self
      */
     public function unsigned(bool $value = true): self
     {
@@ -193,7 +193,7 @@ class ColumnDefinition
      * ```
      * 
      * @param string $text กำหนดข้อความความคิดเห็นสำหรับคอลัมน์
-     * @return App\Core\ColumnDefinition
+     * @return self
      */
     public function comment(string $text): self
     {
@@ -212,7 +212,7 @@ class ColumnDefinition
      * ```
      * 
      * @param bool $value กำหนดว่าคอลัมน์เป็น AUTO_INCREMENT หรือไม่
-     * @return App\Core\ColumnDefinition
+     * @return self
      */
     public function autoIncrement(bool $value = true): self
     {
@@ -231,7 +231,7 @@ class ColumnDefinition
      * ```
      * 
      * @param bool $value กำหนดว่าคอลัมน์มีคุณสมบัติ UNIQUE หรือไม่
-     * @return App\Core\ColumnDefinition
+     * @return self
      */
     public function unique(bool $value = true): self
     {
@@ -250,7 +250,7 @@ class ColumnDefinition
      * ```
      * 
      * @param bool $value กำหนดว่าคอลัมน์มีคุณสมบัติ INDEX หรือไม่
-     * @return App\Core\ColumnDefinition
+     * @return self
      */
     public function index(bool $value = true): self
     {
@@ -269,7 +269,7 @@ class ColumnDefinition
      * ```
      * 
      * @param bool $value กำหนดว่าคอลัมน์มีคุณสมบัติ PRIMARY KEY หรือไม่
-     * @return App\Core\ColumnDefinition
+     * @return self
      */
     public function primary(bool $value = true): self
     {
@@ -470,6 +470,8 @@ class ColumnDefinition
                     $default = 'CURRENT_TIMESTAMP';
                 }
                 $sql .= ' DEFAULT ' . $default;
+            } elseif (is_bool($this->default)) {
+                $sql .= ' DEFAULT ' . ($this->default ? '1' : '0');
             } else {
                 $default = is_numeric($this->default) ? $this->default : "'" . addslashes((string)$this->default) . "'";
                 $sql .= ' DEFAULT ' . $default;
