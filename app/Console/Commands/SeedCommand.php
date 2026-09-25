@@ -53,32 +53,30 @@ class SeedCommand extends BaseCommand
             $seeders = ['Database\\Seeders\\' . $requestedSeeder];
         } else {
 
-            // ถ้าไม่มีการระบุชื่อ Seeder ให้ค้นหา Seeder ทั้งหมดในโฟลเดอร์ database/seeders
-            $seederDir = $this->path('database/seeders');
-     
-            // ตรวจสอบว่าโฟลเดอร์ database/seeders มีอยู่หรือไม่
-            if (!is_dir($seederDir)) {
-                $this->warning("ไม่พบโฟลเดอร์ database/seeders");
-                $this->info("สร้าง Seeder ใหม่ได้ด้วย: php console make:seeder UserSeeder");
-                return;
-            }
-            
-            // ค้นหาไฟล์ที่ลงท้ายด้วย "Seeder.php" ในโฟลเดอร์ database/seeders
-            $files = glob($seederDir . '/*Seeder.php') ?: [];
-            sort($files, SORT_STRING);
+            // ถ้ามี DatabaseSeeder (จุดรวมลำดับการ seed แบบ Laravel) ให้รันไฟล์นี้เพียงไฟล์เดียว
+            // เพราะมันจะเรียก Seeder อื่นตามลำดับที่ประกาศไว้ในตัวเองอยู่แล้ว
+            if (class_exists('Database\\Seeders\\DatabaseSeeder')) {
+                $seeders = ['Database\\Seeders\\DatabaseSeeder'];
+            } else {
+                // ถ้าไม่มี DatabaseSeeder ให้ fallback ไปค้นหา Seeder ทั้งหมดในโฟลเดอร์ database/seeders แล้วเรียงตามตัวอักษร
+                $seederDir = $this->path('database/seeders');
 
-            // สร้างรายชื่อ class ของ Seeder จากชื่อไฟล์ที่พบ
-            foreach ($files as $file) {
-                // ดึงชื่อ class จากชื่อไฟล์ (สมมติว่าไฟล์ชื่อ UserSeeder.php จะได้ class UserSeeder)
-                $classBase = basename($file, '.php');
-
-                // ข้ามไฟล์ที่ไม่มีชื่อ class หรือชื่อ class เป็น "Seeder" เท่านั้น
-                if ($classBase === '' || $classBase === 'Seeder') {
-                    continue;
+                if (!is_dir($seederDir)) {
+                    $this->warning("ไม่พบโฟลเดอร์ database/seeders");
+                    $this->info("สร้าง Seeder ใหม่ได้ด้วย: php console make:seeder UserSeeder");
+                    return;
                 }
 
-                // สร้างชื่อ class เต็มรูปแบบของ Seeder
-                $seeders[] = 'Database\\Seeders\\' . $classBase;
+                $files = glob($seederDir . '/*Seeder.php') ?: [];
+                sort($files, SORT_STRING);
+
+                foreach ($files as $file) {
+                    $classBase = basename($file, '.php');
+                    if ($classBase === '' || $classBase === 'Seeder' || $classBase === 'DatabaseSeeder') {
+                        continue;
+                    }
+                    $seeders[] = 'Database\\Seeders\\' . $classBase;
+                }
             }
         }
 

@@ -50,6 +50,23 @@ abstract class Seeder
     abstract public function run(): void;
 
     /**
+     * รัน Seeder class อื่นตามลำดับที่ระบุ (แบบ Laravel's $this->call())
+     * ใช้ใน DatabaseSeeder เพื่อประกาศลำดับการ seed ทั้งหมดไว้ในที่เดียว
+     *
+     * @param array $seederClasses รายชื่อ Seeder class เต็มรูปแบบ (FQCN) เรียงตามลำดับที่ต้องการรัน
+     */
+    protected function call(array $seederClasses): void
+    {
+        foreach ($seederClasses as $seederClass) {
+            if (!class_exists($seederClass)) {
+                $this->log("⚠ ไม่พบ Seeder class {$seederClass} ข้าม...");
+                continue;
+            }
+            (new $seederClass())->run();
+        }
+    }
+
+    /**
      * Insert ข้อมูลเข้าตาราง
      * จุดประสงค์: แทรกข้อมูลลงในตารางฐานข้อมูลด้วยการจัดการข้อผิดพลาดอย่างละเอียด
      * insert() ควรใช้กับอะไร: ชื่อตารางและข้อมูลที่ต้องการแทรก

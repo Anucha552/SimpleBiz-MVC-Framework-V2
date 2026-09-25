@@ -40,7 +40,57 @@ class MakeSeederCommand extends BaseCommand
         file_put_contents($path, $template);
 
         $this->success("สร้าง Seeder สำเร็จ: database/seeders/{$name}.php");
+
+        $this->ensureDatabaseSeederExists($name);
+
         echo "\n";
+    }
+
+    /**
+     * สร้าง DatabaseSeeder.php ให้อัตโนมัติถ้ายังไม่มี เพื่อกันลืมกำหนดลำดับการ seed
+     */
+    private function ensureDatabaseSeederExists(string $newSeederName): void
+    {
+        $databaseSeederPath = $this->path('database/seeders/DatabaseSeeder.php');
+
+        if (file_exists($databaseSeederPath)) {
+            $this->info("พบ DatabaseSeeder.php อยู่แล้ว อย่าลืมเพิ่ม {$newSeederName}::class เข้าไปในลำดับที่ถูกต้อง");
+            return;
+        }
+
+        $template = $this->getDatabaseSeederTemplate($newSeederName);
+        file_put_contents($databaseSeederPath, $template);
+
+        $this->success("ไม่พบ DatabaseSeeder.php จึงสร้างให้อัตโนมัติ: database/seeders/DatabaseSeeder.php");
+    }
+
+    private function getDatabaseSeederTemplate(string $firstSeederName): string
+    {
+        return <<<PHP
+<?php
+/**
+ * DatabaseSeeder
+ *
+ * จุดประสงค์: จุดรวมลำดับการรัน Seeder ทั้งหมด
+ * แก้ลำดับการ seed ได้ที่ไฟล์นี้ไฟล์เดียว โดยไม่ต้องแก้ Seeder ตัวอื่น
+ */
+
+namespace Database\Seeders;
+
+use App\Core\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    public function run(): void
+    {
+        \$this->call([
+            {$firstSeederName}::class,
+            // TODO: เพิ่ม Seeder ตัวถัดไปที่นี่ เรียงตามลำดับ dependency (ตารางที่ถูกอ้างอิงต้องมาก่อน)
+        ]);
+    }
+}
+
+PHP;
     }
 
     private function getSeederTemplate(string $name): string
