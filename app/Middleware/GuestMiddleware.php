@@ -55,12 +55,13 @@ class GuestMiddleware extends Middleware
         // ใช้ redirect path ที่กำหนด
         if ($redirectTo !== null) {
             $this->redirectTo = $redirectTo;
-        }
+        } else {
 
-        // โหลด redirect path จาก config ถ้ามี
-        $configRedirect = (string) Config::get('auth.guest_redirect_to', '');
-        if ($configRedirect) {
-            $this->redirectTo = $configRedirect;
+            // โหลด redirect path จาก config ถ้ามี
+            $configRedirect = (string) Config::get('auth.guest_redirect_to', '');
+            if ($configRedirect) {
+                $this->redirectTo = $configRedirect;
+            }
         }
     }
 
