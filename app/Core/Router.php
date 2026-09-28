@@ -38,6 +38,11 @@ class Router
     ];
 
     /**
+     * กลุ่ม route ที่กำลังลงทะเบียนอยู่ เรียงจากกลุ่มนอกไปกลุ่มใน
+     */
+    private array $groupStack = [];
+
+    /**
      * โหลดชุด routes ที่ถูก cache ไว้
      * @param array $routes รูปแบบเดียวกับ $this->routes
      * @return void
@@ -70,6 +75,39 @@ class Router
     }
 
     /**
+     * ลงทะเบียน routes ภายใต้ prefix และ middleware ร่วม
+     * จุดประสงค์: รวม route ที่ใช้ path prefix หรือ middleware เดียวกัน และรองรับกลุ่มซ้อน
+     * ตัวอย่างการใช้งาน:
+     * ```php
+     * $router->group('/admin', [AuthMiddleware::class], function (Router $router): void {
+     *     $router->get('/users', 'UserController@index');
+     * });
+     * ```
+     *
+     * @param string $prefix prefix ที่เติมหน้าทุก path ในกลุ่ม
+     * @param array $middleware middleware ที่ใช้ร่วมกันในกลุ่ม
+     * @param callable $callback callback สำหรับลงทะเบียน routes ภายในกลุ่ม
+     * @return void
+     */
+    public function group(string $prefix, array $middleware, callable $callback): void
+    {
+        $parent = $this->groupStack === []
+            ? ['prefix' => '', 'middleware' => []]
+            : $this->groupStack[array_key_last($this->groupStack)];
+
+        $this->groupStack[] = [
+            'prefix' => $this->joinRoutePaths($parent['prefix'], $prefix),
+            'middleware' => array_merge($parent['middleware'], $middleware),
+        ];
+
+        try {
+            $callback($this);
+        } finally {
+            array_pop($this->groupStack);
+        }
+    }
+
+    /**
      * สร้างอินสแตนซ์ Router
      * จุดประสงค์: สร้างอินสแตนซ์ Router และกำหนด Container (ถ้ามี)
      * Router() ควรใช้กับอะไร: เมื่อคุณต้องการสร้างอินสแตนซ์ Router ใหม่
@@ -98,11 +136,11 @@ class Router
      * @param string $path รูปแบบเส้นทาง
      * @param string $controller รูปแบบ Controller@method
      * @param array $middleware คลาส middleware (ไม่บังคับ)
-     * @return void ไม่มีค่าที่ส่งกลับ
+        * @return RouteDefinition นิยามเส้นทางสำหรับ chain constraint
      */
-    public function get(string $path, string $controller, array $middleware = []): void
+    public function get(string $path, string $controller, array $middleware = []): RouteDefinition
     {
-        $this->addRoute('GET', $path, $controller, $middleware);
+        return $this->addRoute('GET', $path, $controller, $middleware);
     }
 
     /**
@@ -117,11 +155,11 @@ class Router
      * @param string $path รูปแบบเส้นทาง
      * @param string $controller รูปแบบ Controller@method
      * @param array $middleware คลาส middleware (ไม่บังคับ)
-     * @return void ไม่มีค่าที่ส่งกลับ
+        * @return RouteDefinition นิยามเส้นทางสำหรับ chain constraint
      */
-    public function post(string $path, string $controller, array $middleware = []): void
+    public function post(string $path, string $controller, array $middleware = []): RouteDefinition
     {
-        $this->addRoute('POST', $path, $controller, $middleware);
+        return $this->addRoute('POST', $path, $controller, $middleware);
     }
 
     /**
@@ -136,11 +174,11 @@ class Router
      * @param string $path รูปแบบเส้นทาง
      * @param string $controller รูปแบบ Controller@method
      * @param array $middleware คลาส middleware (ไม่บังคับ)
-     * @return void ไม่มีค่าที่ส่งกลับ
+        * @return RouteDefinition นิยามเส้นทางสำหรับ chain constraint
      */
-    public function put(string $path, string $controller, array $middleware = []): void
+    public function put(string $path, string $controller, array $middleware = []): RouteDefinition
     {
-        $this->addRoute('PUT', $path, $controller, $middleware);
+        return $this->addRoute('PUT', $path, $controller, $middleware);
     }
 
     /**
@@ -155,11 +193,11 @@ class Router
      * @param string $path รูปแบบเส้นทาง
      * @param string $controller รูปแบบ Controller@method
      * @param array $middleware คลาส middleware (ไม่บังคับ)
-     * @return void ไม่มีค่าที่ส่งกลับ
+        * @return RouteDefinition นิยามเส้นทางสำหรับ chain constraint
      */
-    public function delete(string $path, string $controller, array $middleware = []): void
+    public function delete(string $path, string $controller, array $middleware = []): RouteDefinition
     {
-        $this->addRoute('DELETE', $path, $controller, $middleware);
+        return $this->addRoute('DELETE', $path, $controller, $middleware);
     }
 
     /**
@@ -175,14 +213,53 @@ class Router
      * @param string $path รูปแบบเส้นทาง
      * @param string $controller รูปแบบ Controller@method
      * @param array $middleware คลาส middleware
-     * @return void ไม่มีค่าที่ส่งกลับ
+        * @return RouteDefinition นิยามเส้นทางสำหรับ chain constraint
      */
-    private function addRoute(string $method, string $path, string $controller, array $middleware): void
+    private function addRoute(string $method, string $path, string $controller, array $middleware): RouteDefinition
     {
+        if ($this->groupStack !== []) {
+            $group = $this->groupStack[array_key_last($this->groupStack)];
+            $path = $this->joinRoutePaths($group['prefix'], $path);
+            $middleware = array_merge($group['middleware'], $middleware);
+        }
+
         $this->routes[$method][$path] = [
             'controller' => $controller,
             'middleware' => $middleware,
+            'wheres' => [],
         ];
+
+        return new RouteDefinition($this, $method, $path);
+    }
+
+    private function joinRoutePaths(string ...$segments): string
+    {
+        $parts = [];
+
+        foreach ($segments as $segment) {
+            $segment = trim($segment, '/');
+            if ($segment !== '') {
+                $parts[] = $segment;
+            }
+        }
+
+        return '/' . implode('/', $parts);
+    }
+
+    /**
+     * กำหนด regex constraint ให้ route parameter
+     */
+    public function setRouteConstraint(string $method, string $path, string $parameter, string $expression): void
+    {
+        if (!isset($this->routes[$method][$path])) {
+            throw new \InvalidArgumentException('Route is not registered');
+        }
+
+        if (!preg_match('/\{' . preg_quote($parameter, '/') . '\}/', $path)) {
+            throw new \InvalidArgumentException("Route parameter {$parameter} is not defined");
+        }
+
+        $this->routes[$method][$path]['wheres'][$parameter] = $expression;
     }
 
     /**
@@ -404,10 +481,7 @@ class Router
         }
 
         foreach ($this->routes[$method] as $pattern => $route) {
-            // แปลงรูปแบบเส้นทางเป็น regex
-            // {id} กลายเป็นกลุ่มจับที่มีชื่อ (?P<id>[^/]+)
-            $regex = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[^/]+)', $pattern);
-            $regex = '#^' . $regex . '$#';
+            $regex = $this->compileRouteRegex($pattern, $route['wheres'] ?? []);
 
             if (preg_match($regex, $uri, $matches)) {
                 // แยกค่าพารามิเตอร์
@@ -446,8 +520,7 @@ class Router
 
         foreach ($this->routes as $httpMethod => $methodRoutes) {
             foreach ($methodRoutes as $pattern => $route) {
-                $regex = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[^/]+)', $pattern);
-                $regex = '#^' . $regex . '$#';
+                $regex = $this->compileRouteRegex($pattern, $route['wheres'] ?? []);
 
                 if (preg_match($regex, $uri)) {
                     $allowed[] = $httpMethod;
@@ -457,6 +530,22 @@ class Router
         }
 
         return $allowed;
+    }
+
+    private function compileRouteRegex(string $pattern, array $wheres): string
+    {
+        $regex = preg_replace_callback(
+            '/\{([a-zA-Z0-9_]+)\}/',
+            static function (array $matches) use ($wheres): string {
+                $name = $matches[1];
+                $constraint = $wheres[$name] ?? '[^/]+';
+
+                return '(?P<' . $name . '>' . $constraint . ')';
+            },
+            $pattern
+        );
+
+        return '#^' . $regex . '$#';
     }
 
     /**

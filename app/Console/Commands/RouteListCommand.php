@@ -21,16 +21,7 @@ class RouteListCommand extends BaseCommand
         $this->info("กำลังโหลด routes...");
         echo "\n";
 
-        $collector = new class {
-            public array $routes = [];
-            public function get(string $path, string $handler, array $middleware = []): void { $this->routes[] = ['GET', $path, $handler, $middleware]; }
-            public function post(string $path, string $handler, array $middleware = []): void { $this->routes[] = ['POST', $path, $handler, $middleware]; }
-            public function put(string $path, string $handler, array $middleware = []): void { $this->routes[] = ['PUT', $path, $handler, $middleware]; }
-            public function delete(string $path, string $handler, array $middleware = []): void { $this->routes[] = ['DELETE', $path, $handler, $middleware]; }
-            public function patch(string $path, string $handler, array $middleware = []): void { $this->routes[] = ['PATCH', $path, $handler, $middleware]; }
-        };
-
-        $router = $collector;
+        $router = new \App\Core\Router();
 
         $loadedAny = false;
         foreach (['web' => $this->path('routes/web.php'), 'api' => $this->path('routes/api.php')] as $type => $file) {
@@ -52,7 +43,10 @@ class RouteListCommand extends BaseCommand
             return;
         }
 
-        if (empty($collector->routes)) {
+        $routes = $router->getRoutes();
+        $routeCount = array_sum(array_map('count', $routes));
+
+        if ($routeCount === 0) {
             $this->warning("ไม่พบการลงทะเบียน routes ในไฟล์ routes/");
             return;
         }
@@ -63,21 +57,26 @@ class RouteListCommand extends BaseCommand
         echo str_pad('METHOD', 8) . str_pad('PATH', 35) . str_pad('HANDLER', 45) . "MIDDLEWARE\n";
         echo str_repeat('─', 110) . "\n";
 
-        foreach ($collector->routes as $route) {
-            [$method, $path, $handler, $middleware] = $route;
-            $middlewareText = '-';
-            if (!empty($middleware)) {
-                $middlewareText = implode(', ', array_map(fn($m) => is_string($m) ? $m : gettype($m), $middleware));
-            }
+        foreach ($routes as $method => $methodRoutes) {
+            foreach ($methodRoutes as $path => $route) {
+                $middlewareText = '-';
+                if (!empty($route['middleware'])) {
+                    $middlewareText = implode(', ', array_map(
+                        fn($middleware) => is_string($middleware) ? $middleware : gettype($middleware),
+                        $route['middleware']
+                    ));
+                }
 
-            $methodOut = str_pad($method, 8);
-            $pathOut = str_pad(strlen($path) > 34 ? substr($path, 0, 31) . '...' : $path, 35);
-            $handlerOut = str_pad(strlen($handler) > 44 ? substr($handler, 0, 41) . '...' : $handler, 45);
-            echo $methodOut . $pathOut . $handlerOut . $middlewareText . "\n";
+                $methodOut = str_pad($method, 8);
+                $pathOut = str_pad(strlen($path) > 34 ? substr($path, 0, 31) . '...' : $path, 35);
+                $handler = $route['controller'];
+                $handlerOut = str_pad(strlen($handler) > 44 ? substr($handler, 0, 41) . '...' : $handler, 45);
+                echo $methodOut . $pathOut . $handlerOut . $middlewareText . "\n";
+            }
         }
 
         echo str_repeat('─', 110) . "\n";
-        $this->success("รวมทั้งหมด " . count($collector->routes) . " routes");
+        $this->success("รวมทั้งหมด " . $routeCount . " routes");
         echo "\n";
     }
 }

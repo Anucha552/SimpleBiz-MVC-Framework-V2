@@ -26,6 +26,102 @@ final class RouterDispatchTest extends TestCase
         $this->assertSame(['show', ['123']], Fixtures\DummyController::$lastCall);
     }
 
+    public function testWhereNumberConstraintMatchesNumericParameters(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/products/123';
+        $_SERVER['SCRIPT_NAME'] = '/index.php';
+
+        $router = new Router();
+        $router->get('/products/{id}', Fixtures\DummyController::class . '@show')->whereNumber('id');
+
+        Fixtures\DummyController::$lastCall = null;
+        $router->dispatch();
+
+        $this->assertSame(['show', ['123']], Fixtures\DummyController::$lastCall);
+    }
+
+    public function testWhereNumberConstraintRejectsNonNumericParameters(): void
+    {
+        $router = new Router();
+        $router->get('/products/{id}', Fixtures\DummyController::class . '@show')->whereNumber('id');
+
+        $matchRoute = new \ReflectionMethod(Router::class, 'matchRoute');
+        $matchRoute->setAccessible(true);
+
+        $this->assertNull($matchRoute->invoke($router, 'GET', '/products/abc'));
+    }
+
+    public function testRouteConstraintsCanBeChainedForEveryHttpMethod(): void
+    {
+        $router = new Router();
+        $controller = Fixtures\DummyController::class . '@show';
+
+        $router->get('/get/{id}', $controller)->whereNumber('id');
+        $router->post('/post/{id}', $controller)->whereAlpha('id');
+        $router->put('/put/{id}', $controller)->whereAlphaNumeric('id');
+        $router->delete('/delete/{id}', $controller)->whereIn('id', ['one', 'two']);
+
+        $routes = $router->getRoutes();
+        $this->assertSame('[0-9]+', $routes['GET']['/get/{id}']['wheres']['id']);
+        $this->assertSame('[a-zA-Z]+', $routes['POST']['/post/{id}']['wheres']['id']);
+        $this->assertSame('[a-zA-Z0-9]+', $routes['PUT']['/put/{id}']['wheres']['id']);
+        $this->assertSame('(?:one|two)', $routes['DELETE']['/delete/{id}']['wheres']['id']);
+    }
+
+    public function testRouteGroupsCombinePrefixesMiddlewareAndConstraints(): void
+    {
+        $router = new Router();
+        $controller = Fixtures\DummyController::class . '@show';
+
+        $router->group('/api', [Fixtures\BlockingMiddleware::class], function (Router $router) use ($controller): void {
+            $router->get('/users/{id}', $controller)->whereNumber('id');
+
+            $router->group('/v1', [Fixtures\BlockingMiddleware::class], function (Router $router) use ($controller): void {
+                $router->post('/files/{uuid}', $controller)->whereUuid('uuid');
+            });
+        });
+
+        $router->get('/health', $controller);
+
+        $routes = $router->getRoutes();
+        $this->assertSame(
+            [Fixtures\BlockingMiddleware::class],
+            $routes['GET']['/api/users/{id}']['middleware']
+        );
+        $this->assertSame('[0-9]+', $routes['GET']['/api/users/{id}']['wheres']['id']);
+        $this->assertSame(
+            [Fixtures\BlockingMiddleware::class, Fixtures\BlockingMiddleware::class],
+            $routes['POST']['/api/v1/files/{uuid}']['middleware']
+        );
+        $this->assertArrayHasKey('/health', $routes['GET']);
+
+        $matchRoute = new \ReflectionMethod(Router::class, 'matchRoute');
+        $matchRoute->setAccessible(true);
+        $matchedRoute = $matchRoute->invoke($router, 'GET', '/api/users/42');
+
+        $this->assertSame(['42'], $matchedRoute['params']);
+    }
+
+    public function testSetRoutesMatchesCachedRoutesWithoutConstraints(): void
+    {
+        $router = new Router();
+        $router->setRoutes([
+            'GET' => [
+                '/products/{id}' => [
+                    'controller' => Fixtures\DummyController::class . '@show',
+                    'middleware' => [],
+                ],
+            ],
+        ]);
+
+        $matchRoute = new \ReflectionMethod(Router::class, 'matchRoute');
+        $matchRoute->setAccessible(true);
+        $matchedRoute = $matchRoute->invoke($router, 'GET', '/products/legacy');
+
+        $this->assertSame(['legacy'], $matchedRoute['params']);
+    }
+
     public function testMethodOverrideFromPostToPutWorks(): void
     {
         $_SERVER['REQUEST_METHOD'] = 'POST';
@@ -58,10 +154,15 @@ final class RouterDispatchTest extends TestCase
         Fixtures\RequestController::$lastCall = null;
         $router->dispatch();
 
-        $this->assertIsArray(Fixtures\RequestController::$lastCall);
-        $this->assertSame('show', Fixtures\RequestController::$lastCall[0]);
-        $this->assertInstanceOf(Request::class, Fixtures\RequestController::$lastCall[1][0]);
-        $this->assertSame('55', Fixtures\RequestController::$lastCall[1][1]);
+        $lastCall = Fixtures\RequestController::$lastCall;
+        $this->assertIsArray($lastCall);
+        if (!is_array($lastCall)) {
+            return;
+        }
+
+        $this->assertSame('show', $lastCall[0]);
+        $this->assertInstanceOf(Request::class, $lastCall[1][0]);
+        $this->assertSame('55', $lastCall[1][1]);
     }
 
     public function testDispatchCanEmitResponseReturnedByController(): void

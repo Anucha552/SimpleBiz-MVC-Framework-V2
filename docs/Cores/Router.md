@@ -1,317 +1,258 @@
 # Router Usage Guide
 
-เอกสารนี้อธิบายวิธีใช้งานคลาส Router สำหรับจัดการเส้นทาง (Routing) ของแอปพลิเคชัน โดยรองรับ HTTP หลายเมธอด, พารามิเตอร์แบบไดนามิก และ Middleware
+เอกสารนี้อธิบายการลงทะเบียนและจัดการ routes ด้วย `App\Core\Router` ตามความสามารถที่มีอยู่ในโปรเจกต์ปัจจุบัน
 
----
+## 1. ภาพรวม
 
-## 1) แนวคิดพื้นฐานของ Router
+Router จับคู่ HTTP method และ URL กับ Controller method จากนั้นเรียก middleware ก่อนส่งพารามิเตอร์ให้ Controller
 
-Router ทำหน้าที่จับคู่คำขอ HTTP ที่เข้ามา (เช่น `GET /products/10`) แล้วส่งต่อไปยัง Controller และเมธอดที่กำหนดไว้
+ลำดับโดยย่อ:
 
-### ลำดับการทำงานโดยสรุป
+1. ลงทะเบียน routes
+2. รับ HTTP method และ URI
+3. หา route ที่ตรงกัน
+4. เรียก middleware ตามลำดับ
+5. เรียก Controller พร้อม route parameters
+6. ส่ง `Response` กลับ หาก Controller คืน `Response` หรือ string
 
-- ลงทะเบียนเส้นทาง (Route Registration)
-- รับ HTTP Method และ URI
-- จับคู่เส้นทาง
-- เรียก Middleware ตามลำดับ
-- เรียก Controller พร้อมพารามิเตอร์
-- ส่ง Response กลับไปยังผู้ใช้
+## 2. เริ่มใช้งาน
 
----
-
-## 2) การสร้างและใช้งาน Router
-
-ตัวอย่างใน Front Controller (เช่น `public/index.php`)
+ใน front controller สร้าง Router, โหลดไฟล์ routes แล้วเรียก `dispatch()`:
 
 ```php
 use App\Core\Router;
 
 $router = new Router();
-
-$router->get('/products', 'App\Controllers\ProductController@index');
-$router->post('/products', 'App\Controllers\ProductController@store');
+require __DIR__ . '/../routes/web.php';
+require __DIR__ . '/../routes/api.php';
 
 $router->dispatch();
 ```
 
-เมื่อมีคำขอเข้ามา ระบบจะเรียก `dispatch()` เพื่อเริ่มกระบวนการจับคู่เส้นทาง
+## 3. ลงทะเบียน routes
 
----
-
-## 3) การลงทะเบียนเส้นทาง (Route Registration)
-
-Router รองรับ 4 HTTP Method หลัก: `GET`, `POST`, `PUT`, `DELETE`
-
-### 3.1 GET
+Router รองรับ `GET`, `POST`, `PUT` และ `DELETE`:
 
 ```php
-$router->get('/products', 'App\Controllers\ProductController@index');
+$router->get('/products', 'App\\Controllers\\ProductController@index');
+$router->post('/products', 'App\\Controllers\\ProductController@store');
+$router->put('/products/{id}', 'App\\Controllers\\ProductController@update');
+$router->delete('/products/{id}', 'App\\Controllers\\ProductController@destroy');
 ```
 
-เหมาะสำหรับ:
+Controller ระบุด้วยรูปแบบ `Full\\Namespace\\Controller@method` ส่วน method ของ Router คืน `RouteDefinition` เพื่อให้ต่อ chain constraints ได้
 
-- แสดงข้อมูล
-- หน้าเว็บทั่วไป
-- API ดึงข้อมูล
+### Method override
 
-### 3.2 POST
-
-```php
-$router->post('/products', 'App\Controllers\ProductController@store');
-```
-
-เหมาะสำหรับ:
-
-- ส่งฟอร์ม
-- สร้างข้อมูลใหม่
-
-### 3.3 PUT
-
-```php
-$router->put('/products/{id}', 'App\Controllers\ProductController@update');
-```
-
-เหมาะสำหรับ:
-
-- อัปเดตข้อมูล
-
-รองรับ _method override จากฟอร์ม:
+ฟอร์ม HTML ใช้ `POST` และส่ง `_method` เพื่อเรียก route แบบ `PUT` หรือ `DELETE` ได้:
 
 ```html
-<form method="POST">
+<form method="POST" action="/products/15">
     <input type="hidden" name="_method" value="PUT">
+    <input type="hidden" name="_csrf_token" value="...">
 </form>
 ```
 
-### 3.4 DELETE
+Router จะใช้ค่า `_method` เมื่อ request method จริงเป็น `POST` จากนั้นจับคู่ route ด้วย method ที่ override แล้ว ควรใช้ CSRF middleware กับคำขอที่เปลี่ยนข้อมูล
+
+## 4. Route parameters
+
+ใช้ `{name}` เพื่อระบุ segment ที่เปลี่ยนแปลงได้:
 
 ```php
-$router->delete('/products/{id}', 'App\Controllers\ProductController@destroy');
+$router->get('/products/{id}', 'App\\Controllers\\ProductController@show')
+    ->whereNumber('id');
 ```
 
-เหมาะสำหรับ:
+สำหรับ URL `/products/15` Controller จะได้รับค่า `15` เป็น route parameter ตำแหน่งแรก โดยค่าที่ Router จับจาก URL เป็น string; หาก Controller ระบุ type เช่น `int` PHP อาจแปลงค่าตามกฎ type coercion ของ PHP แต่ constraint มีหน้าที่กรองรูปแบบ URL ไม่ใช่แปลงชนิดหรือยืนยันว่าข้อมูลมีอยู่จริง
 
-- ลบข้อมูล
-
----
-
-## 4) เส้นทางแบบพารามิเตอร์ (Dynamic Route)
-
-Router รองรับรูปแบบ `{parameter}`
-
-ตัวอย่าง:
+Route ที่มีหลาย parameters จะส่งค่าให้ Controller ตามลำดับที่ปรากฏใน path:
 
 ```php
-$router->get('/products/{id}', 'App\Controllers\ProductController@show');
+$router->get(
+    '/users/{userId}/files/{fileId}',
+    'App\\Controllers\\FileController@show'
+)->whereNumber('userId')->whereUuid('fileId');
 ```
 
-ถ้าเรียก: `GET /products/15`
-
-Controller จะได้รับค่า:
-
 ```php
-public function show($id)
+use App\Core\Response;
+
+public function show(int $userId, string $fileId): Response
 {
-    echo $id; // 15
+    // ใช้ $userId และ $fileId
 }
 ```
 
-Router จะแปลง `{id}` เป็น regex ภายในโดยอัตโนมัติ
+หาก Controller รับ `App\Core\Request` เป็นพารามิเตอร์แรก Router จะ inject Request ให้อัตโนมัติ จากนั้นจึงส่ง route parameters ตามลำดับ:
 
----
+```php
+use App\Core\Request;
+use App\Core\Response;
 
-## 5) การใช้งาน Middleware กับ Route
+public function show(Request $request, string $id): Response
+{
+    $search = $request->get('search');
+}
+```
 
-สามารถกำหนด middleware เป็นอาร์เรย์ลำดับที่ต้องการให้ทำงาน
+## 5. Parameter constraints
+
+Constraint ใช้กำหนดว่าค่าใดจับคู่กับ route ได้:
+
+```php
+$router->get('/posts/{postId}/{slug}', 'App\\Controllers\\PostController@show')
+    ->whereNumber('postId')
+    ->where('slug', '[a-z0-9-]+');
+```
+
+Methods ที่มีใน `RouteDefinition`:
+
+| Method | เงื่อนไข |
+| --- | --- |
+| `where($parameter, $regex)` | กำหนด regex เอง |
+| `where([...])` | กำหนด regex หลาย parameters ด้วย array `[ชื่อ => regex]` |
+| `whereNumber($parameter)` | ตัวเลข 0-9 อย่างน้อยหนึ่งหลัก |
+| `whereAlpha($parameter)` | ตัวอักษรภาษาอังกฤษอย่างน้อยหนึ่งตัว |
+| `whereAlphaNumeric($parameter)` | ตัวอักษรภาษาอังกฤษหรือตัวเลขอย่างน้อยหนึ่งตัว |
+| `whereUuid($parameter)` | รูปแบบ UUID 8-4-4-4-12 โดยรับเลขฐานสิบหกทั้งตัวพิมพ์เล็กและใหญ่ |
+| `whereUlid($parameter)` | รูปแบบ ULID 26 ตัวอักษร |
+| `whereIn($parameter, $values)` | จำกัดให้ตรงกับค่าใดค่าหนึ่งในรายการ |
+
+กำหนดเงื่อนไขหลาย parameters ด้วย `where()` หรือ chain methods ได้:
+
+```php
+$router->get('/posts/{id}/{status}', 'App\\Controllers\\PostController@show')
+    ->where([
+        'id' => '[0-9]+',
+        'status' => '[a-z]+',
+    ]);
+
+$router->get('/posts/{status}', 'App\\Controllers\\PostController@byStatus')
+    ->whereIn('status', ['draft', 'published']);
+```
+
+ถ้า URL ไม่ตรง constraint route นั้นจะไม่ match และ Router จะจัดการเป็น 404 เว้นแต่มี route อื่นที่ตรงกัน
+
+## 6. Route groups
+
+`group($prefix, $middleware, $callback)` รวม prefix และ middleware ให้ routes ภายใน รองรับ groups ซ้อนกันได้ Middleware ของกลุ่มชั้นนอกจะทำงานก่อน middleware ของกลุ่มชั้นในและ middleware ที่ระบุบน route:
+
+```php
+use App\Core\Router;
+use App\Middleware\AuthMiddleware;
+use App\Middleware\CsrfMiddleware;
+
+$router->group('/admin', [AuthMiddleware::class], function (Router $router): void {
+    $router->get('/dashboard', 'App\\Controllers\\AdminController@index');
+
+    $router->group('/users', [CsrfMiddleware::class], function (Router $router): void {
+        $router->post('/', 'App\\Controllers\\AdminUserController@store');
+        $router->get('/{id}', 'App\\Controllers\\AdminUserController@show')
+            ->whereNumber('id');
+    });
+});
+```
+
+ตัวอย่างนี้ลงทะเบียนเป็น `/admin/dashboard`, `/admin/users` และ `/admin/users/{id}` โดย route ภายในกลุ่มซ้อนจะได้รับ middleware ทั้งจากกลุ่มนอกและกลุ่มใน เครื่องหมาย slash รอบ path จะถูกตัดและประกอบใหม่
+
+กลุ่มปัจจุบันรองรับเฉพาะ prefix และ middleware; ยังไม่มี group options สำหรับ name, domain หรือ constraints ที่สืบทอดทั้งกลุ่ม
+
+## 7. Middleware
+
+กำหนด middleware เป็นอาร์เรย์ใน argument ที่สามของ route:
 
 ```php
 use App\Middleware\AuthMiddleware;
 
 $router->get(
     '/dashboard',
-    'App\Controllers\DashboardController@index',
+    'App\\Controllers\\DashboardController@index',
     [AuthMiddleware::class]
 );
 ```
 
-ลำดับการทำงาน:
+Middleware ทำงานตามลำดับที่กำหนด:
 
-- สร้าง instance ของ Middleware
-- เรียก `handle()`
-- ถ้า return `true` → ไปต่อ
-- ถ้า return `false` → หยุด
-- ถ้า return `Response` → ส่งกลับทันที
+- `handle()` คืน `true` เพื่อไป middleware หรือ Controller ถัดไป
+- คืน `false` เพื่อหยุดการทำงาน
+- คืน `Response` เพื่อส่ง response และหยุดการทำงาน
+- หลัง Controller ทำงานสำเร็จ Router เรียก `after()` ย้อนลำดับ สำหรับ middleware ที่มี method นี้
 
-### 5.1 Middleware พร้อมพารามิเตอร์
-
-รองรับรูปแบบ array:
+ส่ง constructor arguments ให้ middleware ได้ เช่น:
 
 ```php
-$router->get(
-    '/admin',
-    'App\Controllers\AdminController@index',
-    [
-        [RoleMiddleware::class, 'admin']
-    ]
-);
+use App\Middleware\RoleMiddleware;
+
+$router->get('/admin', 'App\\Controllers\\AdminController@index', [
+    [RoleMiddleware::class, 'admin'],
+]);
+
+$router->get('/reports', 'App\\Controllers\\ReportController@index', [
+    [RoleMiddleware::class, [['admin', 'manager']]],
+]);
 ```
 
-หรือส่งหลายค่า:
+รูปแบบแรกส่ง `'admin'` เป็น argument เดียว ส่วนรูปแบบที่สองส่ง array `['admin', 'manager']` เป็น argument เดียวให้ constructor โดยต้องใส่ array ซ้อนตามตัวอย่าง เพราะ Router กระจายค่าจากรายการ middleware เข้า constructor
+
+## 8. ลำดับการจับคู่และ HTTP errors
+
+Router ตรวจ routes ตามลำดับที่ลงทะเบียนและใช้ route แรกที่ match ดังนั้นควรลงทะเบียน static routes ก่อน dynamic routes ที่อาจครอบคลุม path เดียวกัน:
 
 ```php
-[
-    [RoleMiddleware::class, ['admin', 'editor']]
-]
+$router->get('/users/create', 'App\\Controllers\\UserController@create');
+$router->get('/users/{id}', 'App\\Controllers\\UserController@show')->whereNumber('id');
 ```
 
-Router จะส่งพารามิเตอร์เข้า constructor ของ middleware
+- `404 Not Found`: ไม่มี route ที่ตรงกับ method และ URI
+- `405 Method Not Allowed`: URI ตรงกับ route แต่ method ไม่ตรง Router ส่ง `Allow` header พร้อม methods ที่รองรับ
 
----
+## 9. Controller และ Response
 
-## 6) รูปแบบ Controller
-
-ต้องกำหนดเป็น: `Full\Namespace\Controller@method`
-
-ตัวอย่าง:
-
-```php
-$router->get(
-    '/users',
-    'App\Controllers\UserController@index'
-);
-```
-
-Controller ตัวอย่าง:
+Controller method ต้องตรงกับชื่อหลัง `@`:
 
 ```php
 namespace App\Controllers;
 
-class UserController
+use App\Core\Response;
+
+class ProductController
 {
-    public function index()
+    public function index(): Response
     {
-        return "User List";
+        return Response::json(['items' => []]);
+    }
+
+    public function show(string $id): string
+    {
+        return '<h1>Product ' . htmlspecialchars($id, ENT_QUOTES, 'UTF-8') . '</h1>';
     }
 }
 ```
 
----
+Router ส่ง `Response` ที่ Controller คืนกลับไปยังผู้ใช้ และห่อ string ที่ไม่ว่างเป็น HTML response ค่า return แบบอื่นหรือ string ว่างจะไม่สร้าง response จาก Controller
 
-## 7) Controller ที่รับ Request โดยตรง
+หากเกิด `Throwable` ขณะเรียก Controller Router จะบันทึก exception; คำขอ API ได้ response 500 ส่วนคำขอ Web จะเก็บข้อความ error ใน session และ redirect กลับ
 
-Router รองรับการ inject `Request` อัตโนมัติ หากกำหนด type hint
+## 10. การอ่าน URI
 
-```php
-use App\Core\Request;
+ก่อนจับคู่ Router จะตัด query string, base path ของการติดตั้งใน subdirectory และ slash ด้านหน้า/ด้านหลัง ตัวอย่าง:
 
-public function show(Request $request, $id)
-{
-    $query = $request->query('search');
-}
+```text
+/myapp/products/10?search=book  ->  /products/10
 ```
 
-ถ้าพารามิเตอร์ตัวแรกเป็น `Request` ระบบจะส่งเข้าไปให้เอง
+Query parameters ไม่ใช่ route parameters; ให้อ่านผ่าน `Request` เช่น `$request->get('search')` หรือ `$request->input('search')`
 
----
+## 11. แนวทางจัดระเบียบ routes
 
-## 8) การจัดการ Response จาก Controller
+- แยกไฟล์ Web และ API ตามที่โปรเจกต์ใช้อยู่ เช่น `routes/web.php` และ `routes/api.php`
+- แบ่งกลุ่ม routes ตาม feature หรือสิทธิ์การเข้าถึง
+- ใช้ group เมื่อหลาย routes ใช้ prefix หรือ middleware ชุดเดียวกัน
+- วาง static routes ก่อน dynamic routes และกำหนด constraints ให้ parameters
+- ใช้ HTTP method ให้ตรงกับการกระทำ และใช้ CSRF middleware สำหรับ Web requests ที่เปลี่ยนข้อมูล
+- เก็บ business logic ไว้ใน Controller หรือ service ไม่ใส่ใน route definition
 
-Controller สามารถ return ได้ 2 แบบหลัก:
+## 12. ความสามารถที่ยังไม่มี
 
-### 8.1 Return Response
-
-```php
-return Response::json(['message' => 'Success']);
-```
-
-Router จะเรียก `send()` ให้อัตโนมัติ
-
-### 8.2 Return String
-
-```php
-return "<h1>Hello</h1>";
-```
-
-Router จะห่อเป็น HTML Response ให้เอง
-
----
-
-## 9) การจัดการ 404 และ 405
-
-### 9.1 404 Not Found
-
-เกิดเมื่อไม่พบเส้นทางที่ตรงกัน
-
-Router จะเรียก `notFound()`
-
-### 9.2 405 Method Not Allowed
-
-เกิดเมื่อ:
-
-- URI ถูกต้อง
-- แต่ HTTP Method ไม่ตรง
-
-Router จะตอบกลับ `405` พร้อม Header:
-
-```
-Allow: GET, POST
-```
-
----
-
-## 10) การทำงานของ URI ภายใน
-
-Router จะ:
-
-- ลบ query string
-- ตัด base path (กรณีติดตั้งใน subdirectory)
-- ลบ slash หน้าและหลัง
-- คืนค่าในรูปแบบ `/path`
-
-ตัวอย่าง:
-
-`/myapp/products/10?search=test` จะถูกแปลงเป็น `/products/10`
-
----
-
-## 11) โครงสร้างไฟล์ที่แนะนำ
-
-```
-App/
- ├── Core/
- │    ├── Router.php
- │    ├── Request.php
- │    └── Response.php
- ├── Controllers/
- │    ├── ProductController.php
- │    └── UserController.php
- └── Middleware/
-```
-
----
-
-## 12) แนวปฏิบัติที่ดี (Best Practices)
-
-- ใช้ RESTful naming:
-  - `GET /products`
-  - `GET /products/{id}`
-  - `POST /products`
-  - `PUT /products/{id}`
-  - `DELETE /products/{id}`
-- แยก Web Route กับ API Route ให้ชัดเจน เช่น `/products` และ `/api/products`
-- อย่าใส่ business logic ใน Router
-- ใช้ Middleware สำหรับ validation และ security
-- Controller ควรมีหน้าที่ประสานงาน ไม่ควรทำงานหนักเกินไป
-
----
-
-## 13) สรุปแนวคิดสำคัญ
-
-Router คือ “ระบบนำทาง” ของแอปพลิเคชัน — มันรับคำขอ → ตรวจสอบเส้นทาง → ผ่านด่าน middleware → เรียก controller
-
-ถ้าออกแบบเส้นทางดีตั้งแต่ต้น:
-
-- โค้ดจะอ่านง่าย
-- ขยายระบบง่าย
-- ลดความซับซ้อนระยะยาว
-- รองรับ API และ Web ได้ในโครงสร้างเดียวกัน
+Router ปัจจุบันยังไม่มี `PATCH`, `HEAD`, `OPTIONS`, optional parameters เช่น `{id?}`, named routes/URL generation, resource routes, model binding หรือ fallback routes กลุ่ม route ยังไม่มี name/domain/group-wide constraints ด้วย หากต้องใช้ความสามารถเหล่านี้ต้องเพิ่มใน Router ก่อน
