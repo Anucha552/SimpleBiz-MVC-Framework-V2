@@ -65,6 +65,11 @@ final class RouteDefinition
 
     /**
      * จำกัดพารามิเตอร์ให้รับเฉพาะตัวเลข 0-9 อย่างน้อยหนึ่งหลัก
+        * ตัวอย่างการใช้งาน:
+        * ```php
+        * $router->get('/users/{id}', 'UserController@show')->whereNumber('id');
+        * ```
+        *
      * @param string $parameter ชื่อพารามิเตอร์ใน path
      * @return self นิยามเส้นทางเดิมสำหรับ chain method
      */
@@ -75,6 +80,11 @@ final class RouteDefinition
 
     /**
      * จำกัดพารามิเตอร์ให้รับเฉพาะตัวอักษรภาษาอังกฤษ
+        * ตัวอย่างการใช้งาน:
+        * ```php
+        * $router->get('/categories/{name}', 'CategoryController@show')->whereAlpha('name');
+        * ```
+        *
      * @param string $parameter ชื่อพารามิเตอร์ใน path
      * @return self นิยามเส้นทางเดิมสำหรับ chain method
      */
@@ -85,6 +95,11 @@ final class RouteDefinition
 
     /**
      * จำกัดพารามิเตอร์ให้รับเฉพาะตัวอักษรภาษาอังกฤษและตัวเลข
+        * ตัวอย่างการใช้งาน:
+        * ```php
+        * $router->get('/files/{key}', 'FileController@show')->whereAlphaNumeric('key');
+        * ```
+        *
      * @param string $parameter ชื่อพารามิเตอร์ใน path
      * @return self นิยามเส้นทางเดิมสำหรับ chain method
      */
@@ -95,6 +110,11 @@ final class RouteDefinition
 
     /**
      * จำกัดพารามิเตอร์ให้มีรูปแบบ UUID 8-4-4-4-12 ตัวอักษร
+        * ตัวอย่างการใช้งาน:
+        * ```php
+        * $router->get('/files/{uuid}', 'FileController@show')->whereUuid('uuid');
+        * ```
+        *
      * @param string $parameter ชื่อพารามิเตอร์ใน path
      * @return self นิยามเส้นทางเดิมสำหรับ chain method
      */
@@ -105,6 +125,11 @@ final class RouteDefinition
 
     /**
      * จำกัดพารามิเตอร์ให้มีรูปแบบ ULID จำนวน 26 ตัวอักษร
+        * ตัวอย่างการใช้งาน:
+        * ```php
+        * $router->get('/files/{ulid}', 'FileController@show')->whereUlid('ulid');
+        * ```
+        *
      * @param string $parameter ชื่อพารามิเตอร์ใน path
      * @return self นิยามเส้นทางเดิมสำหรับ chain method
      */
@@ -115,6 +140,12 @@ final class RouteDefinition
 
     /**
      * จำกัดพารามิเตอร์ให้ตรงกับค่าหนึ่งค่าในรายการที่อนุญาต
+        * ตัวอย่างการใช้งาน:
+        * ```php
+        * $router->get('/posts/{status}', 'PostController@index')
+        *     ->whereIn('status', ['draft', 'published']);
+        * ```
+        *
      * @param string $parameter ชื่อพารามิเตอร์ใน path
      * @param array $values รายการค่าที่อนุญาต
      * @return self นิยามเส้นทางเดิมสำหรับ chain method
