@@ -53,12 +53,12 @@ class Controller
     }
 
     /**
-     * ฟังก์ชั่น responseView สำหรับส่งกลับ Response พร้อมวิว
+     * แสดงผลวิวพร้อมข้อมูลและส่งกลับเป็น Response (HTTP Response)
      * จุดประสงค์: สร้าง Response ที่มีเนื้อหาเป็นวิว HTML
      * responseView() ควรใช้กับอะไร: เมื่อคุณต้องการส่งกลับ Response ที่มีเนื้อหาเป็นวิว HTML จากตัวควบคุม
      * ตัวอย่างการใช้งาน:
      * ```php
-     * return $this->responseView('home', ['name' => 'John'], 'layouts/main', 200, 60);
+     * return $this->responseView('home', ['name' => 'John'], 'layouts/main', 3600, 200);
      * ```
      * 
      * @param string $view กำหนดชื่อวิวที่จะโหลด
