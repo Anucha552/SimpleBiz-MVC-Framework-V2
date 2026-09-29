@@ -82,7 +82,8 @@ class {$className} extends Migration
         \$this->createTable('{$name}', function(Blueprint \$table) {
             \$table->increments('id')->comment('รหัส');
             \$table->string('name', 255)->comment('ชื่อ');
-            \$table->timestamp('created_at')->comment('วันที่สร้าง');
+            \$table->timestamps();
+            \$table->timestamp('deleted_at')->nullable()->comment('วันที่ลบ (Soft Delete)');
         });
 
     }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\Migration;
+use App\Core\Blueprint;
 
 class CreateRolesTable extends Migration
 {
@@ -9,12 +10,13 @@ class CreateRolesTable extends Migration
      */
     public function up(): void
     {
-        $this->createTable('roles', function ($table) {
+        $this->createTable('roles', function (Blueprint $table) {
             $table->increments('id')->comment('รหัสบทบาท');
             $table->string('name', 100)->comment('ชื่อบทบาท')->unique();
             $table->string('slug', 100)->comment('ชื่อย่อบทบาท')->unique();
             $table->text('description')->nullable()->comment('คำอธิบาย');
             $table->timestamps();
+            $table->timestamp('deleted_at')->nullable()->comment('วันที่ลบ (Soft Delete)');
 
             $table->index('name');
             $table->index('slug');

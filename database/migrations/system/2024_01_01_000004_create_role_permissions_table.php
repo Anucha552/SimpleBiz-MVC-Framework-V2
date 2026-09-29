@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\Migration;
+use App\Core\Blueprint;
 
 class CreateRolePermissionsTable extends Migration
 {
@@ -9,11 +10,12 @@ class CreateRolePermissionsTable extends Migration
      */
     public function up(): void
     {
-        $this->createTable('role_permissions', function ($table) {
+        $this->createTable('role_permissions', function (Blueprint $table) {
             $table->increments('id')->comment('รหัสรายการ');
             $table->integer('role_id')->comment('รหัสบทบาท');
             $table->string('permission', 150)->comment('สิทธิ์');
             $table->timestamps();
+            $table->timestamp('deleted_at')->nullable()->comment('วันที่ลบ (Soft Delete)');
 
             $table->index('role_id');
             $table->index('permission');

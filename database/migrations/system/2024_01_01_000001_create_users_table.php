@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\Migration;
+use App\Core\Blueprint;
 
 class CreateUsersTable extends Migration
 {
@@ -9,7 +10,7 @@ class CreateUsersTable extends Migration
      */
     public function up(): void
     {
-        $this->createTable('users', function($table) {
+        $this->createTable('users', function(Blueprint $table) {
             $table->increments('id')->comment('รหัสผู้ใช้');
             $table->string('username', 50)->comment('ชื่อผู้ใช้')->unique();
             $table->string('email', 100)->comment('อีเมล')->unique();
