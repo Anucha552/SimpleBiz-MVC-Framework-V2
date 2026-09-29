@@ -59,6 +59,7 @@ class MakeModelCommand extends BaseCommand
 
     private function getModelTemplate(string $name): string
     {
+        $tableName = strtolower($name);
 
         return <<<PHP
 <?php
@@ -79,7 +80,7 @@ class {$name} extends Model
     /**
      * ชื่อตารางในฐานข้อมูล
      */
-    protected static string \$table = '{$name}';
+    protected static string \$table = '{$tableName}';
 
     /**
      * Primary key (ปกติใช้ id)
@@ -88,7 +89,7 @@ class {$name} extends Model
 
     /**
      * ฟิลด์ที่อนุญาตให้ mass assignment
-     * fillable: รายชื่อคอลัมน์ที่ “อนุญาต” ให้บํนทึกข้อมูล และอัพเดทได้
+     * fillable: รายชื่อคอลัมน์ที่ “อนุญาต” ให้บันทึกข้อมูล และอัพเดทได้
      */
     protected static array \$fillable = [
         // ตัวอย่าง: 'name', 'email', 'status'
@@ -96,7 +97,7 @@ class {$name} extends Model
 
     /**
      * ฟิลด์ที่ห้าม mass assignment
-     * guarded: รายชื่อคอลัมน์ที่ “ห้าม” ให้บํนทึกข้อมูล และอัพเดทได้
+     * guarded: รายชื่อคอลัมน์ที่ “ห้าม” ให้บันทึกข้อมูล และอัพเดทได้
      */
     protected static array \$guarded = ['id'];
 
