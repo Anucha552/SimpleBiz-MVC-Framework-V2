@@ -173,7 +173,7 @@ use App\Helpers\UrlHelper;
 			<div class="stack">
 				<div><strong>ดูเอกสาร:</strong> เริ่มจาก <code>docs/</code> เพื่อเข้าใจ Core และตัวอย่างการใช้งาน</div>
 				<div><strong>กำหนดเส้นทาง:</strong> แก้ไขที่ <code>routes/web.php</code> หรือ <code>routes/api.php</code></div>
-				<div><strong>เชื่อมฐานข้อมูล:</strong> ตั้งค่าใน <code>config/database.php</code> และรัน migration</div>
+				<div><strong>เชื่อมฐานข้อมูล:</strong> ตั้งค่าใน <code>.env</code> และรัน migration</div>
 				<div><strong>สร้างหน้าแรก:</strong> ปรับแต่ง View ที่ <code>app/Views</code> ตามดีไซน์ของคุณ</div>
 			</div>
 		</div>
