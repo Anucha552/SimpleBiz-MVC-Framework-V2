@@ -107,7 +107,7 @@ Web Server (Apache/Nginx)
 ### 1. ดาวน์โหลด & ติดตั้ง
 ```bash
 # Clone repository
-git clone https://github.com/simplebiz/mvc-framework-v2.git
+git clone https://github.com/Anucha552/SimpleBiz-MVC-Framework-V2.git
 cd mvc-framework-v2
 
 # ติดตั้ง dependencies
