@@ -580,7 +580,6 @@ class SetupCommand extends BaseCommand
 
 # Composer dependencies
 /vendor/
-composer.lock
 
 # บันทึก (อาจเก็บข้อมูลที่ละเอียดอ่อน)
 /storage/logs/*.log
