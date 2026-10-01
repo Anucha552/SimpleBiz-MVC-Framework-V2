@@ -46,10 +46,16 @@ class SetupCommand extends BaseCommand
             $appName = '';
 
             if (!$envExists) {
-                echo ConsoleColor::CYAN . "ชื่อแอปพลิเคชัน (สำหรับแสดงผล เช่น My Bookstore) [My App]: " . ConsoleColor::RESET;
-                $appName = trim(fgets(STDIN));
-                if ($appName === '') {
-                    $appName = 'My App';
+                $detectedAppName = $this->detectAppNameFromComposer();
+                if ($detectedAppName !== null) {
+                    $appName = $detectedAppName;
+                    $this->info("ใช้ชื่อแอปพลิเคชันจาก composer.json: {$appName}");
+                } else {
+                    echo ConsoleColor::CYAN . "ชื่อแอปพลิเคชัน (สำหรับแสดงผล เช่น My Bookstore) [My App]: " . ConsoleColor::RESET;
+                    $appName = trim(fgets(STDIN));
+                    if ($appName === '') {
+                        $appName = 'My App';
+                    }
                 }
             }
 
@@ -94,9 +100,11 @@ class SetupCommand extends BaseCommand
             $appKey = $this->generateAppKey();
             $this->updateEnvKey($appKey);
 
+            $this->info("3. กำลังตรวจสอบสภาพแวดล้อม (php console check)...");
+            $this->runCheckCommand();
+
             echo "\n";
             $this->success("✓ ตั้งค่าเฉพาะที่จำเป็นเสร็จสมบูรณ์!");
-            $this->runCheck();
             echo "\n";
             return;
         }
@@ -254,6 +262,10 @@ class SetupCommand extends BaseCommand
         }
         $step++;
 
+        $this->info("{$step}. กำลังตรวจสอบสภาพแวดล้อม (php console check)...");
+        $this->runCheckCommand();
+        $step++;
+
         if ($gitRemoteUrl !== '' && is_dir($this->path('.git'))) {
             echo "\n";
             echo ConsoleColor::YELLOW . "ต้องการ commit และ push การเปลี่ยนแปลงหรือไม่? (y/n) [y]: " . ConsoleColor::RESET;
@@ -268,7 +280,6 @@ class SetupCommand extends BaseCommand
         echo "\n";
         $this->success("✓ ตั้งค่าโปรเจคเสร็จสมบูรณ์!");
         $this->writeSetupMarker($projectName);
-        $this->runCheck();
         echo "\n";
 
         echo ConsoleColor::GREEN . ConsoleColor::BOLD . "สรุปข้อมูลโปรเจค:\n" . ConsoleColor::RESET;
@@ -371,17 +382,6 @@ class SetupCommand extends BaseCommand
         $content = "project_name=" . $projectName . "\n";
         $content .= "setup_at=" . date('Y-m-d H:i:s') . "\n";
         @file_put_contents($markerPath, $content);
-    }
-
-    private function runCheck(): void
-    {
-        $this->info("กำลังตรวจสอบระบบต่อด้วย php console check...");
-        $command = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($this->path('console')) . ' check';
-        passthru($command, $exitCode);
-
-        if ($exitCode !== 0) {
-            $this->warning("การตรวจสอบพบปัญหา โปรดแก้ไขตามผลลัพธ์ด้านบนแล้วรัน php console check ซ้ำ");
-        }
     }
 
     private function createEnvFile(string $appName, string $dbConnection, string $dbName, string $dbUser, string $dbPassword): void
@@ -550,13 +550,40 @@ class SetupCommand extends BaseCommand
         $this->success("อัปเดต README.md แล้ว");
     }
 
+    private function detectAppNameFromComposer(): ?string
+    {
+        $composerFile = $this->path('composer.json');
+
+        if (!file_exists($composerFile)) {
+            return null;
+        }
+
+        $content = file_get_contents($composerFile);
+        if ($content === false) {
+            return null;
+        }
+
+        $composer = json_decode($content, true);
+        if (!is_array($composer) || !isset($composer['name']) || !is_string($composer['name'])) {
+            return null;
+        }
+
+        $parts = explode('/', $composer['name'], 2);
+        $project = trim($parts[1] ?? $parts[0]);
+
+        if ($project === '') {
+            return null;
+        }
+
+        return ucwords(str_replace(['-', '_'], ' ', $project));
+    }
+
     private function ensureGitignore(): void
     {
         $gitignoreFile = $this->path('.gitignore');
 
         if (!file_exists($gitignoreFile)) {
-            $content = $this->getDefaultGitignore();
-            file_put_contents($gitignoreFile, $content);
+            $content = $this->getDefaultGitignore();            file_put_contents($gitignoreFile, $content);
             $this->success("สร้างไฟล์ .gitignore แล้ว");
             return;
         }
@@ -693,6 +720,21 @@ EOT;
     {
         exec("composer --version 2>&1", $output, $returnCode);
         return $returnCode === 0;
+    }
+
+    private function runCheckCommand(): void
+    {
+        $consoleScript = $this->path('console');
+        if (!file_exists($consoleScript)) {
+            $this->warning("ไม่พบไฟล์ console ข้ามการตรวจสอบสภาพแวดล้อม");
+            return;
+        }
+
+        $command = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($consoleScript) . ' check';
+        passthru($command, $checkExitCode);
+        if ($checkExitCode !== 0) {
+            $this->warning("ตรวจพบปัญหาจาก php console check กรุณาตรวจสอบรายละเอียดด้านบน");
+        }
     }
 
     private function commitAndPush(string $projectName): void
