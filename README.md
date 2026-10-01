@@ -117,39 +117,37 @@ composer install
 chmod -R 775 storage/
 ```
 
-### 2. การตั้งค่าเบื้องต้น
+### 2. ตั้งค่าโปรเจกต์
 ```bash
-# สร้างไฟล์ .env
-cp .env.example .env
-
-# แก้ไขการตั้งค่าใน .env
-nano .env
+# ตั้งค่าโปรเจกต์แบบโต้ตอบ
+php console setup
 ```
 
-```env
-# ตัวอย่างการตั้งค่า .env
-APP_NAME="My Application"
-APP_ENV=local
-APP_DEBUG=true
-APP_URL=http://localhost
+คำสั่งจะถามชื่อโปรเจกต์ ชื่อแอป และการเชื่อมต่อฐานข้อมูล จากนั้นสร้าง `.env` และ `APP_KEY` พร้อมอัปเดตข้อมูลโปรเจกต์ใน `composer.json` และ README โดยจะเรียก `composer update` และตรวจระบบด้วย `php console check` ให้อัตโนมัติ
 
-DB_CONNECTION=sqlite
-DB_DATABASE=storage/database.sqlite
+> `setup` ต้องใช้ `vendor/autoload.php` จึงต้องรัน `composer install` ในขั้นตอนก่อนหน้า ค่าเริ่มต้นของ wizard คือ MySQL/MariaDB; หากใช้ SQLite ให้เลือกตัวเลือก 2 หากเลือก MySQL/MariaDB ให้เตรียมฐานข้อมูลและ credentials ให้พร้อมก่อน setup เพราะคำสั่งนี้ตั้งค่า connection แต่ไม่ได้สร้างฐานข้อมูลให้
+
+หากต้องการตั้งค่าเองแทน wizard ให้คัดลอก `.env.example` เป็น `.env` แล้วแก้ค่าที่จำเป็น จากนั้นสร้าง key ด้วยคำสั่ง:
+```bash
+cp .env.example .env
+php console key:generate
 ```
 
 ### 3. ตั้งค่าฐานข้อมูล
 ```bash
-# รัน migrations
+# สร้างตารางตาม migrations
 php console migrate
 
 # รัน seeders (ถ้าต้องการ)  
 php console seed
 ```
 
+`setup` ไม่ได้รัน migrations ให้ หากการตรวจอัตโนมัติแจ้งว่าเชื่อมต่อฐานข้อมูลไม่ได้ ให้ตรวจว่าฐานข้อมูลมีอยู่จริงและ credentials ใน `.env` ถูกต้อง แล้วรัน `php console check` ซ้ำ
+
 ### 4. เรียกใช้งาน
 ```bash
 # Development server
-php -S localhost:8000 -t public/
+php console serve
 
 # หรือใช้ Web Server (Apache/Nginx)
 # ตั้ง Document Root ไปที่โฟลเดอร์ public/
@@ -235,7 +233,7 @@ class Product extends Model
 <?php
 // routes/web.php
 
-use App\Controllers\Web\ProductController;
+$webBasePath = 'App\\Controllers\\Web\\';
 
 // Web Routes
 $router->get('/', $webBasePath . 'WebController@index');
@@ -275,8 +273,9 @@ class ProductApiController extends Controller
 <?php  
 // routes/api.php
 
-use App\Controllers\Api\ProductApiController;
 use App\Middleware\ApiKeyMiddleware;
+
+$apiBasePath = 'App\\Controllers\\Api\\';
 
 // API Routes with Authentication
 $router->get('/api/products', $apiBasePath . 'ProductApiController@index', [
@@ -296,6 +295,12 @@ $router->post('/api/products', $apiBasePath . 'ProductApiController@store', [
 # ดูคำสั่งที่มี
 php console
 
+# ตั้งค่าโปรเจกต์และตรวจระบบอัตโนมัติเมื่อ setup เสร็จ
+php console setup
+
+# ตรวจสอบสภาพแวดล้อมและการเชื่อมต่อฐานข้อมูล
+php console check
+
 # จัดการ Migrations
 php console migrate                 # รัน migrations ทั้งหมด
 php console migrate:rollback        # ย้อนกลับ migration
@@ -303,7 +308,7 @@ php console migrate:status          # ดูสถานะ migration
 
 # จัดการ Seeders  
 php console seed                    # รัน seeders ทั้งหมด
-php console seed --class=UserSeeder # รัน seeder เฉพาะ
+php console seed UserSeeder         # รัน seeder เฉพาะ
 
 # Cache Management
 php console cache:clear             # ล้าง cache
@@ -322,7 +327,7 @@ use App\Middleware\RoleMiddleware;
 // Protected Routes
 $router->get('/admin', $webBasePath . 'AdminController@dashboard', [
     AuthMiddleware::class,
-    [RoleMiddleware::class, ['admin'], 10, true]
+    [RoleMiddleware::class, ['admin']]
 ]);
 
 // API with API Key
@@ -375,12 +380,29 @@ modules/
     └── MyModuleModule.php
 ```
 
+```php
+<?php
+// modules/MyModule/MyModuleModule.php
+
+namespace Modules\MyModule;
+
+use App\Core\ModuleInterface;
+use App\Core\Router;
+
+final class MyModuleModule implements ModuleInterface
+{
+    public function register(Router $router): void
+    {
+        $router->get('/my-module', Controllers\MyModuleController::class . '@index');
+    }
+}
+```
+
 ### ลงทะเบียน Module
 ```php
 // config/modules.php
 return [
-    // เพิ่มชื่อคลาสโมดูลที่ต้องการเปิดใช้งาน
-    Modules\\MyModule\\MyModuleModule::class,
+    Modules\MyModule\MyModuleModule::class,
 ];
 ```
 
@@ -402,22 +424,25 @@ composer test
 ### ตัวอย่าง Test
 ```php
 <?php
-// tests/Unit/UserTest.php
+// tests/Unit/ValidatorTest.php
 
+declare(strict_types=1);
+
+namespace Tests\Unit;
+
+use App\Core\Validator;
 use PHPUnit\Framework\TestCase;
-use App\Models\User;
 
-class UserTest extends TestCase
+class ValidatorTest extends TestCase
 {
-    public function testUserCreation()
+    public function testValidNamePasses(): void
     {
-        $user = new User([
-            'name' => 'John Doe',
-            'email' => 'john@example.com'
-        ]);
-        
-        $this->assertEquals('John Doe', $user->name);
-        $this->assertEquals('john@example.com', $user->email);
+        $validator = new Validator(
+            ['name' => 'Alice'],
+            ['name' => 'required|min:3|max:100']
+        );
+
+        self::assertTrue($validator->passes());
     }
 }
 ```

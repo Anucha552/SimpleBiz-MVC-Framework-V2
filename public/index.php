@@ -116,7 +116,7 @@ if (!file_exists($autoloadPath)) {
                 <div class="error-title">Composer Dependencies ยังไม่ได้ติดตั้ง</div>
                 <div class="error-message">
                     ไม่พบไฟล์ <strong>vendor/autoload.php</strong><br>
-                    กรุณารันคำสั่งใดคำสั่ง
+                    กรุณารันคำสั่ง
                 </div>
                 <div class="command">php console setup</div>
                 <div style="color: #856404; font-size: 13px; margin-top: 8px;">
@@ -218,7 +218,7 @@ if (!file_exists($envPath)) {
                 <div class="error-title">ไม่พบไฟล์ .env</div>
                 <div class="error-message">
                     ไฟล์ <strong>.env</strong> ยังไม่ได้สร้าง<br>
-                    กรุณารันคำสั่งใดคำสั่ง
+                    กรุณารันคำสั่ง
                 </div>
                 <div class="command">php console setup</div>
                 <div style="color: #856404; font-size: 13px; margin-top: 8px;">

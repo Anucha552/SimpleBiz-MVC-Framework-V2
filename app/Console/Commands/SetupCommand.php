@@ -96,6 +96,7 @@ class SetupCommand extends BaseCommand
 
             echo "\n";
             $this->success("✓ ตั้งค่าเฉพาะที่จำเป็นเสร็จสมบูรณ์!");
+            $this->runCheck();
             echo "\n";
             return;
         }
@@ -267,6 +268,7 @@ class SetupCommand extends BaseCommand
         echo "\n";
         $this->success("✓ ตั้งค่าโปรเจคเสร็จสมบูรณ์!");
         $this->writeSetupMarker($projectName);
+        $this->runCheck();
         echo "\n";
 
         echo ConsoleColor::GREEN . ConsoleColor::BOLD . "สรุปข้อมูลโปรเจค:\n" . ConsoleColor::RESET;
@@ -369,6 +371,17 @@ class SetupCommand extends BaseCommand
         $content = "project_name=" . $projectName . "\n";
         $content .= "setup_at=" . date('Y-m-d H:i:s') . "\n";
         @file_put_contents($markerPath, $content);
+    }
+
+    private function runCheck(): void
+    {
+        $this->info("กำลังตรวจสอบระบบต่อด้วย php console check...");
+        $command = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($this->path('console')) . ' check';
+        passthru($command, $exitCode);
+
+        if ($exitCode !== 0) {
+            $this->warning("การตรวจสอบพบปัญหา โปรดแก้ไขตามผลลัพธ์ด้านบนแล้วรัน php console check ซ้ำ");
+        }
     }
 
     private function createEnvFile(string $appName, string $dbConnection, string $dbName, string $dbUser, string $dbPassword): void
