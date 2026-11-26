@@ -546,6 +546,10 @@ class View
      */
     public function render(): string
     {
+        // ตั้งค่าเวลาแคชเป็น null เพื่อปิดการแคชชั่วคราวสำหรับการเรนเดอร์นี้
+        // เนื่องจากเจอ bug ที่เกี่ยวกับ SESSION / CSRF token
+        $this->cacheTtl = null; 
+
         // เริ่มต้นจับเวลาการเรนเดอร์เพื่อใช้ในการบันทึก log และตรวจสอบประสิทธิภาพของการเรนเดอร์
         $start = microtime(true); 
 

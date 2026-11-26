@@ -41,7 +41,6 @@ class EmployeeController extends Controller
             'employees' => $this->employeeModel->getAllEmployees()
         ],
             'layouts/main',
-            3600
         );
 
         return $thml;
@@ -52,7 +51,7 @@ class EmployeeController extends Controller
      */
     public function create(): Response
     {
-        return $this->responseView('employees/create', [], 'layouts/main', 3600);
+        return $this->responseView('employees/create', [], 'layouts/main');
     }
 
     /**
@@ -118,7 +117,7 @@ class EmployeeController extends Controller
         // แสดงรายละเอียดพนักงานในหน้า show
         return $this->responseView('employees/show', [
             'employee' => $employee
-        ], 'layouts/main', 3600);
+        ], 'layouts/main');
     }
 
     /**
@@ -140,7 +139,7 @@ class EmployeeController extends Controller
         return $this->responseView('employees/edit', [
             'employee' => $employee,
             'id' => $id
-        ], 'layouts/main', 3600);
+        ], 'layouts/main');
     }
 
     /**
@@ -250,8 +249,7 @@ class EmployeeController extends Controller
         return $this->responseView('employees/index', [
             'employees' => $employees
             ],
-                'layouts/main',
-                3600
+                'layouts/main'
             );
     }
 }

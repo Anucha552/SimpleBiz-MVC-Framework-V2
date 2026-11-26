@@ -58,25 +58,20 @@ class Controller
      * responseView() ควรใช้กับอะไร: เมื่อคุณต้องการส่งกลับ Response ที่มีเนื้อหาเป็นวิว HTML จากตัวควบคุม
      * ตัวอย่างการใช้งาน:
      * ```php
-     * return $this->responseView('home', ['name' => 'John'], 'layouts/main', 3600, 200);
+     * return $this->responseView('home', ['name' => 'John'], 'layouts/main', 200);
      * ```
      * 
      * @param string $view กำหนดชื่อวิวที่จะโหลด
      * @param array $data กำหนดข้อมูลที่จะส่งไปยังวิว
      * @param string|null $layout กำหนดชื่อเลย์เอาต์ที่จะใช้ (ถ้ามี)
-     * @param int|null $cacheSeconds กำหนดเวลาที่จะเก็บแคช์ของวิวในวินาที (ถ้ามี)
      * @param int|null $statusCode กำหนดรหัสสถานะ HTTP ของการตอบกลับ (เริ่มต้นที่ 200)
      * @return Response คืนค่า Response ที่มีเนื้อหาเป็นวิว HTML
      */
-    protected function responseView(string $view, array $data = [], ?string $layout = null, ?int $cacheSeconds = null,int $statusCode = 200): Response {
+    protected function responseView(string $view, array $data = [], ?string $layout = null,int $statusCode = 200): Response {
         $engine = new View($view, $data);
 
         if ($layout) {
             $engine->layout($layout);
-        }
-
-        if ($cacheSeconds !== null) {
-            $engine->cache($cacheSeconds);
         }
 
         return Response::html($engine->render(), $statusCode);

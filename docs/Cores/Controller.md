@@ -52,13 +52,7 @@ return $this->responseView(
 );
 ```
 
-รองรับ: layout, status code, cache control
-
-ตัวอย่างใส่ cache:
-
-```php
-return $this->responseView('home', [], null, 200, 60); // แคช 60 วินาที
-```
+รองรับ: layout และ HTTP status code
 
 ### 3. Redirect
 
