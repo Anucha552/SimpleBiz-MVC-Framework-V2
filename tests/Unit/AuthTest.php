@@ -78,6 +78,29 @@ final class AuthTest extends TestCase
         $this->assertIsArray(\App\Core\Auth::user());
     }
 
+    public function testInactiveUserSessionIsRejectedAndRememberTokenRevoked(): void
+    {
+        $userId = 1;
+        $rawToken = bin2hex(random_bytes(64));
+        $hashedToken = hash('sha256', $rawToken);
+        \App\Core\Database::getInstance()->execute(
+            'UPDATE users SET remember_token = :token, status = :status WHERE id = :id',
+            ['token' => $hashedToken, 'status' => 'inactive', 'id' => $userId]
+        );
+        \App\Core\Session::set('_auth_user_id', $userId);
+        $_COOKIE['_auth_remember'] = $userId . '|' . $rawToken;
+
+        $this->assertFalse(\App\Core\Auth::check());
+        $this->assertFalse(\App\Core\Session::has('_auth_user_id'));
+        $this->assertFalse(\App\Core\Session::has('_auth_permissions'));
+        $this->assertArrayNotHasKey('_auth_remember', $_COOKIE);
+        $row = \App\Core\Database::getInstance()->fetch(
+            'SELECT remember_token FROM users WHERE id = :id',
+            ['id' => $userId]
+        );
+        $this->assertNull($row['remember_token']);
+    }
+
     public function testLoginById(): void
     {
         \App\Core\Auth::logout();
@@ -110,6 +133,30 @@ final class AuthTest extends TestCase
 
         $this->assertTrue(\App\Core\Auth::check());
         $this->assertSame(1, \App\Core\Auth::id());
+    }
+
+    public function testRememberCookieCannotRestoreInactiveUser(): void
+    {
+        $userId = 1;
+        $rawToken = bin2hex(random_bytes(64));
+        $hashed = hash('sha256', $rawToken);
+        \App\Core\Database::getInstance()->execute(
+            'UPDATE users SET remember_token = :token, status = :status WHERE id = :id',
+            ['token' => $hashed, 'status' => 'inactive', 'id' => $userId]
+        );
+
+        $payload = $userId . '|' . $rawToken;
+        $signature = hash_hmac('sha256', $payload, \App\Core\Config::get('auth.app_key'));
+        $_COOKIE['_auth_remember'] = $payload . '|' . $signature;
+
+        $this->assertFalse(\App\Core\Auth::check());
+        $this->assertFalse(\App\Core\Session::has('_auth_user_id'));
+        $this->assertArrayNotHasKey('_auth_remember', $_COOKIE);
+        $row = \App\Core\Database::getInstance()->fetch(
+            'SELECT remember_token FROM users WHERE id = :id',
+            ['id' => $userId]
+        );
+        $this->assertNull($row['remember_token']);
     }
 
     public function testRememberFailsWhenAppKeyMissing(): void

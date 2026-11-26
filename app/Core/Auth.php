@@ -261,30 +261,7 @@ final class Auth
         Session::remove(self::SESSION_KEY);
         self::$user = null;
 
-        // ลบ cookie (ใช้ options เดียวกับการตั้งค่าเพื่อให้แน่ใจว่าถูกลบ)
-        if (isset($_COOKIE[self::REMEMBER_COOKIE])) {
-            $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
-            $domain = Config::get('auth.cookie_domain', null);
-            if ($domain === '') {
-                $domain = null;
-            }
-            $cookieOptions = [
-                'expires' => time() - 3600,
-                'path' => '/',
-                'domain' => $domain,
-                'secure' => $secure,
-                'httponly' => true,
-                'samesite' => (string) Config::get('auth.remember_samesite', 'Lax'),
-            ];
-
-            if (PHP_SAPI === 'cli') {
-                $_COOKIE[self::REMEMBER_COOKIE] = '';
-                unset($_COOKIE[self::REMEMBER_COOKIE]);
-            } else {
-                setcookie(self::REMEMBER_COOKIE, '', $cookieOptions);
-                unset($_COOKIE[self::REMEMBER_COOKIE]);
-            }
-        }
+        self::clearRememberCookie();
 
         // สร้าง session ใหม่ (logged with context 'logout')
         Session::regenerateWithContext('logout', isset($userId) ? (int)$userId : null);
@@ -320,7 +297,12 @@ final class Auth
         if (Session::has(self::SESSION_KEY)) {
             $id = (int) Session::get(self::SESSION_KEY);
             self::$user = self::getUserById($id);
-            return self::$user !== null;
+            if (self::$user !== null) {
+                return true;
+            }
+
+            self::clearInvalidAuthentication($id);
+            return false;
         }
 
         // ตรวจสอบ remember me cookie
@@ -668,7 +650,20 @@ final class Auth
             return false;
         }
 
-        // Valid remember token -> perform auto-login
+        $user = is_numeric($userId) ? self::getUserById((int) $userId) : null;
+        if ($user === null) {
+            if (is_numeric($userId)) {
+                self::removeRememberToken((int) $userId);
+            }
+            self::clearRememberCookie();
+            $logger->security('auth.remember.user_unavailable', [
+                'user_id' => is_numeric($userId) ? (int) $userId : null,
+                'ip' => \App\Core\Request::resolveClientIp($_SERVER),
+            ]);
+            return false;
+        }
+
+        // Valid remember token for an active user -> perform auto-login
         Session::start();
         Session::set(self::SESSION_KEY, $userId);
 
@@ -683,7 +678,7 @@ final class Auth
 
 
         // Load user cache
-        self::$user = self::getUserById((int) $userId);
+        self::$user = $user;
         // Preload and cache permissions in session (same as normal login)
         self::cacheUserPermissions(self::$user);
 
@@ -812,11 +807,54 @@ final class Auth
     private static function getUserById(int $userId): ?array
     {
         $db = Database::getInstance();
-        $sql = "SELECT * FROM users WHERE id = :id AND deleted_at IS NULL LIMIT 1";
+        $sql = "SELECT * FROM users WHERE id = :id AND status = 'active' AND deleted_at IS NULL LIMIT 1";
         // ดึงข้อมูลผู้ใช้จากฐานข้อมูลของเรา
         $userData = $db->fetch($sql, ['id' => $userId]);
 
         return $userData ?: null;
+    }
+
+    private static function clearInvalidAuthentication(int $userId): void
+    {
+        Session::remove(self::SESSION_KEY);
+        Session::remove('_auth_permissions');
+        self::$user = null;
+
+        if ($userId > 0) {
+            self::removeRememberToken($userId);
+        }
+
+        self::clearRememberCookie();
+    }
+
+    private static function clearRememberCookie(): void
+    {
+        if (!isset($_COOKIE[self::REMEMBER_COOKIE])) {
+            return;
+        }
+
+        $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        $domain = Config::get('auth.cookie_domain', null);
+        if ($domain === '') {
+            $domain = null;
+        }
+
+        $cookieOptions = [
+            'expires' => time() - 3600,
+            'path' => '/',
+            'domain' => $domain,
+            'secure' => $secure,
+            'httponly' => true,
+            'samesite' => (string) Config::get('auth.remember_samesite', 'Lax'),
+        ];
+
+        if (PHP_SAPI === 'cli') {
+            unset($_COOKIE[self::REMEMBER_COOKIE]);
+            return;
+        }
+
+        setcookie(self::REMEMBER_COOKIE, '', $cookieOptions);
+        unset($_COOKIE[self::REMEMBER_COOKIE]);
     }
 
     // ========== Brute-force protection helpers ==========
