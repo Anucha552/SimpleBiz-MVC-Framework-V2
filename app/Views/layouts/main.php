@@ -3,6 +3,7 @@
 use App\Helpers\CookieConsentHelper;
 use App\Helpers\SeoHelper;
 use App\Helpers\UrlHelper;
+use App\Helpers\FormHelper;
 
 if (SeoHelper::canonical() === null) {
     SeoHelper::setCanonical(UrlHelper::current(false));
@@ -15,6 +16,9 @@ if (SeoHelper::canonical() === null) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- CSRF Meta Tags สำหรับใช้กับฟอร์มและคำขอ AJAX -->
+    <?= FormHelper::csrfMeta() ?>
     <link rel="icon" type="image/png" href="<?= UrlHelper::assetVersioned('assets/img/logo/logo.png'); ?>">
     <link rel="stylesheet" href="<?= UrlHelper::assetVersioned('assets/css/bootstrap.min.css') ?>">
     <?= SeoHelper::renderMetaTags($this->yield('title', 'Employee Management')) ?>

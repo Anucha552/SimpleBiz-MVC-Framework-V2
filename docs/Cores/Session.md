@@ -127,6 +127,27 @@ $token = Session::generateCsrfToken();
     <?= Session::csrfMeta(); ?>
 </head>
 ```
+
+### ใช้ CSRF Token กับ API ที่ยืนยันตัวตนด้วย Session
+
+Routes สำหรับ API ที่เปลี่ยนข้อมูลและใช้ `CsrfMiddleware` ต้องส่ง token ใน `X-CSRF-Token`:
+
+```javascript
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+const response = await fetch('/api/employees', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken
+    },
+    body: JSON.stringify(employee)
+});
+```
+
+เมื่อ token หายหรือไม่ถูกต้อง API จะตอบ JSON พร้อม HTTP `419` ส่วนการตรวจ CSRF บน API `GET` ไม่จำเป็น
+
 **ตรวจสอบ Token ใน Controller**
 ```php
 if (!Session::verifyCsrfToken($_POST['_csrf_token'] ?? '')) {

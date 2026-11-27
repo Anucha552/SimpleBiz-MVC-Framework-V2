@@ -73,4 +73,49 @@ final class CsrfMiddlewareTest extends TestCase
         $this->assertIsArray($_SESSION['_flash']['new'] ?? null);
         $this->assertArrayHasKey('error', $_SESSION['_flash']['new']);
     }
+
+    public function testApiMissingTokenReturnsJson419(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'DELETE';
+        $_SERVER['REQUEST_URI'] = '/api/employees/1';
+
+        $result = (new CsrfMiddleware(true))->handle();
+
+        $this->assertInstanceOf(Response::class, $result);
+        $this->assertSame(419, $result->getStatusCode());
+        $this->assertSame('application/json; charset=UTF-8', $result->getHeaders()['Content-Type']);
+        $this->assertSame('CSRF token missing', json_decode($result->getBody(), true)['message']);
+    }
+
+    public function testApiInvalidTokenReturnsJson419(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_SERVER['REQUEST_URI'] = '/api/employees';
+        $_SERVER['HTTP_X_CSRF_TOKEN'] = 'invalid-token';
+        Session::generateCsrfToken();
+
+        $result = (new CsrfMiddleware(true))->handle();
+
+        $this->assertInstanceOf(Response::class, $result);
+        $this->assertSame(419, $result->getStatusCode());
+        $this->assertSame('Invalid CSRF token', json_decode($result->getBody(), true)['message']);
+    }
+
+    public function testApiValidHeaderTokenPasses(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'PUT';
+        $_SERVER['REQUEST_URI'] = '/api/employees/1';
+        $token = Session::generateCsrfToken();
+        $_SERVER['HTTP_X_CSRF_TOKEN'] = $token;
+
+        $this->assertTrue((new CsrfMiddleware(true))->handle());
+    }
+
+    public function testGetRequestDoesNotRequireCsrfToken(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/api/employees';
+
+        $this->assertTrue((new CsrfMiddleware(true))->handle());
+    }
 }

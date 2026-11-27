@@ -42,6 +42,11 @@ class CsrfMiddleware extends Middleware
     private Logger $logger;
 
     /**
+     * ตัวแปรสำหรับกำหนดว่าควรตอบกลับเป็น JSON หรือไม่
+     */
+    private bool $jsonResponse;
+
+    /**
      * TOKEN_LENGTH ความยาวของ CSRF token ที่สร้างขึ้น
      */
     private const TOKEN_LENGTH = 32;
@@ -55,11 +60,12 @@ class CsrfMiddleware extends Middleware
      * สร้างอินสแตนซ์ CsrfMiddleware ใหม่
      * จุดประสงค์: เตรียมตัวบันทึกเหตุการณ์และเริ่มต้นเซสชันเพื่อใช้ในการจัดการ CSRF token
      */
-    public function __construct()
+    public function __construct(bool $jsonResponse = false)
     {
         Session::start();
 
         $this->logger = new Logger();
+        $this->jsonResponse = $jsonResponse;
 
         // สร้าง CSRF token ถ้ายังไม่มี
         $this->ensureTokenExists();
@@ -81,37 +87,19 @@ class CsrfMiddleware extends Middleware
             return true;
         }
 
-        // ข้าม API
         $uri = $_SERVER['REQUEST_URI'] ?? '';
-        if (preg_match('#^/api(/|$)#', $uri)) {
-            return true;
-        }
 
         // รับ token จาก request ก่อน
         $submittedToken = $this->getSubmittedToken();
         
         // ถ้าไม่มี token ที่ส่งมาเลย ถือว่าเป็นความพยายามที่ไม่ถูกต้อง
         if (!$submittedToken) {
-            $this->logger->security('csrf.missing_token', [
-                'route' => $uri,
-                'method' => $method,
-            ]);
-
-            Session::flash('error', 'CSRF token missing');
-            $referer = $_SERVER['HTTP_REFERER'] ?? '/';
-            return Response::redirect($referer);
+            return $this->rejectRequest('csrf.missing_token', 'CSRF token missing', $uri, $method);
         }
 
         // ตรวจสอบ token ก่อนเสมอ
         if (!$this->validateToken($submittedToken)) {
-            $this->logger->security('csrf.invalid_token', [
-                'route' => $uri,
-                'method' => $method,
-            ]);
-
-            Session::flash('error', 'Invalid CSRF token');
-            $referer = $_SERVER['HTTP_REFERER'] ?? '/';
-            return Response::redirect($referer);
+            return $this->rejectRequest('csrf.invalid_token', 'Invalid CSRF token', $uri, $method);
         }
 
         // ตรงนี้คือ token ถูกต้องแล้ว
@@ -121,6 +109,22 @@ class CsrfMiddleware extends Middleware
         }
 
         return true;
+    }
+
+    private function rejectRequest(string $event, string $message, string $uri, string $method): Response
+    {
+        $this->logger->security($event, [
+            'route' => $uri,
+            'method' => $method,
+        ]);
+
+        if ($this->jsonResponse) {
+            return Response::apiError($message, [], 419);
+        }
+
+        Session::flash('error', $message);
+        $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+        return Response::redirect($referer);
     }
 
     /**
