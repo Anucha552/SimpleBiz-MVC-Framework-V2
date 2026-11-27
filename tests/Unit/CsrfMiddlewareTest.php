@@ -118,4 +118,20 @@ final class CsrfMiddlewareTest extends TestCase
 
         $this->assertTrue((new CsrfMiddleware(true))->handle());
     }
+
+    public function testValidTokenDoesNotRotateAfterOneHour(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_SERVER['REQUEST_URI'] = '/employees';
+        $token = Session::generateCsrfToken();
+        Session::set('csrf_token', $token);
+        Session::set('csrf_token_time', time() - 7200);
+        $_POST['_csrf_token'] = $token;
+
+        $this->assertTrue((new CsrfMiddleware())->handle());
+        $this->assertSame($token, Session::getCsrfToken());
+
+        $this->assertTrue((new CsrfMiddleware())->handle());
+        $this->assertSame($token, Session::getCsrfToken());
+    }
 }

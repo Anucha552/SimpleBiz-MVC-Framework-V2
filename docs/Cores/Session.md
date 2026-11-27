@@ -115,6 +115,9 @@ if (Session::hasOldInput('username')) {
 ```php
 $token = Session::generateCsrfToken();
 ```
+
+CSRF token หนึ่งค่าจะคงอยู่ตลอด Session และใช้ร่วมกันได้ในทุกฟอร์ม/แท็บ ระบบไม่หมุน token ตามเวลา แต่จะสร้าง token ใหม่เมื่อ Session ID ถูก regenerate เช่น login/logout
+
 **ใส่ในฟอร์ม**
 ```php
 <form method="POST">

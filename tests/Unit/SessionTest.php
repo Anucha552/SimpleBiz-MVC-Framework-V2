@@ -42,4 +42,22 @@ final class SessionTest extends TestCase
         unset($_SESSION['_flash']['new']);
         $this->assertSame(['name' => 'tester'], Session::old());
     }
+
+    public function testRegeneratingSessionRotatesCsrfTokenAndLegacyAlias(): void
+    {
+        $previousToken = Session::generateCsrfToken();
+        Session::set('csrf_token', $previousToken);
+
+        Session::regenerateWithContext('login', 1);
+
+        $currentToken = Session::getCsrfToken();
+        $this->assertNotSame($previousToken, $currentToken);
+        $this->assertSame($currentToken, Session::get('csrf_token'));
+
+        Session::regenerate();
+
+        $regeneratedToken = Session::getCsrfToken();
+        $this->assertNotSame($currentToken, $regeneratedToken);
+        $this->assertSame($regeneratedToken, Session::get('csrf_token'));
+    }
 }

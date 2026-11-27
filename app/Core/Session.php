@@ -305,6 +305,7 @@ class Session
     {
         self::ensureStarted();
         session_regenerate_id($deleteOldSession);
+        self::generateCsrfToken();
     }
 
     /**
@@ -324,6 +325,7 @@ class Session
     {
         self::ensureStarted();
         session_regenerate_id($deleteOldSession);
+        self::generateCsrfToken();
 
         // บันทึก structured log โดยไม่เปิดเผย session ID
         try {
@@ -550,6 +552,8 @@ class Session
 
         $token = bin2hex(random_bytes(32));
         $_SESSION[self::CSRF_TOKEN_KEY] = $token;
+        $_SESSION['csrf_token'] = $token;
+        unset($_SESSION['csrf_token_time']);
 
         return $token;
     }

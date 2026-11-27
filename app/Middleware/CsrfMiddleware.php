@@ -41,20 +41,12 @@ class CsrfMiddleware extends Middleware
      */
     private Logger $logger;
 
-    /**
-     * ตัวแปรสำหรับกำหนดว่าควรตอบกลับเป็น JSON หรือไม่
-     */
     private bool $jsonResponse;
 
     /**
      * TOKEN_LENGTH ความยาวของ CSRF token ที่สร้างขึ้น
      */
     private const TOKEN_LENGTH = 32;
-
-    /**
-     * TOKEN_LIFETIME ระยะเวลาที่ CSRF token มีอายุ (วินาที) ก่อนที่จะหมดอายุและต้องสร้างใหม่
-     */
-    private const TOKEN_LIFETIME = 3600;
 
     /**
      * สร้างอินสแตนซ์ CsrfMiddleware ใหม่
@@ -102,12 +94,6 @@ class CsrfMiddleware extends Middleware
             return $this->rejectRequest('csrf.invalid_token', 'Invalid CSRF token', $uri, $method);
         }
 
-        // ตรงนี้คือ token ถูกต้องแล้ว
-        // ค่อยเช็คหมดอายุ และ regenerate หลังจาก validate ผ่าน
-        if ($this->isTokenExpired()) {
-            $this->regenerateToken();
-        }
-
         return true;
     }
 
@@ -141,50 +127,19 @@ class CsrfMiddleware extends Middleware
             Session::set('_csrf_token', $legacy);
         }
 
-        // สร้าง token ใหม่ถ้ายังไม่มี
-        if (!Session::getCsrfToken()) {
-            Session::generateCsrfToken();
+        $token = Session::getCsrfToken();
+        if (!$token) {
+            $legacy = Session::get('csrf_token');
+            if (is_string($legacy) && $legacy !== '') {
+                Session::set('_csrf_token', $legacy);
+                $token = $legacy;
+            } else {
+                $token = Session::generateCsrfToken();
+            }
         }
 
-        // เช็คและตั้งค่า token time ถ้ายังไม่มี
-        if (!Session::has('csrf_token')) {
-            Session::set('csrf_token', Session::getCsrfToken());
-            Session::set('csrf_token_time', time());
-        }
-
-        // ตั้งค่า token time ถ้ายังไม่มี (สำหรับกรณีที่มี token แต่ไม่มีเวลา)
-        if (!Session::has('csrf_token_time')) {
-            Session::set('csrf_token_time', time());
-        }
-    }
-
-    /**
-     * สร้าง CSRF token ใหม่
-     * จุดประสงค์: ให้สามารถสร้าง token ใหม่ได้เมื่อ token ปัจจุบันหมดอายุหรือเมื่อมีการ regenerate เซสชัน เพื่อรักษาความปลอดภัยของแอปพลิเคชัน
-     * 
-     * @return void ไม่มีค่าที่ส่งกลับ แต่จะสร้าง token ใหม่และเก็บไว้ในเซสชัน
-     */
-    private function regenerateToken(): void
-    {
-        // สร้าง token ใหม่ผ่าน Session แล้วสะท้อนกลับไปยัง legacy
-        $token = Session::generateCsrfToken();
         Session::set('csrf_token', $token);
-        Session::set('csrf_token_time', time());
-    }
-
-    /**
-     * ตรวจสอบว่า token หมดอายุหรือไม่
-     * จุดประสงค์: ให้แน่ใจว่า token ที่ใช้ในการตรวจสอบคำขอยังไม่หมดอายุ เพื่อป้องกันการโจมตี CSRF ที่ใช้ token เก่า
-     * 
-     * @return bool คืนค่า true หาก token หมดอายุ, false หากยังไม่หมดอายุ
-     */
-    private function isTokenExpired(): bool
-    {
-        if (!Session::has('csrf_token_time')) {
-            return true;
-        }
-
-        return (time() - (int) Session::get('csrf_token_time')) > self::TOKEN_LIFETIME;
+        Session::remove('csrf_token_time');
     }
 
     /**
@@ -254,9 +209,6 @@ class CsrfMiddleware extends Middleware
         $token = Session::getCsrfToken() ?? Session::generateCsrfToken();
         // สะท้อน token กลับไปยัง legacy เพื่อรองรับเทมเพลตเก่า
         Session::set('csrf_token', $token);
-        if (!Session::has('csrf_token_time')) {
-            Session::set('csrf_token_time', time());
-        }
         return $token;
     }
 

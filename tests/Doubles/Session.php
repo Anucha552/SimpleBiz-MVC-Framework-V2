@@ -99,6 +99,10 @@ final class Session
         }
         $token = bin2hex(random_bytes(16));
         $_SESSION['_csrf_token'] = $token;
+        $_SESSION['csrf_token'] = $token;
+        unset($_SESSION['csrf_token_time']);
+        self::$data['csrf_token'] = $token;
+        unset(self::$data['csrf_token_time']);
         return $token;
     }
 
@@ -110,7 +114,15 @@ final class Session
         return $_SESSION['_csrf_token'] ?? null;
     }
 
-    public static function regenerateWithContext(string $context, ?int $id = null): void {}
+    public static function regenerate(bool $deleteOldSession = true): void
+    {
+        self::generateCsrfToken();
+    }
+
+    public static function regenerateWithContext(string $context, ?int $id = null, bool $deleteOldSession = true): void
+    {
+        self::generateCsrfToken();
+    }
 
     public static function reset(): void
     {
