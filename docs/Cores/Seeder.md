@@ -12,7 +12,7 @@
 
 ```php
 <?php
-namespace App\Database\Seeders;
+namespace Database\Seeders;
 use App\Core\Seeder;
 class UserSeeder extends Seeder
 {
@@ -95,7 +95,7 @@ Seeder มีเมธอดช่วยแสดงข้อความแบ�
 
 ```php
 <?php
-namespace App\Database\Seeders;
+namespace Database\Seeders;
 use App\Core\Seeder;
 class ProductSeeder extends Seeder
 {
@@ -128,28 +128,65 @@ class ProductSeeder extends Seeder
 ## 6️⃣ โครงสร้างที่แนะนำในโปรเจกต์
 
 ```
-app/
- └── Database/
-      └── Seeders/
-           ├── UserSeeder.php
-           ├── ProductSeeder.php
-           └── DatabaseSeeder.php
+database/
+ └── seeders/
+      ├── UserSeeder.php
+      ├── ProductSeeder.php
+      └── DatabaseSeeder.php
 ```
 
-## 7️⃣ การสร้าง Seeder หลัก (เรียกหลาย Seeder พร้อมกัน)
+Seeder ในโปรเจกต์นี้ใช้ namespace `Database\Seeders` และคลาส Seeder อื่น ๆ สืบทอดจาก `App\Core\Seeder` สร้างไฟล์ใหม่ได้ด้วยคำสั่ง:
+
+```bash
+php console make:seeder ProductSeeder
+```
+
+## 7️⃣ การใช้ DatabaseSeeder รวมและเรียก Seeder ตามลำดับ
+
+`DatabaseSeeder` เป็นจุดรวมรายชื่อ Seeder ที่ต้องการรัน โดยสืบทอดจาก `Seeder` แล้วใช้ `$this->call()` เรียกคลาส Seeder ตามลำดับใน array:
 
 ```php
 <?php
-namespace App\Database\Seeders;
-class DatabaseSeeder
+namespace Database\Seeders;
+
+use App\Core\Seeder;
+
+class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        (new UserSeeder())->run();
-        (new ProductSeeder())->run();
+        $this->call([
+            UserSeeder::class,
+            ProductSeeder::class,
+        ]);
     }
 }
 ```
+
+วางไฟล์นี้ที่ `database/seeders/DatabaseSeeder.php` และเพิ่ม Seeder ที่ต้องการใน `$this->call([...])` โดยเรียงลำดับให้ Seeder ที่สร้างข้อมูลที่จำเป็นต่อ Seeder อื่นทำงานก่อน
+
+**รัน Seeder**
+
+```bash
+php console migrate       # สร้างตารางก่อน หากยังไม่ได้ migrate
+php console seed          # รัน Seeder ทั้งหมดตาม DatabaseSeeder
+php console seed UserSeeder  # รัน UserSeeder เพียงตัวเดียว
+```
+
+เมื่อมี `DatabaseSeeder` คำสั่ง `php console seed` จะใช้รายชื่อและลำดับจากไฟล์นี้ ส่วนคำสั่งที่ระบุชื่อ เช่น `php console seed UserSeeder` จะรัน Seeder นั้นโดยตรง ไม่ได้รันลำดับทั้งหมดจาก `DatabaseSeeder`
+
+**ตัวอย่างกับ Seeder ที่มีในโปรเจกต์**
+
+```php
+$this->call([
+    UserSeeder::class,
+    employeeSeeder::class,
+]);
+```
+
+ตรวจชื่อคลาสและชื่อไฟล์ให้ตรงกับที่มีอยู่จริง โดยเฉพาะระบบไฟล์ที่แยกตัวพิมพ์เล็ก/ใหญ่ หากระบุคลาสที่ไม่มีอยู่ `call()` จะแสดงคำเตือนและข้ามคลาสนั้น ปัจจุบันให้แทน `testSeeder::class` ใน `DatabaseSeeder.php` ด้วย Seeder ที่มีอยู่จริงก่อนรัน `php console seed`
+
+> **ข้อควรระวัง:** Seeder บางตัวเรียก `truncate()` เพื่อลบข้อมูลเดิมก่อนเพิ่มข้อมูลใหม่ ตรวจสอบการทำงานของแต่ละ Seeder ก่อนรัน โดยเฉพาะกับฐานข้อมูลที่มีข้อมูลสำคัญ
 
 ## 8️⃣ Error ที่พบบ่อยและแนวทางแก้
 
