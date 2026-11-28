@@ -151,7 +151,12 @@ class ConsoleIO
         $defaultText = $default ? 'Y/n' : 'y/N';
         echo ConsoleColor::YELLOW . "[?] {$message} [{$defaultText}]: " . ConsoleColor::RESET;
 
-        $input = strtolower(trim(fgets(STDIN)));
+        $inputRaw = fgets(STDIN);
+        if ($inputRaw === false) {
+            return $default;
+        }
+
+        $input = strtolower(trim($inputRaw));
 
         if ($input === '') {
             return $default;

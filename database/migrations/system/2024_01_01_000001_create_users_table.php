@@ -39,6 +39,8 @@ class CreateUsersTable extends Migration
             $table->index('role');
             $table->index('role_id');
             $table->index('is_admin');
+
+            $table->foreign('role_id')->references('id')->on('roles')->onDelete('SET NULL');
         });
     }
 

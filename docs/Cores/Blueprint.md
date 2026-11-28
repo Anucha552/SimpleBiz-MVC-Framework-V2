@@ -224,7 +224,9 @@ $blueprint->softDeletes();
 $sql = $blueprint->toCreateSql();
 ```
 
-ถ้าใช้ SQLite อาจได้ array ของ SQL statements
+`toCreateSql()` อาจคืนค่าได้ 2 แบบ:
+- `string` สำหรับกรณีทั่วไป
+- `array` สำหรับ SQLite (เช่น มี index ปกติที่ต้องสร้างแยกด้วย `CREATE INDEX`)
 
 ---
 
@@ -234,7 +236,9 @@ $sql = $blueprint->toCreateSql();
 $stmts = $blueprint->toAlterAddSql();
 ```
 
-จะได้ array ของ ALTER TABLE statements
+จะได้ `array` ของ SQL statements โดย:
+- MySQL: ส่วนใหญ่เป็น `ALTER TABLE ...`
+- SQLite: index จะถูกสร้างด้วย `CREATE INDEX IF NOT EXISTS ...` หรือ `CREATE UNIQUE INDEX IF NOT EXISTS ...`
 
 ---
 
@@ -276,7 +280,12 @@ Blueprint รองรับ:
 - MySQL
 - SQLite
 
-การสร้าง index และ auto increment อาจมีพฤติกรรมแตกต่างกันตาม driver
+พฤติกรรมที่ต่างกันตาม driver ที่ควรรู้:
+- `AUTO_INCREMENT` (MySQL) จะถูกแปลงเป็น `PRIMARY KEY AUTOINCREMENT` ใน SQLite
+- `UNSIGNED` และ `COMMENT` ของคอลัมน์ไม่มีผลใน SQLite
+- บางชนิดข้อมูลจะ normalize ใน SQLite เช่น `JSON`/`ENUM` → `TEXT`, `TIMESTAMP` → `DATETIME`
+- ค่า default แบบ raw ที่มี `ON UPDATE` จะถูกลดรูปเป็น `CURRENT_TIMESTAMP` ใน SQLite
+- index ปกติใน SQLite มักถูกสร้างเป็นคำสั่งแยกหลัง `CREATE TABLE`
 
 ---
 

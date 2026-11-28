@@ -19,9 +19,10 @@ Migration คือคลาสที่สืบทอดจาก `App\Core\Mi
 
 ## 2) โครงสร้างไฟล์ Migration
 
-**ตัวอย่างไฟล์:**
+**ตัวอย่างไฟล์ (โครงสร้างปัจจุบันแบบแยกโมดูล):**
 
-`database/migrations/2026_03_01_000001_create_users_table.php`
+- `database/migrations/system/2024_01_01_000001_create_users_table.php`
+- `database/migrations/employee/2026_02_21_124736_employees.php`
 
 **ตัวอย่างคลาส:**
 
@@ -102,6 +103,8 @@ public function down(): void
 }
 ```
 
+> หมายเหตุ: `dropColumn()` ใช้งานได้กับ MySQL แต่ใน SQLite จะไม่รองรับการลบคอลัมน์โดยตรง และระบบจะ throw exception
+
 ### 3.4 เปลี่ยนชื่อตาราง
 ```php
 public function up(): void
@@ -126,9 +129,12 @@ public function up(): void
 
 public function down(): void
 {
-    $this->execute("DROP INDEX idx_email ON users");
+    $this->execute("DROP INDEX idx_email ON users"); // MySQL
+    // SQLite ใช้: DROP INDEX IF EXISTS idx_email
 }
 ```
+
+หมายเหตุ: เมื่อใช้ SQL ดิบ ต้องเลือก syntax ให้ตรงกับ database driver (เช่น MySQL/SQLite)
 
 ### 3.6 รันหลายคำสั่งพร้อมกัน (Transaction)
 ```php
