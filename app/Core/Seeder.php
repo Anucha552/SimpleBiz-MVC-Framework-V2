@@ -31,10 +31,35 @@ use PDOException;
 
 abstract class Seeder
 {
+    private static int $ranCount = 0;
+    private static int $skippedCount = 0;
+
     /**
      * การเชื่อมต่อฐานข้อมูล
      */
     protected Database $db;
+
+    public static function resetRunStats(): void
+    {
+        self::$ranCount = 0;
+        self::$skippedCount = 0;
+    }
+
+    public static function recordSeederRun(): void
+    {
+        self::$ranCount++;
+    }
+
+    /**
+     * @return array{ran: int, skipped: int}
+     */
+    public static function getRunStats(): array
+    {
+        return [
+            'ran' => self::$ranCount,
+            'skipped' => self::$skippedCount,
+        ];
+    }
 
     /**
      * ตัวสร้าง Seeder
@@ -60,9 +85,13 @@ abstract class Seeder
         foreach ($seederClasses as $seederClass) {
             if (!class_exists($seederClass)) {
                 $this->log("⚠ ไม่พบ Seeder class {$seederClass} ข้าม...");
+                self::$skippedCount++;
                 continue;
             }
+            $seederName = basename(str_replace('\\', '/', $seederClass));
+            $this->log("กำลังรัน Seeder: {$seederName}");
             (new $seederClass())->run();
+            self::$ranCount++;
         }
     }
 

@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Core\Seeder;
+
 class SeedCommand extends BaseCommand
 {
     public function name(): string
@@ -88,7 +90,7 @@ class SeedCommand extends BaseCommand
         }
 
         try {
-            $ran = 0;
+            Seeder::resetRunStats();
             $skipped = 0;
 
             // รัน Seeder แต่ละตัวที่พบ
@@ -101,23 +103,29 @@ class SeedCommand extends BaseCommand
                 }
 
                 // รัน Seeder
+                $seederName = basename(str_replace('\\', '/', $seederClass));
+                $this->info("กำลังรัน Seeder: {$seederName}");
                 $seeder = new $seederClass();
                 $seeder->run();
-                $ran++;
+                Seeder::recordSeederRun();
                 echo "\n";
             }
 
+            $stats = Seeder::getRunStats();
+            $ran = $stats['ran'];
+            $skipped += $stats['skipped'];
+
             // แสดงผลลัพธ์การรัน Seeder
             if ($ran === 0) {
-                $this->warning("ไม่มี Seeder ที่ถูกรัน (ข้ามทั้งหมด {$skipped})");
+                $this->warning("ไม่มี seed file ที่รันสำเร็จ (ข้าม {$skipped} ไฟล์)");
                 return;
             }
 
             // แสดงข้อความสรุปผลการรัน Seeder
             if ($skipped > 0) {
-                $this->success("รัน seeders เสร็จสมบูรณ์! (รัน {$ran}, ข้าม {$skipped})");
+                $this->success("รัน seed สำเร็จ {$ran} ไฟล์ (ข้าม {$skipped} ไฟล์)");
             } else {
-                $this->success("รัน seeders เสร็จสมบูรณ์! (รัน {$ran})");
+                $this->success("รัน seed สำเร็จ {$ran} ไฟล์");
             }
             echo "\n";
         } catch (\Exception $e) {
